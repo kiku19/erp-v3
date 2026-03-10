@@ -1,0 +1,77 @@
+#!/bin/sh
+# pre-push hook — runs Playwright E2E tests before every push.
+# Push is blocked if any E2E test fails or if the required server stack is not running.
+#
+# Prerequisites (all must be running before git push):
+#   1. Next.js dev server  →  npm run dev
+#   2. Kong gateway        →  http://localhost:8000
+#   3. PostgreSQL          →  with seed data applied
+#
+# Port detection: Reads from BASE_URL in .env (default: 3002)
+
+# Load .env to get BASE_URL
+APP_PORT=3002
+KONG_PORT=8000
+
+if [ -f .env ]; then
+  # Extract port from BASE_URL (e.g., http://localhost:3002 -> 3002)
+  TEST_URL=$(grep "^BASE_URL=" .env 2>/dev/null | cut -d'=' -f2-)
+  if [ -n "$TEST_URL" ]; then
+    APP_PORT=$(echo "$TEST_URL" | sed -E 's|.*:([0-9]+).*|\1|')
+  fi
+
+  # Extract port from KONG_BASE_URL
+  KONG_URL=$(grep "^KONG_BASE_URL=" .env 2>/dev/null | cut -d'=' -f2-)
+  if [ -n "$KONG_URL" ]; then
+    KONG_PORT=$(echo "$KONG_URL" | sed -E 's|.*:([0-9]+).*|\1|')
+  fi
+fi
+
+echo ""
+echo "🧪 Running E2E tests (Playwright) before push…"
+echo ""
+
+# ── 1. Verify Next.js dev server is running ────────────────────────────────────
+if ! nc -z localhost "$APP_PORT" 2>/dev/null; then
+  echo "❌  Push blocked: Next.js dev server is NOT running on port $APP_PORT."
+  echo ""
+  echo "    Start the server and try again:"
+  echo "      npm run dev"
+  echo ""
+  exit 1
+fi
+
+# ── 2. Verify Kong gateway is running ─────────────────────────────────────────
+if ! nc -z localhost "$KONG_PORT" 2>/dev/null; then
+  echo "❌  Push blocked: Kong gateway is NOT running on port $KONG_PORT."
+  echo ""
+  echo "    Start Kong and try again."
+  echo ""
+  exit 1
+fi
+
+echo "✔  Next.js dev server is running (localhost:$APP_PORT)"
+echo "✔  Kong gateway is running      (localhost:$KONG_PORT)"
+echo ""
+echo "Running: npm run test:e2e"
+echo ""
+
+# ── 3. Run E2E tests ───────────────────────────────────────────────────────────
+npm run test:e2e
+
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+  echo ""
+  echo "❌  Push blocked: E2E tests failed."
+  echo ""
+  echo "    Review the failures:"
+  echo "      npm run test:e2e:headed    # watch the browser"
+  echo "      npm run test:e2e:report    # open HTML report"
+  echo ""
+  exit 1
+fi
+
+echo ""
+echo "✅  All E2E tests passed. Push proceeding."
+echo ""
