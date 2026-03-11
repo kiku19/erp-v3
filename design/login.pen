@@ -1,0 +1,1683 @@
+{
+  "version": "2.7",
+  "children": [
+    {
+      "type": "frame",
+      "id": "AJ51a",
+      "x": -343.5017626321974,
+      "y": -150,
+      "name": "Login Screen",
+      "width": 1440,
+      "height": 900,
+      "fill": "$--background",
+      "children": [
+        {
+          "type": "frame",
+          "id": "4aBll",
+          "name": "Branding Panel",
+          "clip": true,
+          "width": 640,
+          "height": "fill_container",
+          "fill": "$--primary",
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "lf5vg",
+              "x": 0,
+              "y": 0,
+              "name": "BG Dark Flow Layer",
+              "clip": true,
+              "width": 640,
+              "height": 900,
+              "fill": {
+                "type": "mesh_gradient",
+                "opacity": 0.55,
+                "enabled": true,
+                "columns": 3,
+                "rows": 3,
+                "colors": [
+                  "#111111",
+                  "#1a1040",
+                  "#111111",
+                  "#0f1a2e",
+                  "#111111",
+                  "#1e1145",
+                  "#111111",
+                  "#151030",
+                  "#111111"
+                ],
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0
+                  ],
+                  [
+                    1,
+                    0
+                  ],
+                  {
+                    "position": [
+                      0,
+                      0.5
+                    ],
+                    "rightHandle": [
+                      0.15,
+                      0.05
+                    ]
+                  },
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  {
+                    "position": [
+                      1,
+                      0.5
+                    ],
+                    "leftHandle": [
+                      -0.15,
+                      -0.05
+                    ]
+                  },
+                  [
+                    0,
+                    1
+                  ],
+                  [
+                    0.5,
+                    1
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "4iq4F",
+                  "x": -100,
+                  "y": -80,
+                  "name": "Dark Blob 1 - Indigo",
+                  "opacity": 0.4,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#4338ca",
+                        "position": 0
+                      },
+                      {
+                        "color": "#4338ca00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 480,
+                  "height": 480,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 80
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "L1Mlz",
+                  "x": 350,
+                  "y": 450,
+                  "name": "Dark Blob 2 - Purple",
+                  "opacity": 0.3,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#7c3aed",
+                        "position": 0
+                      },
+                      {
+                        "color": "#7c3aed00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 420,
+                  "height": 420,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 70
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "YOxz4",
+                  "x": -60,
+                  "y": 500,
+                  "name": "Dark Blob 3 - Teal",
+                  "opacity": 0.2,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#0d9488",
+                        "position": 0
+                      },
+                      {
+                        "color": "#0d948800",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 400,
+                  "height": 380,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 75
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "LII3M",
+                  "x": 400,
+                  "y": -60,
+                  "name": "Dark Blob 4 - Violet",
+                  "opacity": 0.35,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#6d28d9",
+                        "position": 0
+                      },
+                      {
+                        "color": "#6d28d900",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 350,
+                  "height": 350,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 65
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "6XRen",
+                  "x": 150,
+                  "y": 200,
+                  "name": "Dark Blob 5 - Deep Blue",
+                  "opacity": 0.25,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#3730a3",
+                        "position": 0
+                      },
+                      {
+                        "color": "#3730a300",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 380,
+                  "height": 350,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 85
+                  }
+                },
+                {
+                  "type": "path",
+                  "id": "nGrTP",
+                  "x": -60,
+                  "y": 80,
+                  "name": "Dark Flow Curve 1",
+                  "opacity": 0.3,
+                  "geometry": "M0 450c120-250 300 50 450-170s200-200 300 40",
+                  "width": 750,
+                  "height": 550,
+                  "stroke": {
+                    "thickness": 1.5,
+                    "fill": {
+                      "type": "gradient",
+                      "gradientType": "linear",
+                      "enabled": true,
+                      "rotation": 0,
+                      "size": {
+                        "height": 1
+                      },
+                      "colors": [
+                        {
+                          "color": "#818cf800",
+                          "position": 0
+                        },
+                        {
+                          "color": "#818cf8",
+                          "position": 0.35
+                        },
+                        {
+                          "color": "#a78bfa",
+                          "position": 0.65
+                        },
+                        {
+                          "color": "#a78bfa00",
+                          "position": 1
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "path",
+                  "id": "kdAPl",
+                  "x": -80,
+                  "y": 250,
+                  "name": "Dark Flow Curve 2",
+                  "opacity": 0.25,
+                  "geometry": "M0 300c180-250 380 100 520-120s180-150 260 40",
+                  "width": 780,
+                  "height": 450,
+                  "stroke": {
+                    "thickness": 1.2,
+                    "fill": {
+                      "type": "gradient",
+                      "gradientType": "linear",
+                      "enabled": true,
+                      "rotation": 0,
+                      "size": {
+                        "height": 1
+                      },
+                      "colors": [
+                        {
+                          "color": "#6366f100",
+                          "position": 0
+                        },
+                        {
+                          "color": "#6366f1",
+                          "position": 0.3
+                        },
+                        {
+                          "color": "#8b5cf6",
+                          "position": 0.7
+                        },
+                        {
+                          "color": "#8b5cf600",
+                          "position": 1
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "path",
+                  "id": "1AZmO",
+                  "x": 30,
+                  "y": 400,
+                  "name": "Dark Flow Curve 3",
+                  "opacity": 0.2,
+                  "geometry": "M0 80c80 240 250-80 380 200s170 70 270-160",
+                  "width": 650,
+                  "height": 400,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": {
+                      "type": "gradient",
+                      "gradientType": "linear",
+                      "enabled": true,
+                      "rotation": 0,
+                      "size": {
+                        "height": 1
+                      },
+                      "colors": [
+                        {
+                          "color": "#2dd4bf00",
+                          "position": 0
+                        },
+                        {
+                          "color": "#2dd4bf",
+                          "position": 0.4
+                        },
+                        {
+                          "color": "#a78bfa",
+                          "position": 0.7
+                        },
+                        {
+                          "color": "#a78bfa00",
+                          "position": 1
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "R5xW5",
+                  "x": 480,
+                  "y": 150,
+                  "name": "Dark Glow Orb 1",
+                  "opacity": 0.3,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#818cf8",
+                        "position": 0
+                      },
+                      {
+                        "color": "#818cf800",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 100,
+                  "height": 100,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 25
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DSGsZ",
+                  "x": 50,
+                  "y": 380,
+                  "name": "Dark Glow Orb 2",
+                  "opacity": 0.25,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#a78bfa",
+                        "position": 0
+                      },
+                      {
+                        "color": "#a78bfa00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 120,
+                  "height": 120,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 30
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "Tn7V0",
+                  "x": 300,
+                  "y": 700,
+                  "name": "Dark Glow Orb 3",
+                  "opacity": 0.2,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#2dd4bf",
+                        "position": 0
+                      },
+                      {
+                        "color": "#2dd4bf00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 90,
+                  "height": 90,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 22
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "emzjr",
+              "x": 48,
+              "y": 48,
+              "name": "Logo Area",
+              "width": 544,
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon_font",
+                  "id": "WufV8",
+                  "name": "logoIcon",
+                  "width": 32,
+                  "height": 32,
+                  "iconFontName": "hexagon",
+                  "iconFontFamily": "lucide",
+                  "fill": "$--primary-foreground"
+                },
+                {
+                  "type": "text",
+                  "id": "KBuBB",
+                  "name": "logoText",
+                  "fill": "$--primary-foreground",
+                  "content": "Acme ERP",
+                  "fontFamily": "$--font-primary",
+                  "fontSize": 22,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "TRBbX",
+              "x": 48,
+              "y": 278,
+              "name": "Hero Content",
+              "width": 544,
+              "layout": "vertical",
+              "gap": 24,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ii3EP",
+                  "name": "heroTitle",
+                  "fill": "$--primary-foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "Streamline your\nbusiness operations",
+                  "lineHeight": 1.15,
+                  "fontFamily": "$--font-primary",
+                  "fontSize": 40,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "SAdZ9",
+                  "name": "heroDesc",
+                  "opacity": 0.7,
+                  "fill": "$--primary-foreground",
+                  "textGrowth": "fixed-width",
+                  "width": 440,
+                  "content": "Manage inventory, track orders, and automate workflows — all from a single unified platform.",
+                  "lineHeight": 1.6,
+                  "fontFamily": "$--font-secondary",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "NcLCK",
+                  "name": "Features",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tGgvw",
+                      "name": "feat1",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "ytk9d",
+                          "name": "feat1Icon",
+                          "opacity": 0.7,
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "circle-check",
+                          "iconFontFamily": "lucide",
+                          "fill": "$--primary-foreground"
+                        },
+                        {
+                          "type": "text",
+                          "id": "NxZE4",
+                          "name": "feat1Text",
+                          "opacity": 0.8,
+                          "fill": "$--primary-foreground",
+                          "content": "Real-time inventory tracking",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "XFH0g",
+                      "name": "feat2",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "wO85Z",
+                          "name": "feat2Icon",
+                          "opacity": 0.7,
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "circle-check",
+                          "iconFontFamily": "lucide",
+                          "fill": "$--primary-foreground"
+                        },
+                        {
+                          "type": "text",
+                          "id": "uCu14",
+                          "name": "feat2Text",
+                          "opacity": 0.8,
+                          "fill": "$--primary-foreground",
+                          "content": "Automated financial reporting",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "giOeW",
+                      "name": "feat3",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "EnsaR",
+                          "name": "feat3Icon",
+                          "opacity": 0.7,
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "circle-check",
+                          "iconFontFamily": "lucide",
+                          "fill": "$--primary-foreground"
+                        },
+                        {
+                          "type": "text",
+                          "id": "a66fj",
+                          "name": "feat3Text",
+                          "opacity": 0.8,
+                          "fill": "$--primary-foreground",
+                          "content": "Multi-location support",
+                          "fontFamily": "Inter",
+                          "fontSize": 15,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "qy0G7",
+              "x": 48,
+              "y": 759,
+              "name": "Testimonial",
+              "width": 544,
+              "layout": "vertical",
+              "gap": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "gwOp4",
+                  "name": "divider",
+                  "opacity": 0.15,
+                  "width": "fill_container",
+                  "height": 1,
+                  "fill": "$--primary-foreground"
+                },
+                {
+                  "type": "text",
+                  "id": "RlpMs",
+                  "name": "quote",
+                  "opacity": 0.7,
+                  "fill": "$--primary-foreground",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "&quot;Acme ERP reduced our order processing time by 60%. It's become the backbone of our operations.&quot;",
+                  "lineHeight": 1.6,
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "CU5xi",
+                  "name": "authorRow",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "WMwjk",
+                      "name": "authorName",
+                      "fill": "$--primary-foreground",
+                      "content": "Sarah Chen",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "B6DsB",
+                      "name": "authorDot",
+                      "opacity": 0.5,
+                      "fill": "$--primary-foreground",
+                      "content": "·",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ugiV2",
+                      "name": "authorRole",
+                      "opacity": 0.6,
+                      "fill": "$--primary-foreground",
+                      "content": "COO, TechVentures Inc.",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bJMD2",
+          "name": "Form Panel",
+          "clip": true,
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "$--card",
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "rgpCN",
+              "x": 0,
+              "y": 0,
+              "name": "BG Flow Layer",
+              "clip": true,
+              "width": 800,
+              "height": 900,
+              "fill": {
+                "type": "mesh_gradient",
+                "opacity": 0.5,
+                "enabled": true,
+                "columns": 3,
+                "rows": 3,
+                "colors": [
+                  "#f5f3ff",
+                  "#FFFFFF",
+                  "#eff6ff",
+                  "#e0e7ff",
+                  "#FFFFFF",
+                  "#f3e8ff",
+                  "#FFFFFF",
+                  "#ede9fe",
+                  "#dbeafe"
+                ],
+                "points": [
+                  [
+                    0,
+                    0
+                  ],
+                  [
+                    0.5,
+                    0
+                  ],
+                  [
+                    1,
+                    0
+                  ],
+                  {
+                    "position": [
+                      0,
+                      0.5
+                    ],
+                    "rightHandle": [
+                      0.15,
+                      0
+                    ]
+                  },
+                  [
+                    0.5,
+                    0.5
+                  ],
+                  {
+                    "position": [
+                      1,
+                      0.5
+                    ],
+                    "leftHandle": [
+                      -0.15,
+                      0
+                    ]
+                  },
+                  [
+                    0,
+                    1
+                  ],
+                  [
+                    0.5,
+                    1
+                  ],
+                  [
+                    1,
+                    1
+                  ]
+                ]
+              },
+              "layout": "none",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "wsTxg",
+                  "x": -120,
+                  "y": -120,
+                  "name": "Flow Blob 1",
+                  "opacity": 0.7,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#c7d2fe",
+                        "position": 0
+                      },
+                      {
+                        "color": "#c7d2fe00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 550,
+                  "height": 550,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 80
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "2Rd1M",
+                  "x": 400,
+                  "y": 480,
+                  "name": "Flow Blob 2",
+                  "opacity": 0.6,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#ddd6fe",
+                        "position": 0
+                      },
+                      {
+                        "color": "#ddd6fe00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 500,
+                  "height": 500,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 70
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "7uImd",
+                  "x": 200,
+                  "y": 200,
+                  "name": "Flow Blob 3",
+                  "opacity": 0.45,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#bfdbfe",
+                        "position": 0
+                      },
+                      {
+                        "color": "#bfdbfe00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 450,
+                  "height": 400,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 90
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "oSFWg",
+                  "x": 550,
+                  "y": -50,
+                  "name": "Flow Blob 4",
+                  "opacity": 0.45,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#e9d5ff",
+                        "position": 0
+                      },
+                      {
+                        "color": "#e9d5ff00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 400,
+                  "height": 380,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 60
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "pkQv3",
+                  "x": -50,
+                  "y": 550,
+                  "name": "Flow Blob 5",
+                  "opacity": 0.35,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#a5b4fc",
+                        "position": 0
+                      },
+                      {
+                        "color": "#a5b4fc00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 420,
+                  "height": 400,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 75
+                  }
+                },
+                {
+                  "type": "path",
+                  "id": "lfitG",
+                  "x": -50,
+                  "y": 100,
+                  "name": "Flow Curve 1",
+                  "opacity": 0.35,
+                  "geometry": "M0 400c150-200 350 100 500-150s250-150 400 50",
+                  "width": 900,
+                  "height": 600,
+                  "stroke": {
+                    "thickness": 1.5,
+                    "fill": {
+                      "type": "gradient",
+                      "gradientType": "linear",
+                      "enabled": true,
+                      "rotation": 0,
+                      "size": {
+                        "height": 1
+                      },
+                      "colors": [
+                        {
+                          "color": "#a5b4fc00",
+                          "position": 0
+                        },
+                        {
+                          "color": "#a5b4fc",
+                          "position": 0.4
+                        },
+                        {
+                          "color": "#c4b5fd",
+                          "position": 0.7
+                        },
+                        {
+                          "color": "#c4b5fd00",
+                          "position": 1
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "path",
+                  "id": "cL35l",
+                  "x": -100,
+                  "y": 200,
+                  "name": "Flow Curve 2",
+                  "opacity": 0.25,
+                  "geometry": "M0 350c200-250 400 100 600-150s200-150 350 50",
+                  "width": 950,
+                  "height": 500,
+                  "stroke": {
+                    "thickness": 1,
+                    "fill": {
+                      "type": "gradient",
+                      "gradientType": "linear",
+                      "enabled": true,
+                      "rotation": 0,
+                      "size": {
+                        "height": 1
+                      },
+                      "colors": [
+                        {
+                          "color": "#818cf800",
+                          "position": 0
+                        },
+                        {
+                          "color": "#818cf8",
+                          "position": 0.3
+                        },
+                        {
+                          "color": "#a78bfa",
+                          "position": 0.6
+                        },
+                        {
+                          "color": "#a78bfa00",
+                          "position": 1
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "path",
+                  "id": "iRReO",
+                  "x": 50,
+                  "y": 300,
+                  "name": "Flow Curve 3",
+                  "opacity": 0.3,
+                  "geometry": "M0 100c100 250 300-100 450 200s200 100 350-150",
+                  "width": 800,
+                  "height": 500,
+                  "stroke": {
+                    "thickness": 1.2,
+                    "fill": {
+                      "type": "gradient",
+                      "gradientType": "linear",
+                      "enabled": true,
+                      "rotation": 0,
+                      "size": {
+                        "height": 1
+                      },
+                      "colors": [
+                        {
+                          "color": "#c7d2fe00",
+                          "position": 0
+                        },
+                        {
+                          "color": "#c7d2fe",
+                          "position": 0.35
+                        },
+                        {
+                          "color": "#ddd6fe",
+                          "position": 0.65
+                        },
+                        {
+                          "color": "#ddd6fe00",
+                          "position": 1
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "DM39C",
+                  "x": 600,
+                  "y": 120,
+                  "name": "Glow Orb 1",
+                  "opacity": 0.2,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#818cf8",
+                        "position": 0
+                      },
+                      {
+                        "color": "#818cf800",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 120,
+                  "height": 120,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 30
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "RFT8d",
+                  "x": 80,
+                  "y": 700,
+                  "name": "Glow Orb 2",
+                  "opacity": 0.2,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#a78bfa",
+                        "position": 0
+                      },
+                      {
+                        "color": "#a78bfa00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 150,
+                  "height": 150,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 35
+                  }
+                },
+                {
+                  "type": "ellipse",
+                  "id": "CrpRw",
+                  "x": 350,
+                  "y": 50,
+                  "name": "Glow Orb 3",
+                  "opacity": 0.25,
+                  "fill": {
+                    "type": "gradient",
+                    "gradientType": "radial",
+                    "enabled": true,
+                    "rotation": 0,
+                    "size": {
+                      "width": 1,
+                      "height": 1
+                    },
+                    "colors": [
+                      {
+                        "color": "#93c5fd",
+                        "position": 0
+                      },
+                      {
+                        "color": "#93c5fd00",
+                        "position": 1
+                      }
+                    ]
+                  },
+                  "width": 100,
+                  "height": 100,
+                  "effect": {
+                    "type": "blur",
+                    "radius": 25
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "PNWQn",
+              "x": 140,
+              "y": 172,
+              "name": "Form Backdrop",
+              "width": 520,
+              "height": 557,
+              "fill": "#FFFFFFCC",
+              "cornerRadius": 20,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#FFFFFF66"
+              },
+              "effect": [
+                {
+                  "type": "background_blur",
+                  "radius": 24
+                },
+                {
+                  "type": "shadow",
+                  "shadowType": "outer",
+                  "color": "#0000000A",
+                  "offset": {
+                    "x": 0,
+                    "y": 8
+                  },
+                  "blur": 32,
+                  "spread": -2
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rJywa",
+              "x": 190,
+              "y": 222,
+              "name": "Form Container",
+              "width": 420,
+              "layout": "vertical",
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Woea9",
+                  "name": "Form Header",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "kgdRf",
+                      "name": "welcomeText",
+                      "fill": "$--foreground",
+                      "content": "Welcome back",
+                      "fontFamily": "Inter",
+                      "fontSize": 28,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "b3yKz",
+                      "name": "subtitleText",
+                      "fill": "$--muted-foreground",
+                      "content": "Enter your credentials to access your account",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EiKep",
+                  "name": "Form Fields",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 20,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "8R55N",
+                      "name": "emailInput",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FN3Mz",
+                          "name": "inputLabel",
+                          "fill": "$--foreground",
+                          "content": "Email address",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ehAUq",
+                          "name": "inputRef",
+                          "width": "fill_container",
+                          "fill": "$--background",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1,
+                            "fill": "$--input"
+                          },
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "Fu2tv",
+                              "name": "inputPlaceholder",
+                              "fill": "$--muted-foreground",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "name@company.com",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MHcPQ",
+                      "name": "Password Group",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "iBT1t",
+                          "name": "passwordLabelRow",
+                          "width": "fill_container",
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "7nqVD",
+                              "name": "passwordLabel",
+                              "fill": "$--foreground",
+                              "content": "Password",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "HbHk3",
+                              "name": "forgotLink",
+                              "fill": "$--muted-foreground",
+                              "content": "Forgot password?",
+                              "fontFamily": "Inter",
+                              "fontSize": 13,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "BFEHV",
+                          "name": "passwordInput",
+                          "width": "fill_container",
+                          "fill": "$--background",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1,
+                            "fill": "$--input"
+                          },
+                          "padding": [
+                            10,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "iW1fU",
+                              "name": "inputPlaceholder",
+                              "fill": "$--muted-foreground",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Enter your password",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NO2R3",
+                      "name": "rememberRow",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "9xFPo",
+                          "name": "cbBox",
+                          "width": 18,
+                          "height": 18,
+                          "fill": "$--background",
+                          "cornerRadius": 4,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1.5,
+                            "fill": "$--border"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "SQhZT",
+                          "name": "cbText",
+                          "fill": "$--foreground",
+                          "content": "Remember me for 30 days",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KlIQR",
+                  "name": "Form Actions",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "8cn0X",
+                      "name": "signInBtn",
+                      "width": "fill_container",
+                      "fill": "$--primary",
+                      "cornerRadius": 8,
+                      "gap": 8,
+                      "padding": [
+                        10,
+                        20
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "uVm5h",
+                          "name": "btnIcon",
+                          "enabled": false,
+                          "width": 16,
+                          "height": 16,
+                          "iconFontName": "plus",
+                          "iconFontFamily": "lucide",
+                          "fill": "$--primary-foreground"
+                        },
+                        {
+                          "type": "text",
+                          "id": "agak0",
+                          "name": "btnLabel",
+                          "fill": "$--primary-foreground",
+                          "content": "Sign in",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J4rjd",
+                      "name": "Divider Row",
+                      "width": "fill_container",
+                      "gap": 16,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "fUZul",
+                          "name": "divLeft",
+                          "width": "fill_container",
+                          "height": 1,
+                          "fill": "$--border"
+                        },
+                        {
+                          "type": "text",
+                          "id": "7v67L",
+                          "name": "divText",
+                          "fill": "$--muted-foreground",
+                          "content": "or",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "GWjoO",
+                          "name": "divRight",
+                          "width": "fill_container",
+                          "height": 1,
+                          "fill": "$--border"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gjAQz",
+                      "name": "googleBtn",
+                      "width": "fill_container",
+                      "fill": "$--background",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "align": "inside",
+                        "thickness": 1,
+                        "fill": "$--border"
+                      },
+                      "gap": 8,
+                      "padding": [
+                        10,
+                        20
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "dAwL9",
+                          "name": "outIcon",
+                          "width": 16,
+                          "height": 16,
+                          "iconFontName": "chrome",
+                          "iconFontFamily": "lucide",
+                          "fill": "$--foreground"
+                        },
+                        {
+                          "type": "text",
+                          "id": "39kwC",
+                          "name": "outLabel",
+                          "fill": "$--foreground",
+                          "content": "Continue with Google",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FADCw",
+                      "name": "signUpRow",
+                      "width": "fill_container",
+                      "gap": 4,
+                      "justifyContent": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "3aOwZ",
+                          "name": "noAccountText",
+                          "fill": "$--muted-foreground",
+                          "content": "Don't have an account?",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "CBian",
+                          "name": "signUpLink",
+                          "fill": "$--foreground",
+                          "content": "Sign up",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "--background": {
+      "type": "color",
+      "value": "#FAFAFA"
+    },
+    "--primary": {
+      "type": "color",
+      "value": "#111111"
+    },
+    "--primary-foreground": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "--font-primary": {
+      "type": "string",
+      "value": "Inter"
+    },
+    "--font-secondary": {
+      "type": "string",
+      "value": "Inter"
+    },
+    "--card": {
+      "type": "color",
+      "value": "#FFFFFF"
+    },
+    "--foreground": {
+      "type": "color",
+      "value": "#111111"
+    },
+    "--muted-foreground": {
+      "type": "color",
+      "value": "#52525b"
+    },
+    "--input": {
+      "type": "color",
+      "value": "#e5e5e5"
+    },
+    "--border": {
+      "type": "color",
+      "value": "#e5e5e5"
+    }
+  }
+}
