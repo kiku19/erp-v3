@@ -142,8 +142,8 @@ describe("DropdownMenu", () => {
     );
     await user.click(screen.getByRole("button", { name: "Open" }));
     const activeItem = screen.getByText("Active Item").closest("[role='menuitem']");
-    expect(activeItem?.className).toContain("bg-accent");
-    expect(activeItem?.className).toContain("text-accent-foreground");
+    expect(activeItem?.className).toContain("bg-primary-active");
+    expect(activeItem?.className).toContain("text-primary-active-foreground");
   });
 
   it("renders the divider", async () => {

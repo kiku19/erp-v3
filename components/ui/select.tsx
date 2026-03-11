@@ -128,29 +128,33 @@ const Select = ({
         />
       </button>
 
-      {isOpen && (
-        <ul
-          role="listbox"
-          className="absolute z-50 mt-1 w-full rounded-md border border-input bg-background shadow-lg"
-        >
-          {options.map((option) => (
-            <li
-              key={option.value}
-              role="option"
-              aria-selected={option.value === currentValue}
-              tabIndex={0}
-              onClick={() => handleSelect(option.value)}
-              onKeyDown={(e) => handleOptionKeyDown(e, option.value)}
-              className={cn(
-                "cursor-pointer px-3.5 py-2.5 text-sm text-foreground transition-colors duration-[var(--duration-normal)] ease-[var(--ease-default)] hover:bg-muted-hover first:rounded-t-md last:rounded-b-md",
-                option.value === currentValue && "bg-muted-hover",
-              )}
-            >
-              {option.label}
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul
+        role="listbox"
+        aria-hidden={!isOpen}
+        className={cn(
+          "absolute z-50 mt-1 w-full rounded-md border border-input bg-background shadow-lg transition-all duration-[var(--duration-slow)] ease-[var(--ease-default)] origin-top",
+          isOpen
+            ? "opacity-100 scale-y-100 pointer-events-auto"
+            : "opacity-0 scale-y-95 pointer-events-none",
+        )}
+      >
+        {options.map((option) => (
+          <li
+            key={option.value}
+            role="option"
+            aria-selected={option.value === currentValue}
+            tabIndex={isOpen ? 0 : -1}
+            onClick={() => handleSelect(option.value)}
+            onKeyDown={(e) => handleOptionKeyDown(e, option.value)}
+            className={cn(
+              "cursor-pointer px-3.5 py-2.5 text-sm text-foreground transition-colors duration-[var(--duration-normal)] ease-[var(--ease-default)] hover:bg-muted-hover first:rounded-t-md last:rounded-b-md",
+              option.value === currentValue && "bg-muted-hover",
+            )}
+          >
+            {option.label}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

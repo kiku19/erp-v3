@@ -9,7 +9,9 @@ import {
   useContext,
   type ReactNode,
   type KeyboardEvent,
+  type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 interface DropdownMenuProps {
@@ -43,25 +45,79 @@ function DropdownMenu({
   className,
 }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
 
   const close = useCallback(() => setOpen(false), []);
 
-  // Focus the menu when opened so keyboard events work
+  // Handle mount/unmount with animation
   useEffect(() => {
-    if (open && menuRef.current) {
+    if (open) {
+      setIsClosing(false);
+      setIsMounted(true);
+    } else if (isMounted) {
+      setIsClosing(true);
+    }
+  }, [open, isMounted]);
+
+  // Fallback: unmount after exit duration if onAnimationEnd doesn't fire (e.g. jsdom)
+  useEffect(() => {
+    if (!isClosing) return;
+    const timer = setTimeout(() => {
+      setIsMounted(false);
+      setIsClosing(false);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isClosing]);
+
+  const handleAnimationEnd = useCallback(() => {
+    if (isClosing) {
+      setIsMounted(false);
+      setIsClosing(false);
+    }
+  }, [isClosing]);
+
+  // Calculate position when menu opens
+  useEffect(() => {
+    if (!open || !triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const style: CSSProperties = {
+      position: "fixed",
+      top: rect.bottom + 4,
+      zIndex: 9999,
+    };
+
+    if (align === "end") {
+      style.right = window.innerWidth - rect.right;
+    } else {
+      style.left = rect.left;
+    }
+
+    setMenuStyle(style);
+  }, [open, align]);
+
+  // Focus the menu when mounted (not closing) so keyboard events work
+  useEffect(() => {
+    if (isMounted && !isClosing && menuRef.current) {
       menuRef.current.focus();
     }
-  }, [open]);
+  }, [isMounted, isClosing]);
 
+  // Close on outside click or escape
   useEffect(() => {
     if (!open) return;
 
     function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
       if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
+        triggerRef.current &&
+        !triggerRef.current.contains(target) &&
+        menuRef.current &&
+        !menuRef.current.contains(target)
       ) {
         close();
       }
@@ -73,11 +129,18 @@ function DropdownMenu({
       }
     }
 
+    // Close on scroll so the menu doesn't float detached from its trigger
+    function handleScroll() {
+      close();
+    }
+
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [open, close]);
 
@@ -110,26 +173,34 @@ function DropdownMenu({
     }
   };
 
+  const menu = isMounted ? (
+    <div
+      ref={menuRef}
+      role="menu"
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      onAnimationEnd={handleAnimationEnd}
+      style={{
+        ...menuStyle,
+        animation: isClosing
+          ? "dropdown-out var(--duration-fast) var(--ease-default) forwards"
+          : "dropdown-in var(--duration-normal) var(--ease-default) forwards",
+        transformOrigin: align === "end" ? "top right" : "top left",
+      }}
+      className={cn(
+        "w-[220px] rounded-md border border-border bg-background p-1 shadow-[var(--shadow-dropdown)] outline-none",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  ) : null;
+
   return (
     <DropdownContext.Provider value={{ close }}>
-      <div ref={containerRef} className="relative inline-block">
+      <div ref={triggerRef} className="inline-block">
         <div onClick={() => setOpen((prev) => !prev)}>{trigger}</div>
-        {open && (
-          <div
-            ref={menuRef}
-            role="menu"
-            tabIndex={-1}
-            onKeyDown={handleKeyDown}
-            className={cn(
-              "absolute z-50 mt-1 w-[220px] rounded-md border border-border bg-background p-1 shadow-[0_4px_12px_-2px_rgba(0,0,0,0.1)] outline-none",
-              "transition-all duration-[var(--duration-normal)] ease-[var(--ease-default)]",
-              align === "end" ? "right-0" : "left-0",
-              className,
-            )}
-          >
-            {children}
-          </div>
-        )}
+        {menu && createPortal(menu, document.body)}
       </div>
     </DropdownContext.Provider>
   );
@@ -160,7 +231,7 @@ function DropdownMenuItem({
       className={cn(
         "flex cursor-pointer items-center gap-2 rounded-[4px] px-3 py-2 text-sm outline-none transition-colors duration-[var(--duration-fast)] ease-[var(--ease-default)]",
         active
-          ? "bg-accent font-medium text-accent-foreground"
+          ? "bg-primary-active font-medium text-primary-active-foreground"
           : "text-foreground hover:bg-muted-hover",
         disabled && "pointer-events-none opacity-50",
         className,

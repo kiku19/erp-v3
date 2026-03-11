@@ -69,7 +69,7 @@ function Toggle({
           "relative inline-flex h-6 w-11 items-center rounded-full p-[3px] transition-colors duration-[var(--duration-normal)] ease-[var(--ease-default)]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           "active:scale-[var(--scale-press)]",
-          isChecked ? "bg-primary" : "bg-muted",
+          isChecked ? "bg-primary" : "bg-input border border-border",
         )}
       >
         <span

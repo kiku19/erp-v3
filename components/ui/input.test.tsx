@@ -98,3 +98,52 @@ describe("Input", () => {
     expect(input.className).toContain("text-sm");
   });
 });
+
+describe("Input password toggle", () => {
+  it("renders a password input with a toggle button", () => {
+    render(<Input type="password" placeholder="Enter password" />);
+    const input = document.querySelector("input");
+    expect(input?.type).toBe("password");
+    const toggleBtn = screen.getByRole("button", { name: "Show password" });
+    expect(toggleBtn).toBeDefined();
+  });
+
+  it("does not render toggle button for non-password types", () => {
+    render(<Input type="text" />);
+    const toggleBtn = screen.queryByRole("button");
+    expect(toggleBtn).toBeNull();
+  });
+
+  it("toggles password visibility on click", async () => {
+    const user = userEvent.setup();
+    render(<Input type="password" placeholder="Enter password" />);
+    const input = document.querySelector("input")!;
+    const toggleBtn = screen.getByRole("button", { name: "Show password" });
+
+    expect(input.type).toBe("password");
+
+    await user.click(toggleBtn);
+    expect(input.type).toBe("text");
+    expect(
+      screen.getByRole("button", { name: "Hide password" }),
+    ).toBeDefined();
+
+    await user.click(toggleBtn);
+    expect(input.type).toBe("password");
+    expect(
+      screen.getByRole("button", { name: "Show password" }),
+    ).toBeDefined();
+  });
+
+  it("adds extra right padding for the toggle button", () => {
+    render(<Input type="password" />);
+    const input = document.querySelector("input")!;
+    expect(input.className).toContain("pr-10");
+  });
+
+  it("toggle button has tabIndex -1 to not interfere with form navigation", () => {
+    render(<Input type="password" />);
+    const toggleBtn = screen.getByRole("button", { name: "Show password" });
+    expect(toggleBtn.tabIndex).toBe(-1);
+  });
+});

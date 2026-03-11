@@ -32,14 +32,14 @@ describe("Badge", () => {
     render(<Badge variant="success">Success</Badge>);
     const badge = screen.getByText("Success");
     expect(badge.className).toContain("bg-success-bg");
-    expect(badge.className).toContain("text-success");
+    expect(badge.className).toContain("text-success-foreground");
   });
 
   it("renders error variant with design tokens", () => {
     render(<Badge variant="error">Error</Badge>);
     const badge = screen.getByText("Error");
     expect(badge.className).toContain("bg-error-bg");
-    expect(badge.className).toContain("text-error");
+    expect(badge.className).toContain("text-error-foreground");
   });
 
   it("renders warning variant with design tokens", () => {

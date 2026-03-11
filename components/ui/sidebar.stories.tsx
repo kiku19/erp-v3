@@ -10,6 +10,11 @@ import {
   ShoppingCart,
   ChevronsLeft,
   ChevronsRight,
+  Layers,
+  Tags,
+  Warehouse,
+  ClipboardList,
+  Truck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -17,6 +22,7 @@ import {
   SidebarNav,
   SidebarFooter,
   NavItem,
+  NavSubItem,
   NavSectionTitle,
   NavDivider,
 } from "./sidebar";
@@ -45,8 +51,16 @@ export const FullSidebar: Story = {
             label="Dashboard"
             active
           />
-          <NavItem icon={<Package size={18} />} label="Products" />
-          <NavItem icon={<ShoppingCart size={18} />} label="Orders" />
+          <NavItem icon={<Package size={18} />} label="Products">
+            <NavSubItem label="All Products" href="/products" />
+            <NavSubItem label="Categories" href="/products/categories" />
+            <NavSubItem label="Inventory" href="/products/inventory" />
+          </NavItem>
+          <NavItem icon={<ShoppingCart size={18} />} label="Orders">
+            <NavSubItem label="All Orders" href="/orders" />
+            <NavSubItem label="Pending" href="/orders/pending" />
+            <NavSubItem label="Fulfilled" href="/orders/fulfilled" />
+          </NavItem>
           <NavItem icon={<BarChart3 size={18} />} label="Analytics" />
           <NavDivider />
           <NavSectionTitle>MANAGEMENT</NavSectionTitle>
@@ -73,12 +87,19 @@ export const CollapsedSidebar: Story = {
             active
             collapsed
           />
-          <NavItem icon={<Package size={18} />} label="Products" collapsed />
+          <NavItem icon={<Package size={18} />} label="Products" collapsed>
+            <NavSubItem label="All Products" href="/products" />
+            <NavSubItem label="Categories" href="/products/categories" />
+            <NavSubItem label="Inventory" href="/products/inventory" />
+          </NavItem>
           <NavItem
             icon={<ShoppingCart size={18} />}
             label="Orders"
             collapsed
-          />
+          >
+            <NavSubItem label="All Orders" href="/orders" />
+            <NavSubItem label="Pending" href="/orders/pending" />
+          </NavItem>
           <NavItem
             icon={<BarChart3 size={18} />}
             label="Analytics"
@@ -115,12 +136,20 @@ function ToggleableSidebarComponent() {
             icon={<Package size={18} />}
             label="Products"
             collapsed={collapsed}
-          />
+          >
+            <NavSubItem label="All Products" href="/products" />
+            <NavSubItem label="Categories" href="/products/categories" active />
+            <NavSubItem label="Inventory" href="/products/inventory" />
+          </NavItem>
           <NavItem
             icon={<ShoppingCart size={18} />}
             label="Orders"
             collapsed={collapsed}
-          />
+          >
+            <NavSubItem label="All Orders" href="/orders" />
+            <NavSubItem label="Pending" href="/orders/pending" />
+            <NavSubItem label="Fulfilled" href="/orders/fulfilled" />
+          </NavItem>
           <NavItem
             icon={<BarChart3 size={18} />}
             label="Analytics"
