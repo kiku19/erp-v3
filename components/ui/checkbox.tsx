@@ -70,13 +70,16 @@ function Checkbox({
           )}
           aria-hidden="true"
         >
-          {isChecked && (
-            <Check
-              size={12}
-              className="text-primary-foreground animate-in zoom-in-0 duration-[var(--duration-fast)]"
-              strokeWidth={3}
-            />
-          )}
+          <Check
+            size={12}
+            className={cn(
+              "text-primary-foreground transition-all duration-[var(--duration-fast)] ease-[var(--ease-default)]",
+              isChecked
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-0",
+            )}
+            strokeWidth={3}
+          />
         </span>
       </span>
       {label && (
