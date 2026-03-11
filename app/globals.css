@@ -24,6 +24,12 @@
   --color-input: #e5e5e5;
   --color-ring: #1c1c1e;
 
+  /* Hover States */
+  --color-primary-hover: #ea580c;
+  --color-secondary-hover: #e5e5e5;
+  --color-destructive-hover: #b91c1c;
+  --color-muted-hover: #e5e5e5;
+
   /* Status Colors */
   --color-success: #16a34a;
   --color-success-bg: #f0fdf4;
@@ -37,6 +43,13 @@
   --color-info: #3b82f6;
   --color-info-bg: #eff6ff;
   --color-info-foreground: #1e40af;
+
+  /* Animation */
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --scale-press: 0.98;
 
   /* Radius */
   --radius-sm: 4px;
