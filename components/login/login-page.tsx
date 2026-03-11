@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Hexagon, CircleCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
@@ -16,6 +17,7 @@ const FEATURES = [
 
 function LoginPage() {
   const { login } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState("");
 
@@ -24,6 +26,7 @@ function LoginPage() {
     setServerError("");
     try {
       await login(data.email, data.password, data.rememberMe);
+      router.push("/dashboard");
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Login failed",
