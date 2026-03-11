@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import type { Meta, StoryObj } from "@storybook/react";
 import { User, Settings, LogOut, Edit, Trash2, Copy } from "lucide-react";
 import {
   DropdownMenu,
