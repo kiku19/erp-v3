@@ -37,6 +37,10 @@
    - ❌ `<button className="...">` instead of `<Button>` · `<input type="text" />` instead of `<Input>` · Hand-built `<div onClick>` dropdown instead of `<DropdownMenu>` · `<table>` instead of `<DataTable>` · Importing `@radix-ui/react-select` directly in a page · Installing and using `shadcn/ui` components without wrapping in `components/ui/`
    - ✅ `<Button variant="primary">` · `<Input placeholder="..." />` · `<Select options={...}>` · New primitive → add to `components/ui/` with tests + stories first, then use
 
+8. **Tenant isolation · Soft delete · UTC dates.** All DB ops scoped to `tenantId`. No hard deletes — set `isDeleted: true`. All reads filter `isDeleted: false`. Dates in UTC via `new Date()`. See `app/api/CLAUDE.md` for full reference.
+   - ❌ Any query missing `tenantId` · `prisma.*.delete()` / `deleteMany()` · Query without `isDeleted: false` · Local timezone dates
+   - ✅ `where: { tenantId, isDeleted: false }` on reads · `data: { tenantId }` on creates · `data: { isDeleted: true }` for deletes · `new Date()` for timestamps
+
 ## Design Tokens (from `app/globals.css`)
 - **Colors:** `background`, `foreground`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `card`, `border`, `input`, `ring` — each has a `-foreground` variant
 - **Status:** `success`, `warning`, `error`, `info` — each has `-bg` and `-foreground` variants
