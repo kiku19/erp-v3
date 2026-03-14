@@ -4,6 +4,14 @@ import { LoginPage } from "./login-page";
 
 afterEach(cleanup);
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+  }),
+}));
+
 vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({
     login: vi.fn(),

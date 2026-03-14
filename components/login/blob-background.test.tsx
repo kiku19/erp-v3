@@ -30,8 +30,8 @@ describe("BlobBackground", () => {
   });
 
   it("renders SVG with wave paths and gradient defs", () => {
-    render(<BlobBackground variant="dark" />);
-    const container = screen.getByTestId("blob-background-dark");
+    render(<BlobBackground variant="light" />);
+    const container = screen.getByTestId("blob-background-light");
     const svg = container.querySelector("[data-waves]");
     expect(svg).toBeTruthy();
     expect(svg!.querySelectorAll("path").length).toBe(3);

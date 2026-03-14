@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -11,19 +11,21 @@ import {
   Settings,
   LogOut,
   Hexagon,
-  ChevronsLeft,
-  ChevronsRight,
+  PanelLeftClose,
 } from "lucide-react";
 import {
   Sidebar,
   SidebarHeader,
   SidebarNav,
   SidebarFooter,
+  SidebarTrigger,
   NavItem,
   NavSubItem,
   NavSectionTitle,
   NavDivider,
+  useSidebarAutoHide,
 } from "@/components/ui/sidebar";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth-context";
 
 function getInitials(name: string): string {
@@ -42,7 +44,8 @@ export default function DashboardLayout({
 }) {
   const { tenant, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const { visible, isClosing, show, hide, startHideTimer, cancelHideTimer } =
+    useSidebarAutoHide();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -68,25 +71,31 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar collapsed={collapsed} onCollapsedChange={setCollapsed}>
+    <div className="h-screen bg-background">
+      {!visible && !isClosing && <SidebarTrigger onReveal={show} />}
+
+      <Sidebar
+        visible={visible}
+        isClosing={isClosing}
+        onMouseEnter={cancelHideTimer}
+        onMouseLeave={startHideTimer}
+      >
         <SidebarHeader
           logo={<Hexagon className="h-7 w-7 text-primary" />}
           brand="Acme ERP"
-          collapsed={collapsed}
         />
         <SidebarNav>
-          <NavSectionTitle collapsed={collapsed}>Main</NavSectionTitle>
-          <NavItem
-            icon={<LayoutDashboard />}
-            label="Dashboard"
-            active
-            collapsed={collapsed}
-          />
+          <NavSectionTitle>Main</NavSectionTitle>
+          <Tooltip content="Dashboard" side="right">
+            <NavItem
+              icon={<LayoutDashboard />}
+              label="Dashboard"
+              active
+            />
+          </Tooltip>
           <NavItem
             icon={<ShoppingCart />}
             label="Orders"
-            collapsed={collapsed}
           >
             <NavSubItem label="All Orders" href="/orders" />
             <NavSubItem label="Pending" href="/orders/pending" />
@@ -95,51 +104,54 @@ export default function DashboardLayout({
           <NavItem
             icon={<Package />}
             label="Products"
-            collapsed={collapsed}
           >
             <NavSubItem label="All Products" href="/products" />
             <NavSubItem label="Categories" href="/products/categories" />
             <NavSubItem label="Inventory" href="/products/inventory" />
           </NavItem>
-          <NavItem
-            icon={<Users />}
-            label="Customers"
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={<BarChart3 />}
-            label="Reports"
-            collapsed={collapsed}
-          />
-          <NavSectionTitle collapsed={collapsed}>System</NavSectionTitle>
-          <NavItem
-            icon={<Settings />}
-            label="Settings"
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={<LogOut />}
-            label="Logout"
-            onClick={handleLogout}
-            collapsed={collapsed}
-          />
-          <NavDivider collapsed={collapsed} />
-          <NavItem
-            icon={collapsed ? <ChevronsRight /> : <ChevronsLeft />}
-            label="Collapse"
-            onClick={() => setCollapsed(!collapsed)}
-            collapsed={collapsed}
-          />
+          <Tooltip content="Customers" side="right">
+            <NavItem
+              icon={<Users />}
+              label="Customers"
+            />
+          </Tooltip>
+          <Tooltip content="Reports" side="right">
+            <NavItem
+              icon={<BarChart3 />}
+              label="Reports"
+            />
+          </Tooltip>
+          <NavSectionTitle>System</NavSectionTitle>
+          <Tooltip content="Settings" side="right">
+            <NavItem
+              icon={<Settings />}
+              label="Settings"
+            />
+          </Tooltip>
+          <Tooltip content="Logout" side="right">
+            <NavItem
+              icon={<LogOut />}
+              label="Logout"
+              onClick={handleLogout}
+            />
+          </Tooltip>
+          <NavDivider />
+          <Tooltip content="Hide sidebar" side="right">
+            <NavItem
+              icon={<PanelLeftClose />}
+              label="Hide"
+              onClick={hide}
+            />
+          </Tooltip>
         </SidebarNav>
         <SidebarFooter
           initials={getInitials(tenant.tenantName)}
           name={tenant.tenantName}
           role={tenant.role}
-          collapsed={collapsed}
         />
       </Sidebar>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex h-full flex-col overflow-hidden">
         {children}
       </div>
     </div>

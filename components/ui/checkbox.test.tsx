@@ -125,11 +125,15 @@ describe("Checkbox", () => {
   it("shows check icon only when checked", async () => {
     const user = userEvent.setup();
     const { container } = render(<Checkbox label="Icon test" />);
-    // When unchecked, no SVG check icon should be visible
-    expect(container.querySelector("svg")).toBeNull();
+    // When unchecked, SVG check icon is in DOM but visually hidden (opacity-0 scale-0)
+    const svg = container.querySelector("svg");
+    expect(svg).not.toBeNull();
+    const svgClass = svg!.getAttribute("class") ?? "";
+    expect(svgClass).toContain("opacity-0");
 
     await user.click(screen.getByRole("checkbox", { name: "Icon test" }));
-    // When checked, SVG check icon should appear
-    expect(container.querySelector("svg")).not.toBeNull();
+    // When checked, SVG check icon should be visible (opacity-100 scale-100)
+    const updatedClass = svg!.getAttribute("class") ?? "";
+    expect(updatedClass).toContain("opacity-100");
   });
 });

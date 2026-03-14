@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect, type ReactNode } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
+/* ─────────────────────────── Interfaces ─────────────────────────── */
+
 interface SidebarProps {
-  collapsed?: boolean;
-  onCollapsedChange?: (collapsed: boolean) => void;
+  visible?: boolean;
+  isClosing?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
   children: ReactNode;
   className?: string;
 }
@@ -15,7 +25,6 @@ interface SidebarProps {
 interface SidebarHeaderProps {
   logo?: ReactNode;
   brand?: string;
-  collapsed?: boolean;
   className?: string;
 }
 
@@ -28,7 +37,6 @@ interface SidebarFooterProps {
   initials: string;
   name: string;
   role: string;
-  collapsed?: boolean;
   className?: string;
 }
 
@@ -36,7 +44,6 @@ interface NavItemProps {
   icon: ReactNode;
   label: string;
   active?: boolean;
-  collapsed?: boolean;
   onClick?: () => void;
   href?: string;
   className?: string;
@@ -53,39 +60,118 @@ interface NavSubItemProps {
 
 interface NavSectionTitleProps {
   children: ReactNode;
-  collapsed?: boolean;
   className?: string;
 }
 
 interface NavDividerProps {
-  collapsed?: boolean;
   className?: string;
 }
 
+interface SidebarTriggerProps {
+  onReveal: () => void;
+  className?: string;
+}
+
+/* ─────────────────────────── Auto-hide hook ─────────────────────── */
+
+function useSidebarAutoHide(autoHideDelay = 5000) {
+  const [visible, setVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelHideTimer = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  }, []);
+
+  const show = useCallback(() => {
+    cancelHideTimer();
+    if (animTimerRef.current) {
+      clearTimeout(animTimerRef.current);
+      animTimerRef.current = null;
+    }
+    setIsClosing(false);
+    setVisible(true);
+  }, [cancelHideTimer]);
+
+  const hide = useCallback(() => {
+    cancelHideTimer();
+    setIsClosing(true);
+    // After animation completes (300ms), unmount
+    animTimerRef.current = setTimeout(() => {
+      setVisible(false);
+      setIsClosing(false);
+      animTimerRef.current = null;
+    }, 300);
+  }, [cancelHideTimer]);
+
+  const startHideTimer = useCallback(() => {
+    cancelHideTimer();
+    hideTimerRef.current = setTimeout(() => {
+      hide();
+      hideTimerRef.current = null;
+    }, autoHideDelay);
+  }, [autoHideDelay, hide, cancelHideTimer]);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    };
+  }, []);
+
+  return { visible, isClosing, show, hide, startHideTimer, cancelHideTimer };
+}
+
+/* ─────────────────────────── Sidebar ────────────────────────────── */
+
 function Sidebar({
-  collapsed = false,
-  onCollapsedChange,
+  visible = false,
+  isClosing = false,
+  onMouseEnter,
+  onMouseLeave,
   children,
   className,
 }: SidebarProps) {
+  if (!visible && !isClosing) return null;
+
   return (
     <aside
       data-testid="sidebar"
       className={cn(
-        "flex h-full flex-col bg-background border-r border-border transition-all duration-[var(--duration-slow)] ease-[var(--ease-default)] overflow-hidden",
-        collapsed ? "w-16" : "w-[260px]",
+        "fixed top-0 left-0 bottom-0 z-40 flex w-16 flex-col bg-background border-r border-border overflow-hidden",
+        visible && !isClosing && "animate-sidebar-in",
+        isClosing && "animate-sidebar-out",
         className,
       )}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {children}
     </aside>
   );
 }
 
+/* ─────────────────────────── Trigger ────────────────────────────── */
+
+function SidebarTrigger({ onReveal, className }: SidebarTriggerProps) {
+  return (
+    <div
+      data-testid="sidebar-trigger"
+      className={cn("fixed top-0 left-0 z-30 h-20 w-5", className)}
+      onMouseEnter={onReveal}
+    />
+  );
+}
+
+/* ─────────────────────────── Header ─────────────────────────────── */
+
 function SidebarHeader({
   logo,
   brand = "ERP System",
-  collapsed = false,
   className,
 }: SidebarHeaderProps) {
   return (
@@ -104,16 +190,15 @@ function SidebarHeader({
         )}
       </div>
       <span
-        className={cn(
-          "text-base font-bold text-foreground whitespace-nowrap transition-[max-width,opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)] overflow-hidden",
-          collapsed ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100",
-        )}
+        className="max-w-0 opacity-0 text-base font-bold text-foreground whitespace-nowrap transition-[max-width,opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)] overflow-hidden"
       >
         {brand}
       </span>
     </div>
   );
 }
+
+/* ─────────────────────────── Nav ────────────────────────────────── */
 
 function SidebarNav({ children, className }: SidebarNavProps) {
   return (
@@ -128,11 +213,12 @@ function SidebarNav({ children, className }: SidebarNavProps) {
   );
 }
 
+/* ─────────────────────────── Footer ─────────────────────────────── */
+
 function SidebarFooter({
   initials,
   name,
   role,
-  collapsed = false,
   className,
 }: SidebarFooterProps) {
   return (
@@ -148,12 +234,7 @@ function SidebarFooter({
           {initials}
         </span>
       </div>
-      <div
-        className={cn(
-          "flex flex-col overflow-hidden transition-[opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)]",
-          collapsed ? "opacity-0" : "opacity-100",
-        )}
-      >
+      <div className="flex flex-col overflow-hidden opacity-0 transition-[opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)]">
         <span className="truncate text-[13px] font-medium text-foreground">
           {name}
         </span>
@@ -162,6 +243,8 @@ function SidebarFooter({
     </div>
   );
 }
+
+/* ─────────────────────────── NavSubItem ──────────────────────────── */
 
 function NavSubItem({
   label,
@@ -209,6 +292,8 @@ function NavSubItem({
   );
 }
 
+/* ─────────────────────────── Flyout position ────────────────────── */
+
 function useFlyoutPosition(
   wrapperRef: React.RefObject<HTMLDivElement | null>,
   visible: boolean,
@@ -231,17 +316,17 @@ function useFlyoutPosition(
   return pos;
 }
 
+/* ─────────────────────────── NavItem ─────────────────────────────── */
+
 function NavItem({
   icon,
   label,
   active = false,
-  collapsed = false,
   onClick,
   href,
   className,
   children,
 }: NavItemProps) {
-  const [expanded, setExpanded] = useState(false);
   const [flyoutVisible, setFlyoutVisible] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -265,12 +350,6 @@ function NavItem({
   }, []);
 
   useEffect(() => {
-    if (collapsed) {
-      setExpanded(false);
-    }
-  }, [collapsed]);
-
-  useEffect(() => {
     return () => {
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
@@ -286,96 +365,80 @@ function NavItem({
     className,
   );
 
-  const handleItemClick = () => {
-    if (hasChildren && !collapsed) {
-      setExpanded((prev) => !prev);
-    }
-    onClick?.();
-  };
-
   const itemContent = (
     <>
-      <span className={cn("shrink-0 [&>svg]:h-[18px] [&>svg]:w-[18px]", active ? "text-primary-active-foreground" : "text-muted-foreground")}>
-        {icon}
-      </span>
       <span
         className={cn(
-          "flex-1 text-sm whitespace-nowrap transition-[opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)]",
-          active ? "font-medium text-primary-active-foreground" : "text-foreground",
-          collapsed ? "opacity-0" : "opacity-100",
+          "shrink-0 [&>svg]:h-[18px] [&>svg]:w-[18px]",
+          active ? "text-primary-active-foreground" : "text-muted-foreground",
         )}
       >
+        {icon}
+      </span>
+      <span className="flex-1 text-sm whitespace-nowrap opacity-0 transition-[opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)]">
         {label}
       </span>
-      {hasChildren && !collapsed && (
-        <ChevronRight
-          data-testid="nav-item-chevron"
-          size={14}
-          className={cn(
-            "shrink-0 text-muted-foreground transition-transform duration-[var(--duration-normal)] ease-[var(--ease-default)]",
-            expanded && "rotate-90",
-          )}
-        />
-      )}
     </>
   );
 
-  const flyout = flyoutVisible && typeof document !== "undefined"
-    ? createPortal(
-        <div
-          data-testid="nav-flyout"
-          className="fixed z-50 min-w-[180px] rounded-md border border-border bg-background p-1 shadow-[var(--shadow-dropdown)] animate-flyout-in"
-          style={{ top: flyoutPos.top, left: flyoutPos.left }}
-          onMouseEnter={showFlyout}
-          onMouseLeave={hideFlyout}
-        >
+  const flyout =
+    flyoutVisible && typeof document !== "undefined"
+      ? createPortal(
           <div
-            data-testid="nav-flyout-header"
-            className="px-3 py-1.5 text-sm font-medium text-foreground"
+            data-testid="nav-flyout"
+            className="fixed z-50 min-w-[180px] rounded-md border border-border bg-background p-1 shadow-[var(--shadow-dropdown)] animate-flyout-in"
+            style={{ top: flyoutPos.top, left: flyoutPos.left }}
+            onMouseEnter={showFlyout}
+            onMouseLeave={hideFlyout}
           >
-            {label}
-          </div>
-          {hasChildren && (
-            <>
-              <div className="my-1 h-px bg-border" />
-              {children}
-            </>
-          )}
-        </div>,
-        document.body,
-      )
-    : null;
+            <div
+              data-testid="nav-flyout-header"
+              className="px-3 py-1.5 text-sm font-medium text-foreground"
+            >
+              {label}
+            </div>
+            {hasChildren && (
+              <>
+                <div className="my-1 h-px bg-border" />
+                {children}
+              </>
+            )}
+          </div>,
+          document.body,
+        )
+      : null;
 
-  const itemElement = href && !hasChildren ? (
-    <a
-      data-testid="nav-item"
-      href={href}
-      className={classes}
-      onClick={onClick}
-      aria-label={collapsed ? label : undefined}
-    >
-      {itemContent}
-    </a>
-  ) : (
-    <div
-      data-testid="nav-item"
-      role="button"
-      tabIndex={0}
-      className={classes}
-      aria-label={collapsed ? label : undefined}
-      onClick={handleItemClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          handleItemClick();
-        }
-      }}
-    >
-      {itemContent}
-    </div>
-  );
+  const itemElement =
+    href && !hasChildren ? (
+      <a
+        data-testid="nav-item"
+        href={href}
+        className={classes}
+        onClick={onClick}
+        aria-label={label}
+      >
+        {itemContent}
+      </a>
+    ) : (
+      <div
+        data-testid="nav-item"
+        role="button"
+        tabIndex={0}
+        className={classes}
+        aria-label={label}
+        onClick={() => onClick?.()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            onClick?.();
+          }
+        }}
+      >
+        {itemContent}
+      </div>
+    );
 
-  // Collapsed mode with children: wrap with hover-triggered flyout via portal
-  if (collapsed && hasChildren) {
+  // Items with children: wrap with hover-triggered flyout via portal
+  if (hasChildren) {
     return (
       <div
         data-testid="nav-item-wrapper"
@@ -390,42 +453,20 @@ function NavItem({
     );
   }
 
-  // Expanded mode with children: render item + animated inline sub-items
-  if (hasChildren) {
-    return (
-      <div data-testid="nav-item-wrapper">
-        {itemElement}
-        <div
-          data-testid="nav-sub-items"
-          className={cn(
-            "grid transition-[grid-template-rows] duration-[var(--duration-slow)] ease-[var(--ease-default)]",
-            expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-          )}
-        >
-          <div data-testid="nav-sub-items-inner" className="overflow-hidden">
-            <div className="ml-[30px] mt-0.5 flex flex-col gap-0.5 py-0.5">
-              {children}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Simple item without children (both collapsed and expanded)
+  // Simple item without children
   return itemElement;
 }
 
+/* ─────────────────────────── NavSectionTitle ─────────────────────── */
+
 function NavSectionTitle({
   children,
-  collapsed = false,
   className,
 }: NavSectionTitleProps) {
   return (
     <div
       className={cn(
-        "overflow-hidden px-3 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-[0.5px] text-muted-foreground whitespace-nowrap transition-[opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)]",
-        collapsed ? "opacity-0" : "opacity-100",
+        "overflow-hidden px-3 pb-1.5 pt-4 text-[11px] font-semibold uppercase tracking-[0.5px] text-muted-foreground whitespace-nowrap opacity-0 transition-[opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)]",
         className,
       )}
     >
@@ -434,32 +475,38 @@ function NavSectionTitle({
   );
 }
 
-function NavDivider({ collapsed = false, className }: NavDividerProps) {
+/* ─────────────────────────── NavDivider ──────────────────────────── */
+
+function NavDivider({ className }: NavDividerProps) {
   return (
     <div
       data-testid="nav-divider"
       className={cn(
-        "my-2 h-px bg-border",
-        collapsed ? "mx-auto w-8" : "w-full",
+        "my-2 h-px bg-border mx-auto w-8",
         className,
       )}
     />
   );
 }
 
+/* ─────────────────────────── Exports ─────────────────────────────── */
+
 export {
   Sidebar,
   SidebarHeader,
   SidebarNav,
   SidebarFooter,
+  SidebarTrigger,
   NavItem,
   NavSubItem,
   NavSectionTitle,
   NavDivider,
+  useSidebarAutoHide,
   type SidebarProps,
   type SidebarHeaderProps,
   type SidebarNavProps,
   type SidebarFooterProps,
+  type SidebarTriggerProps,
   type NavItemProps,
   type NavSubItemProps,
   type NavSectionTitleProps,

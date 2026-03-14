@@ -127,8 +127,8 @@ describe("Toggle", () => {
     render(<Toggle label="BG test" />);
     const toggle = screen.getByRole("switch", { name: "BG test" });
 
-    // Off state: bg-muted
-    expect(toggle.className).toContain("bg-muted");
+    // Off state: bg-input
+    expect(toggle.className).toContain("bg-input");
 
     await user.click(toggle);
     // On state: bg-primary

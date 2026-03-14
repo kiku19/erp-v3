@@ -33,7 +33,7 @@ describe("POST /api/auth/logout", () => {
   });
 
   it("returns 200 and clears the refresh cookie", async () => {
-    const token = await generateRefreshToken("tenant-123");
+    const token = await generateRefreshToken("tenant-123", 7);
     const res = await makeRequest(`refreshToken=${token}`);
 
     expect(res.status).toBe(200);
@@ -43,7 +43,7 @@ describe("POST /api/auth/logout", () => {
   });
 
   it("clears refresh token in the database", async () => {
-    const token = await generateRefreshToken("tenant-123");
+    const token = await generateRefreshToken("tenant-123", 7);
     await makeRequest(`refreshToken=${token}`);
 
     expect(mockPrisma.tenant.update).toHaveBeenCalledWith({
