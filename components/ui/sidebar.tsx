@@ -96,15 +96,17 @@ function SidebarHeader({
         className,
       )}
     >
-      {logo ?? (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
-          <span className="text-sm font-bold text-primary-foreground">E</span>
-        </div>
-      )}
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center">
+        {logo ?? (
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+            <span className="text-sm font-bold text-primary-foreground">E</span>
+          </div>
+        )}
+      </div>
       <span
         className={cn(
-          "text-base font-bold text-foreground whitespace-nowrap transition-[opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)]",
-          collapsed ? "opacity-0" : "opacity-100",
+          "text-base font-bold text-foreground whitespace-nowrap transition-[max-width,opacity] duration-[var(--duration-slow)] ease-[var(--ease-default)] overflow-hidden",
+          collapsed ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100",
         )}
       >
         {brand}

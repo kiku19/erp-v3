@@ -6,6 +6,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
 } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 /**
  * @swagger
@@ -161,7 +162,7 @@ export async function POST(request: Request): Promise<Response> {
 
     response.cookies.set("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
       maxAge: refreshExpiryDays * 24 * 60 * 60,

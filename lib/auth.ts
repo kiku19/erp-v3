@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
+import { env } from "@/lib/env";
 
 const SALT_ROUNDS = 12;
 
@@ -10,15 +11,11 @@ interface AccessTokenPayload {
 }
 
 function getAccessSecret(): Uint8Array {
-  const secret = process.env.JWT_ACCESS_SECRET;
-  if (!secret) throw new Error("JWT_ACCESS_SECRET is not set");
-  return new TextEncoder().encode(secret);
+  return new TextEncoder().encode(env.JWT_ACCESS_SECRET);
 }
 
 function getRefreshSecret(): Uint8Array {
-  const secret = process.env.JWT_REFRESH_SECRET;
-  if (!secret) throw new Error("JWT_REFRESH_SECRET is not set");
-  return new TextEncoder().encode(secret);
+  return new TextEncoder().encode(env.JWT_REFRESH_SECRET);
 }
 
 async function hashPassword(plain: string): Promise<string> {
