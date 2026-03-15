@@ -8,6 +8,7 @@ import {
   ShoppingCart,
   Users,
   BarChart3,
+  FolderKanban,
   Settings,
   LogOut,
   Hexagon,
@@ -119,6 +120,13 @@ export default function DashboardLayout({
             <NavItem
               icon={<BarChart3 />}
               label="Reports"
+            />
+          </Tooltip>
+          <Tooltip content="Project Management" side="right">
+            <NavItem
+              icon={<FolderKanban />}
+              label="Project Management"
+              href="/project-management"
             />
           </Tooltip>
           <NavSectionTitle>System</NavSectionTitle>

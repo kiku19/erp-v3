@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  Search,
   UserPlus,
 } from "lucide-react";
 
@@ -30,8 +31,10 @@ interface OrgTreeNodeData {
   id: string;
   name: string;
   initials?: string;
+  icon?: ReactNode;
   role?: string;
   roleColor?: NodeColor;
+  badge?: { label: string; color: NodeColor };
   expanded?: boolean;
   children?: OrgTreeNodeData[];
 }
@@ -434,7 +437,7 @@ function AddChildInput({
 
 /* ─────────────────────── OrgTreeNode ─────────────────────────────── */
 
-interface OrgTreeNodeProps extends HTMLAttributes<HTMLDivElement> {
+interface OrgTreeNodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "onClick" | "onToggle"> {
   node: OrgTreeNodeData;
   level: number;
   active?: boolean;
@@ -558,8 +561,10 @@ function OrgTreeNode({
           </button>
         )}
 
-        {/* Avatar */}
-        {node.initials && (
+        {/* Icon (takes precedence over avatar) */}
+        {node.icon ? (
+          <span className="shrink-0">{node.icon}</span>
+        ) : node.initials ? (
           <div
             className={cn(
               "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full overflow-hidden",
@@ -575,7 +580,7 @@ function OrgTreeNode({
               {node.initials}
             </span>
           </div>
-        )}
+        ) : null}
 
         {/* Name — or rename input */}
         {renaming ? (
@@ -607,6 +612,23 @@ function OrgTreeNode({
             )}
           >
             {node.role}
+          </span>
+        )}
+
+        {/* Badge (e.g. "Active" status) */}
+        {!renaming && node.badge && (
+          <span
+            data-badge
+            className={cn(
+              "ml-auto shrink-0 rounded-full px-3 py-0.5 text-[10px] font-medium",
+              node.badge.color === "success" && "bg-success-bg text-success",
+              node.badge.color === "warning" && "bg-warning-bg text-warning",
+              node.badge.color === "error" && "bg-error-bg text-destructive",
+              node.badge.color === "info" && "bg-info-bg text-info",
+              node.badge.color === "accent" && "bg-muted text-accent-foreground",
+            )}
+          >
+            {node.badge.label}
           </span>
         )}
       </div>

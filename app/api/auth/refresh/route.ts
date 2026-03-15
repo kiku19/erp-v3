@@ -95,11 +95,24 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
+    // Look up the user for this tenant to include userId in the token
+    const user = await prisma.user.findFirst({
+      where: { tenantId: tenant.id, email: tenant.email, isDeleted: false },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 401 },
+      );
+    }
+
     const accessToken = await generateAccessToken(
       {
         tenantId: tenant.id,
-        email: tenant.email,
-        role: tenant.role,
+        userId: user.id,
+        email: user.email,
+        role: user.role,
       },
       tenant.accessTokenExpiryMins,
     );
@@ -132,6 +145,12 @@ export async function POST(request: Request): Promise<Response> {
           tenantName: tenant.tenantName,
           email: tenant.email,
           role: tenant.role,
+        },
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
         },
       },
       { status: 200 },

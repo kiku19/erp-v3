@@ -12,7 +12,7 @@ import { env } from "@/lib/env";
  * @swagger
  * /api/auth/login:
  *   post:
- *     summary: Authenticate tenant with email and password
+ *     summary: Authenticate user with email and password
  *     requestBody:
  *       required: true
  *       content:
@@ -53,35 +53,23 @@ import { env } from "@/lib/env";
  *                       type: string
  *                     role:
  *                       type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
  *       400:
  *         description: Validation error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 errors:
- *                   type: array
  *       401:
  *         description: Invalid credentials
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
  *       500:
  *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
  */
 export async function POST(request: Request): Promise<Response> {
   try {
@@ -97,24 +85,28 @@ export async function POST(request: Request): Promise<Response> {
 
     const { email, password, rememberMe } = parsed.data;
 
-    const tenant = await prisma.tenant.findFirst({
+    // Look up User first, then get Tenant
+    const user = await prisma.user.findFirst({
       where: { email, isDeleted: false },
+      include: { tenant: true },
     });
 
-    if (!tenant) {
+    if (!user || user.tenant.isDeleted) {
       return NextResponse.json(
         { message: "Invalid email or password" },
         { status: 401 },
       );
     }
 
-    const isPasswordValid = await verifyPassword(password, tenant.password);
+    const isPasswordValid = await verifyPassword(password, user.password);
     if (!isPasswordValid) {
       return NextResponse.json(
         { message: "Invalid email or password" },
         { status: 401 },
       );
     }
+
+    const tenant = user.tenant;
 
     const refreshExpiryDays = rememberMe
       ? tenant.rememberMeExpiryDays
@@ -123,8 +115,9 @@ export async function POST(request: Request): Promise<Response> {
     const accessToken = await generateAccessToken(
       {
         tenantId: tenant.id,
-        email: tenant.email,
-        role: tenant.role,
+        userId: user.id,
+        email: user.email,
+        role: user.role,
       },
       tenant.accessTokenExpiryMins,
     );
@@ -155,6 +148,12 @@ export async function POST(request: Request): Promise<Response> {
           tenantName: tenant.tenantName,
           email: tenant.email,
           role: tenant.role,
+        },
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
         },
       },
       { status: 200 },

@@ -23,5 +23,119 @@ model Tenant {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
+  users                   User[]
+  canvasSnapshots         CanvasSnapshot[]
+
   @@index([email, isDeleted])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String
+  name      String
+  role      String   @default("member")
+  password  String
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  canvasEvents CanvasEvent[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, isDeleted])
+}
+
+model Eps {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  sortOrder   Int       @default(0)
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  nodes       Node[]
+  projects    Project[]
+
+  @@index([tenantId, isDeleted])
+}
+
+model Node {
+  id            String    @id @default(cuid())
+  tenantId      String
+  epsId         String
+  parentNodeId  String?
+  name          String
+  sortOrder     Int       @default(0)
+  isDeleted     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  eps           Eps       @relation(fields: [epsId], references: [id])
+  parentNode    Node?     @relation("NodeToNode", fields: [parentNodeId], references: [id])
+  childNodes    Node[]    @relation("NodeToNode")
+  projects      Project[]
+
+  @@index([tenantId, isDeleted])
+  @@index([epsId, isDeleted])
+  @@index([parentNodeId, isDeleted])
+}
+
+model Project {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  epsId              String
+  nodeId             String?
+  projectId          String
+  name               String
+  status             String    @default("Planning")
+  responsibleManager String?
+  startDate          DateTime?
+  finishDate         DateTime?
+  percentDone        Float     @default(0)
+  budget             Float     @default(0)
+  actualCost         Float     @default(0)
+  eac                Float     @default(0)
+  sortOrder          Int       @default(0)
+  isDeleted          Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  eps                Eps       @relation(fields: [epsId], references: [id])
+  node               Node?     @relation(fields: [nodeId], references: [id])
+
+  @@unique([tenantId, projectId])
+  @@index([tenantId, isDeleted])
+  @@index([epsId, isDeleted])
+  @@index([nodeId, isDeleted])
+}
+
+model CanvasEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  version    Int
+  eventType  String
+  entityType String
+  entityId   String
+  payload    Json
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, version])
+  @@index([tenantId, entityId])
+}
+
+model CanvasSnapshot {
+  id        String   @id @default(cuid())
+  tenantId  String   @unique
+  version   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
 }

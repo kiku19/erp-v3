@@ -16,9 +16,17 @@ interface TenantInfo {
   role: string;
 }
 
+interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface AuthContextValue {
   accessToken: string | null;
   tenant: TenantInfo | null;
+  user: UserInfo | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
@@ -30,6 +38,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function AuthProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [tenant, setTenant] = useState<TenantInfo | null>(null);
+  const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +49,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
           const data = await res.json();
           setAccessToken(data.accessToken);
           setTenant(data.tenant);
+          setUser(data.user ?? null);
         }
       } catch {
         // Refresh failed — user is not authenticated
@@ -66,6 +76,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       setAccessToken(data.accessToken);
       setTenant(data.tenant);
+      setUser(data.user ?? null);
     },
     [],
   );
@@ -78,12 +89,14 @@ function AuthProvider({ children }: { children: ReactNode }) {
     }
     setAccessToken(null);
     setTenant(null);
+    setUser(null);
   }, []);
 
   return (
     <AuthContext value={{
       accessToken,
       tenant,
+      user,
       isAuthenticated: !!accessToken,
       isLoading,
       login,
@@ -102,4 +115,4 @@ function useAuth(): AuthContextValue {
   return context;
 }
 
-export { AuthProvider, useAuth, type AuthContextValue, type TenantInfo };
+export { AuthProvider, useAuth, type AuthContextValue, type TenantInfo, type UserInfo };

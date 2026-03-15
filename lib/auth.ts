@@ -6,6 +6,7 @@ const SALT_ROUNDS = 12;
 
 interface AccessTokenPayload {
   tenantId: string;
+  userId: string;
   email: string;
   role: string;
 }

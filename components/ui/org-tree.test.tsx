@@ -651,3 +651,97 @@ describe("InteractiveOrgTree", () => {
     expect(screen.getByTestId("org-tree-chevron-p2")).toBeDefined();
   });
 });
+
+/* ─────────────────────── Icon prop support ────────────────────────── */
+
+describe("OrgTreeNode with icon prop", () => {
+  it("renders icon instead of avatar when icon prop is provided", () => {
+    const node: OrgTreeNodeData = {
+      id: "eps-1",
+      name: "Energy Division",
+      icon: <span data-testid="custom-icon">IC</span>,
+    };
+    render(
+      <OrgTree>
+        <OrgTreeContent>
+          <OrgTreeNode node={node} level={0} data-testid="node-eps-1" />
+        </OrgTreeContent>
+      </OrgTree>,
+    );
+    expect(screen.getByTestId("custom-icon")).toBeDefined();
+    expect(screen.getByText("Energy Division")).toBeDefined();
+  });
+
+  it("does not render avatar circle when icon is provided", () => {
+    const node: OrgTreeNodeData = {
+      id: "eps-1",
+      name: "Test",
+      initials: "TE",
+      icon: <span data-testid="icon">IC</span>,
+    };
+    render(
+      <OrgTree>
+        <OrgTreeContent>
+          <OrgTreeNode node={node} level={0} data-testid="node-eps-1" />
+        </OrgTreeContent>
+      </OrgTree>,
+    );
+    // Icon should be rendered, not the initials avatar
+    expect(screen.getByTestId("icon")).toBeDefined();
+  });
+
+  it("still renders initials avatar when no icon is provided", () => {
+    const node: OrgTreeNodeData = {
+      id: "p1",
+      name: "Sarah Chen",
+      initials: "SC",
+    };
+    render(
+      <OrgTree>
+        <OrgTreeContent>
+          <OrgTreeNode node={node} level={0} data-testid="node-p1" />
+        </OrgTreeContent>
+      </OrgTree>,
+    );
+    expect(screen.getByText("SC")).toBeDefined();
+  });
+});
+
+/* ─────────────────────── Badge prop support ──────────────────────── */
+
+describe("OrgTreeNode with badge prop", () => {
+  it("renders badge when badge prop is provided", () => {
+    const node: OrgTreeNodeData = {
+      id: "proj-1",
+      name: "Horizon LNG",
+      icon: <span>F</span>,
+      badge: { label: "Active", color: "success" },
+    };
+    render(
+      <OrgTree>
+        <OrgTreeContent>
+          <OrgTreeNode node={node} level={0} data-testid="node-proj-1" />
+        </OrgTreeContent>
+      </OrgTree>,
+    );
+    const badge = screen.getByText("Active");
+    expect(badge).toBeDefined();
+    expect(badge.closest("[data-badge]")!.className).toContain("bg-success-bg");
+  });
+
+  it("does not render badge when badge prop is absent", () => {
+    const node: OrgTreeNodeData = {
+      id: "n1",
+      name: "No Badge",
+      icon: <span>N</span>,
+    };
+    render(
+      <OrgTree>
+        <OrgTreeContent>
+          <OrgTreeNode node={node} level={0} data-testid="node-n1" />
+        </OrgTreeContent>
+      </OrgTree>,
+    );
+    expect(screen.queryByText("Active")).toBeNull();
+  });
+});

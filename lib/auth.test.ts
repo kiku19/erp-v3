@@ -47,6 +47,7 @@ describe("generateAccessToken", () => {
   it("returns a JWT string", async () => {
     const token = await generateAccessToken({
       tenantId: "tenant-123",
+      userId: "user-123",
       email: "admin@acme.com",
       role: "admin",
     }, 15);
@@ -59,6 +60,7 @@ describe("verifyAccessToken", () => {
   it("decodes a valid access token with correct claims", async () => {
     const token = await generateAccessToken({
       tenantId: "tenant-123",
+      userId: "user-123",
       email: "admin@acme.com",
       role: "admin",
     }, 15);
@@ -95,6 +97,7 @@ describe("verifyRefreshToken", () => {
   it("rejects a token signed with access secret", async () => {
     const accessToken = await generateAccessToken({
       tenantId: "tenant-123",
+      userId: "user-123",
       email: "admin@acme.com",
       role: "admin",
     }, 15);
