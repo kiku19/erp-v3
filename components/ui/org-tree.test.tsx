@@ -1,0 +1,653 @@
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import {
+  OrgTree,
+  OrgTreeHeader,
+  OrgTreeContent,
+  OrgTreeNode,
+  OrgTreeShortcuts,
+  OrgTreeFooter,
+  InteractiveOrgTree,
+  insertNodeNear,
+  removeNodeById,
+  type OrgTreeNodeData,
+} from "./org-tree";
+
+afterEach(() => {
+  cleanup();
+});
+
+/* ─────────────────────── OrgTree (container) ─────────────────────── */
+
+describe("OrgTree", () => {
+  it("renders as a vertical flex container with card background", () => {
+    render(
+      <OrgTree data-testid="org-tree">
+        <div>content</div>
+      </OrgTree>,
+    );
+    const el = screen.getByTestId("org-tree");
+    expect(el).toBeDefined();
+    expect(el.className).toContain("flex");
+    expect(el.className).toContain("flex-col");
+    expect(el.className).toContain("bg-card");
+  });
+
+  it("applies right border", () => {
+    render(
+      <OrgTree data-testid="org-tree">
+        <div>content</div>
+      </OrgTree>,
+    );
+    const el = screen.getByTestId("org-tree");
+    expect(el.className).toContain("border-r");
+    expect(el.className).toContain("border-border");
+  });
+
+  it("merges custom className", () => {
+    render(
+      <OrgTree data-testid="org-tree" className="w-80">
+        <div>content</div>
+      </OrgTree>,
+    );
+    const el = screen.getByTestId("org-tree");
+    expect(el.className).toContain("w-80");
+  });
+});
+
+/* ─────────────────────── OrgTreeHeader ───────────────────────────── */
+
+describe("OrgTreeHeader", () => {
+  it("renders the title text", () => {
+    render(<OrgTreeHeader title="Organization Tree" />);
+    expect(screen.getByText("Organization Tree")).toBeDefined();
+  });
+
+  it("renders action button when provided", () => {
+    const onAddPerson = vi.fn();
+    render(
+      <OrgTreeHeader
+        title="Organization Tree"
+        onAddPerson={onAddPerson}
+      />,
+    );
+    const personBtn = screen.getByTestId("org-tree-add-person");
+    expect(personBtn).toBeDefined();
+  });
+
+  it("calls onAddPerson when person button is clicked", async () => {
+    const user = userEvent.setup();
+    const onAddPerson = vi.fn();
+    render(
+      <OrgTreeHeader
+        title="Organization Tree"
+        onAddPerson={onAddPerson}
+      />,
+    );
+    await user.click(screen.getByTestId("org-tree-add-person"));
+    expect(onAddPerson).toHaveBeenCalledOnce();
+  });
+
+  it("has bottom border", () => {
+    render(<OrgTreeHeader title="Test" data-testid="org-tree-header" />);
+    const el = screen.getByTestId("org-tree-header");
+    expect(el.className).toContain("border-b");
+  });
+});
+
+/* ─────────────────────── OrgTreeContent ──────────────────────────── */
+
+describe("OrgTreeContent", () => {
+  it("renders children in scrollable area", () => {
+    render(
+      <OrgTreeContent data-testid="org-tree-content">
+        <div>tree nodes</div>
+      </OrgTreeContent>,
+    );
+    const el = screen.getByTestId("org-tree-content");
+    expect(el.className).toContain("overflow-y-auto");
+    expect(screen.getByText("tree nodes")).toBeDefined();
+  });
+
+  it("takes remaining vertical space with flex-1", () => {
+    render(
+      <OrgTreeContent data-testid="org-tree-content">
+        <div>nodes</div>
+      </OrgTreeContent>,
+    );
+    const el = screen.getByTestId("org-tree-content");
+    expect(el.className).toContain("flex-1");
+  });
+});
+
+/* ─────────────────────── OrgTreeNode ─────────────────────────────── */
+
+describe("OrgTreeNode", () => {
+  const personNode: OrgTreeNodeData = {
+    id: "1",
+    name: "Rajesh Kumar",
+    initials: "RK",
+    role: "CEO",
+    roleColor: "accent",
+  };
+
+  const managerNode: OrgTreeNodeData = {
+    id: "2",
+    name: "Mike Torres",
+    initials: "MT",
+    role: "Manager",
+    roleColor: "info",
+    expanded: true,
+    children: [
+      {
+        id: "3",
+        name: "Lisa Park",
+        initials: "LP",
+        role: "Sr. Eng.",
+      },
+    ],
+  };
+
+  it("renders person node with name, initials, and role", () => {
+    render(<OrgTreeNode node={personNode} level={0} />);
+    expect(screen.getByText("Rajesh Kumar")).toBeDefined();
+    expect(screen.getByText("RK")).toBeDefined();
+    expect(screen.getByText("CEO")).toBeDefined();
+  });
+
+  it("applies indentation based on level", () => {
+    render(<OrgTreeNode node={personNode} level={2} data-testid="tree-node" />);
+    const el = screen.getByTestId("tree-node");
+    expect(el.style.paddingLeft).toBeTruthy();
+  });
+
+  it("shows chevron when node has children", () => {
+    render(<OrgTreeNode node={managerNode} level={0} />);
+    const chevron = screen.getByTestId("org-tree-chevron-2");
+    expect(chevron).toBeDefined();
+  });
+
+  it("does not show chevron for leaf nodes", () => {
+    render(<OrgTreeNode node={personNode} level={0} />);
+    expect(screen.queryByTestId("org-tree-chevron-1")).toBeNull();
+  });
+
+  it("calls onToggle when chevron is clicked", async () => {
+    const user = userEvent.setup();
+    const onToggle = vi.fn();
+    render(<OrgTreeNode node={managerNode} level={0} onToggle={onToggle} />);
+    await user.click(screen.getByTestId("org-tree-chevron-2"));
+    expect(onToggle).toHaveBeenCalledWith("2");
+  });
+
+  it("renders drag handle when draggable", () => {
+    render(<OrgTreeNode node={personNode} level={0} draggable />);
+    expect(screen.getByTestId("org-tree-drag-1")).toBeDefined();
+  });
+
+  it("highlights selected node with active state tokens", () => {
+    render(<OrgTreeNode node={personNode} level={0} active data-testid="tree-node" />);
+    const el = screen.getByTestId("tree-node");
+    expect(el.className).toContain("bg-primary-active");
+    expect(el.className).toContain("text-primary-active-foreground");
+  });
+
+  it("renders children when expanded", () => {
+    render(
+      <OrgTreeNode node={managerNode} level={0}>
+        <OrgTreeNode node={managerNode.children![0]} level={1} />
+      </OrgTreeNode>,
+    );
+    expect(screen.getByText("Lisa Park")).toBeDefined();
+  });
+
+  it("shows rename input when renaming prop is true", () => {
+    render(<OrgTreeNode node={personNode} level={0} renaming />);
+    const input = screen.getByTestId("org-tree-rename-input");
+    expect(input).toBeDefined();
+    expect((input as HTMLInputElement).value).toBe("Rajesh Kumar");
+  });
+
+  it("calls onRenameSubmit with new name on Enter", async () => {
+    const user = userEvent.setup();
+    const onRenameSubmit = vi.fn();
+    render(
+      <OrgTreeNode
+        node={personNode}
+        level={0}
+        renaming
+        onRenameSubmit={onRenameSubmit}
+      />,
+    );
+    const input = screen.getByTestId("org-tree-rename-input");
+    await user.clear(input);
+    await user.type(input, "New Name{Enter}");
+    expect(onRenameSubmit).toHaveBeenCalledWith("1", "New Name");
+  });
+
+  it("calls onRenameCancel on Escape during rename", async () => {
+    const user = userEvent.setup();
+    const onRenameCancel = vi.fn();
+    render(
+      <OrgTreeNode
+        node={personNode}
+        level={0}
+        renaming
+        onRenameCancel={onRenameCancel}
+      />,
+    );
+    const input = screen.getByTestId("org-tree-rename-input");
+    await user.type(input, "{Escape}");
+    expect(onRenameCancel).toHaveBeenCalled();
+  });
+
+  it("shows add-child input when addingChild prop is true", () => {
+    render(<OrgTreeNode node={personNode} level={0} addingChild />);
+    const input = screen.getByTestId("org-tree-add-child-input");
+    expect(input).toBeDefined();
+  });
+
+  it("calls onAddChildSubmit with name on Enter in add-child input", async () => {
+    const user = userEvent.setup();
+    const onAddChildSubmit = vi.fn();
+    render(
+      <OrgTreeNode
+        node={personNode}
+        level={0}
+        addingChild
+        onAddChildSubmit={onAddChildSubmit}
+      />,
+    );
+    const input = screen.getByTestId("org-tree-add-child-input");
+    await user.type(input, "Jane Doe{Enter}");
+    expect(onAddChildSubmit).toHaveBeenCalledWith("1", "Jane Doe");
+  });
+
+  it("calls onAddChildCancel on Escape in add-child input", async () => {
+    const user = userEvent.setup();
+    const onAddChildCancel = vi.fn();
+    render(
+      <OrgTreeNode
+        node={personNode}
+        level={0}
+        addingChild
+        onAddChildCancel={onAddChildCancel}
+      />,
+    );
+    const input = screen.getByTestId("org-tree-add-child-input");
+    await user.type(input, "{Escape}");
+    expect(onAddChildCancel).toHaveBeenCalled();
+  });
+
+  it("shows inside-drop indicator when dropPosition is inside", () => {
+    render(<OrgTreeNode node={personNode} level={0} dragOver dropPosition="inside" data-testid="tree-node" />);
+    const el = screen.getByTestId("tree-node");
+    expect(el.className).toContain("ring-2");
+    expect(el.className).toContain("ring-ring");
+  });
+
+  it("shows before-drop indicator when dropPosition is before", () => {
+    render(<OrgTreeNode node={personNode} level={0} dragOver dropPosition="before" data-testid="tree-node" />);
+    const el = screen.getByTestId("tree-node");
+    expect(el.querySelector("[data-testid='drop-line-before']")).toBeDefined();
+  });
+
+  it("shows after-drop indicator when dropPosition is after", () => {
+    render(<OrgTreeNode node={personNode} level={0} dragOver dropPosition="after" data-testid="tree-node" />);
+    const el = screen.getByTestId("tree-node");
+    expect(el.querySelector("[data-testid='drop-line-after']")).toBeDefined();
+  });
+});
+
+/* ─────────────────────── OrgTreeShortcuts ────────────────────────── */
+
+describe("OrgTreeShortcuts", () => {
+  const shortcuts = [
+    { key: "Ctrl+U", label: "User" },
+    { key: "F2", label: "Rename" },
+  ];
+
+  it("renders all shortcut items", () => {
+    render(<OrgTreeShortcuts shortcuts={shortcuts} />);
+    expect(screen.getByText("Ctrl+U")).toBeDefined();
+    expect(screen.getByText("User")).toBeDefined();
+    expect(screen.getByText("F2")).toBeDefined();
+    expect(screen.getByText("Rename")).toBeDefined();
+  });
+
+  it("has muted background", () => {
+    render(<OrgTreeShortcuts shortcuts={shortcuts} data-testid="org-tree-shortcuts" />);
+    const el = screen.getByTestId("org-tree-shortcuts");
+    expect(el.className).toContain("bg-muted");
+  });
+});
+
+/* ─────────────────────── OrgTreeFooter ───────────────────────────── */
+
+describe("OrgTreeFooter", () => {
+  const stats = [
+    { label: "People", value: 30 },
+    { label: "Managers", value: 5, color: "success" as const },
+  ];
+
+  it("renders all stat items", () => {
+    render(<OrgTreeFooter stats={stats} />);
+    expect(screen.getByText("30")).toBeDefined();
+    expect(screen.getByText("People")).toBeDefined();
+    expect(screen.getByText("5")).toBeDefined();
+    expect(screen.getByText("Managers")).toBeDefined();
+  });
+
+  it("has top border", () => {
+    render(<OrgTreeFooter stats={stats} data-testid="org-tree-footer" />);
+    const el = screen.getByTestId("org-tree-footer");
+    expect(el.className).toContain("border-t");
+  });
+
+  it("applies color to value when specified", () => {
+    render(<OrgTreeFooter stats={stats} />);
+    const successValue = screen.getByText("5");
+    expect(successValue.className).toContain("text-success");
+  });
+});
+
+/* ─────────────────────── InteractiveOrgTree ──────────────────────── */
+
+const sampleTree: OrgTreeNodeData[] = [
+  {
+    id: "ceo",
+    name: "Rajesh Kumar",
+    initials: "RK",
+    role: "CEO",
+    roleColor: "accent",
+    expanded: true,
+    children: [
+      {
+        id: "cto",
+        name: "Sarah Chen",
+        initials: "SC",
+        role: "CTO",
+        roleColor: "accent",
+        expanded: true,
+        children: [
+          {
+            id: "p1",
+            name: "Lisa Park",
+            initials: "LP",
+            role: "Sr. Eng.",
+          },
+        ],
+      },
+      {
+        id: "p2",
+        name: "Alex Rivera",
+        initials: "AR",
+        role: "Engineer",
+      },
+    ],
+  },
+];
+
+describe("InteractiveOrgTree", () => {
+  it("renders the full tree", () => {
+    render(<InteractiveOrgTree data={sampleTree} />);
+    expect(screen.getByText("Rajesh Kumar")).toBeDefined();
+    expect(screen.getByText("Sarah Chen")).toBeDefined();
+    expect(screen.getByText("Lisa Park")).toBeDefined();
+    expect(screen.getByText("Alex Rivera")).toBeDefined();
+  });
+
+  it("toggles a node with children on click", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    // Sarah Chen is expanded, Lisa Park visible
+    expect(screen.getByText("Lisa Park")).toBeDefined();
+    // Click Sarah Chen to collapse
+    await user.click(screen.getByText("Sarah Chen"));
+    expect(screen.queryByText("Lisa Park")).toBeNull();
+    // Click again to expand
+    await user.click(screen.getByText("Sarah Chen"));
+    expect(screen.getByText("Lisa Park")).toBeDefined();
+  });
+
+  it("selects a node on click with active state tokens", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    await user.click(screen.getByText("Alex Rivera"));
+    const row = screen.getByTestId("org-tree-row-p2");
+    expect(row.className).toContain("bg-primary-active");
+    expect(row.className).toContain("text-primary-active-foreground");
+  });
+
+  it("enters rename mode on F2 after selecting a node", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    await user.click(screen.getByText("Alex Rivera"));
+    await user.keyboard("{F2}");
+    const input = screen.getByTestId("org-tree-rename-input");
+    expect(input).toBeDefined();
+    expect((input as HTMLInputElement).value).toBe("Alex Rivera");
+  });
+
+  it("renames a node on Enter after F2", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    await user.click(screen.getByText("Alex Rivera"));
+    await user.keyboard("{F2}");
+    const input = screen.getByTestId("org-tree-rename-input");
+    await user.clear(input);
+    await user.type(input, "Alex R. Updated{Enter}");
+    expect(screen.getByText("Alex R. Updated")).toBeDefined();
+    expect(screen.queryByTestId("org-tree-rename-input")).toBeNull();
+  });
+
+  it("cancels rename on Escape", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    await user.click(screen.getByText("Alex Rivera"));
+    await user.keyboard("{F2}");
+    await user.type(screen.getByTestId("org-tree-rename-input"), "{Escape}");
+    expect(screen.getByText("Alex Rivera")).toBeDefined();
+    expect(screen.queryByTestId("org-tree-rename-input")).toBeNull();
+  });
+
+  it("adds a person child with Ctrl+U on any selected node", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    // Select Alex Rivera (a leaf node — should still allow adding a report)
+    await user.click(screen.getByText("Alex Rivera"));
+    await user.keyboard("{Control>}u{/Control}");
+    const input = screen.getByTestId("org-tree-add-child-input");
+    expect(input).toBeDefined();
+    await user.type(input, "New Report{Enter}");
+    // New person should appear as child of Alex Rivera
+    expect(screen.getByText("New Report")).toBeDefined();
+    expect(screen.queryByTestId("org-tree-add-child-input")).toBeNull();
+  });
+
+  it("cancels add-child on Escape", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    await user.click(screen.getByText("Alex Rivera"));
+    await user.keyboard("{Control>}u{/Control}");
+    await user.type(screen.getByTestId("org-tree-add-child-input"), "{Escape}");
+    expect(screen.queryByTestId("org-tree-add-child-input")).toBeNull();
+  });
+
+  it("drops a user onto another user, making the target a manager", () => {
+    const onTreeChange = vi.fn();
+    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+
+    // Drag p1 (Lisa Park) onto p2 (Alex Rivera)
+    const dragSource = screen.getByTestId("org-tree-row-p1");
+    const dropTarget = screen.getByTestId("org-tree-row-p2");
+
+    fireEvent.dragStart(dragSource, {
+      dataTransfer: { setData: vi.fn(), effectAllowed: "" },
+    });
+    fireEvent.dragOver(dropTarget, {
+      dataTransfer: { types: ["text/plain"] },
+    });
+    fireEvent.drop(dropTarget, {
+      dataTransfer: { getData: () => "p1" },
+    });
+
+    expect(onTreeChange).toHaveBeenCalled();
+    const newTree = onTreeChange.mock.calls[0][0] as OrgTreeNodeData[];
+    // Alex Rivera should now have Lisa Park as a child
+    const findNode = (nodes: OrgTreeNodeData[], id: string): OrgTreeNodeData | null => {
+      for (const n of nodes) {
+        if (n.id === id) return n;
+        if (n.children) {
+          const f = findNode(n.children, id);
+          if (f) return f;
+        }
+      }
+      return null;
+    };
+    const alex = findNode(newTree, "p2");
+    expect(alex?.children?.some((c) => c.id === "p1")).toBe(true);
+    // Lisa Park should be removed from Sarah Chen's children
+    const sarah = findNode(newTree, "cto");
+    expect(sarah?.children?.some((c) => c.id === "p1")).toBe(false);
+  });
+
+  it("does not allow dropping a node onto itself", () => {
+    const onTreeChange = vi.fn();
+    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+
+    const row = screen.getByTestId("org-tree-row-p2");
+    fireEvent.dragStart(row, {
+      dataTransfer: { setData: vi.fn(), effectAllowed: "" },
+    });
+    fireEvent.drop(row, {
+      dataTransfer: { getData: () => "p2" },
+    });
+    expect(onTreeChange).not.toHaveBeenCalled();
+  });
+
+  it("does not allow dropping a parent into its own descendant", () => {
+    const onTreeChange = vi.fn();
+    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+
+    const dragSource = screen.getByTestId("org-tree-row-cto");
+    const dropTarget = screen.getByTestId("org-tree-row-p1");
+    fireEvent.dragStart(dragSource, {
+      dataTransfer: { setData: vi.fn(), effectAllowed: "" },
+    });
+    fireEvent.drop(dropTarget, {
+      dataTransfer: { getData: () => "cto" },
+    });
+    expect(onTreeChange).not.toHaveBeenCalled();
+  });
+
+  it("calls onTreeChange callback on rename", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn();
+    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    await user.click(screen.getByText("Alex Rivera"));
+    await user.keyboard("{F2}");
+    const input = screen.getByTestId("org-tree-rename-input");
+    await user.clear(input);
+    await user.type(input, "Renamed{Enter}");
+    expect(onTreeChange).toHaveBeenCalled();
+  });
+
+  it("reorders via insertNodeNear — before target", () => {
+    // Tree: CEO > [CTO > [p1], p2]
+    // Move p2 before CTO → CEO > [p2, CTO > [p1]]
+    const { nodes: afterRemove, removed } = removeNodeById(sampleTree, "p2");
+    expect(removed).not.toBeNull();
+    const result = insertNodeNear(afterRemove, "cto", removed!, "before");
+    const ceoChildren = result[0].children!;
+    expect(ceoChildren[0].id).toBe("p2");
+    expect(ceoChildren[1].id).toBe("cto");
+  });
+
+  it("reorders via insertNodeNear — after target", () => {
+    // Tree: CEO > [CTO > [p1], p2]
+    // Move CTO after p2 → CEO > [p2, CTO > [p1]]
+    const { nodes: afterRemove, removed } = removeNodeById(sampleTree, "cto");
+    expect(removed).not.toBeNull();
+    const result = insertNodeNear(afterRemove, "p2", removed!, "after");
+    const ceoChildren = result[0].children!;
+    expect(ceoChildren[0].id).toBe("p2");
+    expect(ceoChildren[1].id).toBe("cto");
+  });
+
+  it("reorders via insertNodeNear — into a nested level", () => {
+    // Move p2 before p1 (inside CTO's children)
+    const { nodes: afterRemove, removed } = removeNodeById(sampleTree, "p2");
+    expect(removed).not.toBeNull();
+    const result = insertNodeNear(afterRemove, "p1", removed!, "before");
+    const ctoChildren = result[0].children![0].children!;
+    expect(ctoChildren[0].id).toBe("p2");
+    expect(ctoChildren[1].id).toBe("p1");
+  });
+
+  it("adds a root-level person when nothing is selected", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn();
+    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    // No selection — click header add button
+    await user.click(screen.getByTestId("org-tree-add-person"));
+    const input = screen.getByTestId("org-tree-add-child-input");
+    expect(input).toBeDefined();
+    await user.type(input, "New Root User{Enter}");
+    expect(screen.getByText("New Root User")).toBeDefined();
+    // Should be at root level
+    expect(onTreeChange).toHaveBeenCalled();
+    const newTree = onTreeChange.mock.calls[0][0] as OrgTreeNodeData[];
+    expect(newTree[newTree.length - 1].name).toBe("New Root User");
+  });
+
+  it("adds a person after the selected user as a sibling", async () => {
+    const user = userEvent.setup();
+    const onTreeChange = vi.fn();
+    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    // Select Lisa Park (child of CTO)
+    await user.click(screen.getByText("Lisa Park"));
+    // Click header add button — should add after Lisa Park at same level
+    await user.click(screen.getByTestId("org-tree-add-person"));
+    const input = screen.getByTestId("org-tree-add-child-input");
+    await user.type(input, "New Colleague{Enter}");
+    expect(screen.getByText("New Colleague")).toBeDefined();
+    // Should be a sibling of Lisa Park under CTO
+    expect(onTreeChange).toHaveBeenCalled();
+    const newTree = onTreeChange.mock.calls[0][0] as OrgTreeNodeData[];
+    const findNode = (nodes: OrgTreeNodeData[], id: string): OrgTreeNodeData | null => {
+      for (const n of nodes) {
+        if (n.id === id) return n;
+        if (n.children) { const f = findNode(n.children, id); if (f) return f; }
+      }
+      return null;
+    };
+    const cto = findNode(newTree, "cto");
+    // Lisa Park at index 0, new person at index 1
+    expect(cto?.children?.[0].id).toBe("p1");
+    expect(cto?.children?.[1].name).toBe("New Colleague");
+  });
+
+  it("cancels add-person on Escape", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    await user.click(screen.getByTestId("org-tree-add-person"));
+    const input = screen.getByTestId("org-tree-add-child-input");
+    await user.type(input, "{Escape}");
+    expect(screen.queryByTestId("org-tree-add-child-input")).toBeNull();
+  });
+
+  it("newly created child becomes visible (parent auto-expanded)", async () => {
+    const user = userEvent.setup();
+    render(<InteractiveOrgTree data={sampleTree} />);
+    // Alex Rivera has no children (leaf)
+    await user.click(screen.getByText("Alex Rivera"));
+    await user.keyboard("{Control>}u{/Control}");
+    await user.type(screen.getByTestId("org-tree-add-child-input"), "First Report{Enter}");
+    // Should be visible — parent auto-expanded
+    expect(screen.getByText("First Report")).toBeDefined();
+    // Alex Rivera should now show a chevron (has children)
+    expect(screen.getByTestId("org-tree-chevron-p2")).toBeDefined();
+  });
+});
