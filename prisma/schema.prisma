@@ -104,11 +104,12 @@ model Project {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  eps                Eps             @relation(fields: [epsId], references: [id])
-  node               Node?           @relation(fields: [nodeId], references: [id])
-  plannerEvents      PlannerEvent[]
-  wbsNodes           WbsNode[]
-  activities         Activity[]
+  eps                    Eps                    @relation(fields: [epsId], references: [id])
+  node                   Node?                  @relation(fields: [nodeId], references: [id])
+  plannerEvents          PlannerEvent[]
+  wbsNodes               WbsNode[]
+  activities             Activity[]
+  activityRelationships  ActivityRelationship[]
 
   @@unique([tenantId, projectId])
   @@index([tenantId, isDeleted])
@@ -186,6 +187,8 @@ model Activity {
 
   project         Project   @relation(fields: [projectId], references: [id])
   wbsNode         WbsNode   @relation(fields: [wbsNodeId], references: [id])
+  predecessorRels ActivityRelationship[] @relation("SuccessorRels")
+  successorRels   ActivityRelationship[] @relation("PredecessorRels")
 
   @@unique([tenantId, projectId, activityId])
   @@index([tenantId, projectId, isDeleted])
@@ -220,4 +223,26 @@ model PlannerSnapshot {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, projectId])
+}
+
+model ActivityRelationship {
+  id               String   @id @default(cuid())
+  tenantId         String
+  projectId        String
+  predecessorId    String
+  successorId      String
+  relationshipType String   @default("FS")
+  lag              Int      @default(0)
+  isDeleted        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id])
+  predecessor Activity @relation("PredecessorRels", fields: [predecessorId], references: [id])
+  successor   Activity @relation("SuccessorRels", fields: [successorId], references: [id])
+
+  @@unique([tenantId, predecessorId, successorId])
+  @@index([tenantId, projectId, isDeleted])
+  @@index([predecessorId, isDeleted])
+  @@index([successorId, isDeleted])
 }

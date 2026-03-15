@@ -30,6 +30,7 @@ interface EpsTreePanelHandle {
 interface EpsTreePanelProps extends DragDropCallbacks {
   treeData: EpsTreeNode[];
   selectedId: string | null;
+  loading?: boolean;
   onSelect: (id: string, type: "eps" | "node" | "project") => void;
   onDoubleClick?: (id: string, type: "eps" | "node" | "project") => void;
   stats: { nodes: number; projects: number; active: number };
@@ -193,6 +194,7 @@ function findEpsContaining(nodes: EpsTreeNode[], id: string): string | null {
 const EpsTreePanel = forwardRef<EpsTreePanelHandle, EpsTreePanelProps>(function EpsTreePanel({
   treeData,
   selectedId,
+  loading,
   onSelect,
   onDoubleClick,
   stats,
@@ -457,7 +459,7 @@ const EpsTreePanel = forwardRef<EpsTreePanelHandle, EpsTreePanelProps>(function 
           ? renderNodes(orgTreeData, 0)
           : !addingEps && (
             <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
-              No EPS data available
+              {loading ? "Loading..." : "No EPS data available"}
             </div>
           )}
         {addingEps && onAddEpsSubmit && onAddEpsCancel && (

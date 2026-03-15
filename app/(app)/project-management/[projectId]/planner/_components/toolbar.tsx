@@ -8,6 +8,9 @@ import {
   IndentDecrease,
   Undo2,
   Redo2,
+  Link2,
+  Check,
+  X,
   Filter,
   ListTree,
   Columns3,
@@ -17,6 +20,7 @@ import {
   Maximize2,
   Search,
 } from "lucide-react";
+import type { LinkModeStatus } from "./types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -26,11 +30,20 @@ interface ToolbarProps {
   onAddWbs?: () => void;
   onIndent?: () => void;
   onOutdent?: () => void;
+  indentDisabled?: boolean;
+  outdentDisabled?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  undoDisabled?: boolean;
+  redoDisabled?: boolean;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   onZoomFit?: () => void;
+  linkMode?: LinkModeStatus;
+  onToggleLinkMode?: () => void;
+  onConfirmLink?: () => void;
+  onCancelLink?: () => void;
+  linkChainLength?: number;
 }
 
 export function Toolbar({
@@ -39,11 +52,20 @@ export function Toolbar({
   onAddWbs,
   onIndent,
   onOutdent,
+  indentDisabled,
+  outdentDisabled,
   onUndo,
   onRedo,
+  undoDisabled,
+  redoDisabled,
   onZoomIn,
   onZoomOut,
   onZoomFit,
+  linkMode = "idle",
+  onToggleLinkMode,
+  onConfirmLink,
+  onCancelLink,
+  linkChainLength = 0,
 }: ToolbarProps) {
   return (
     <div className="flex items-center justify-between px-4 h-11 border-b border-border bg-card shrink-0">
@@ -69,11 +91,11 @@ export function Toolbar({
 
         {/* Indent Group */}
         <div className="flex items-center gap-0.5">
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onIndent} title="Indent selected activity (make it a child)">
-            <IndentIncrease size={16} />
-          </Button>
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onOutdent} title="Outdent selected activity (move it up a level)">
+          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onOutdent} disabled={outdentDisabled} title="Outdent selected item (move it up a level)">
             <IndentDecrease size={16} />
+          </Button>
+          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onIndent} disabled={indentDisabled} title="Indent selected item (make it a child)">
+            <IndentIncrease size={16} />
           </Button>
         </div>
 
@@ -81,12 +103,51 @@ export function Toolbar({
 
         {/* Undo Redo */}
         <div className="flex items-center gap-0.5">
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onUndo} title="Undo last action (Ctrl+Z)">
+          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onUndo} disabled={undoDisabled} title="Undo last action (Ctrl+Z)">
             <Undo2 size={16} />
           </Button>
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onRedo} title="Redo last undone action (Ctrl+Y)">
+          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onRedo} disabled={redoDisabled} title="Redo last undone action (Ctrl+Y)">
             <Redo2 size={16} />
           </Button>
+        </div>
+
+        <div className="w-px h-6 bg-border" />
+
+        {/* Link Group */}
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant={linkMode === "linking" ? "default" : "ghost"}
+            size="sm"
+            className="h-7 px-2.5 text-[12px]"
+            onClick={onToggleLinkMode}
+            title="Link activities: click in sequence to build dependency chains (Shift+click for parallel)"
+          >
+            <Link2 size={14} />
+            Link
+          </Button>
+          {linkMode === "linking" && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-success"
+                onClick={onConfirmLink}
+                disabled={linkChainLength < 2}
+                title="Confirm link chain"
+              >
+                <Check size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive"
+                onClick={onCancelLink}
+                title="Cancel link chain"
+              >
+                <X size={16} />
+              </Button>
+            </>
+          )}
         </div>
 
         <div className="w-px h-6 bg-border" />

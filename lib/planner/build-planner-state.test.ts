@@ -11,6 +11,9 @@ function createMockPrisma() {
     activity: {
       findMany: vi.fn().mockResolvedValue([]),
     },
+    activityRelationship: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
   };
 }
 
@@ -31,7 +34,7 @@ describe("buildPlannerState", () => {
       PROJECT_ID,
     );
 
-    expect(result).toEqual({ wbsNodes: [], activities: [] });
+    expect(result).toEqual({ wbsNodes: [], activities: [], relationships: [] });
   });
 
   it("queries with correct tenant and project filters", async () => {

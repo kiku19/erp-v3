@@ -6,6 +6,10 @@ const mockAuth = { tenantId: "t-1", userId: "u-1", email: "a@b.com", role: "admi
 const mockTx = {
   plannerSnapshot: { findUnique: vi.fn(), upsert: vi.fn() },
   plannerEvent: { create: vi.fn() },
+  activity: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
+  wbsNode: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
+  activityRelationship: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
+  project: { update: vi.fn().mockResolvedValue({}) },
 };
 
 const mockPrisma = {

@@ -1,20 +1,40 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type {
   WbsNodeData,
   ActivityData,
+  ActivityRelationshipData,
   SpreadsheetRow,
   PlannerEventInput,
+  LinkModeStatus,
+  LinkChainEntry,
 } from "./types";
+import { forwardPass } from "@/lib/planner/forward-pass";
 
 /* ─────────────────────── Types ───────────────────────────────────── */
 
 interface UseWbsTreeOptions {
   initialWbsNodes: WbsNodeData[];
   initialActivities: ActivityData[];
+  initialRelationships?: ActivityRelationshipData[];
   projectId: string;
+  projectStartDate: string | null;
   queueEvent: (event: PlannerEventInput) => void;
+}
+
+type DropPosition = "before" | "inside" | "after";
+
+type AddingType = "wbs" | "activity" | "milestone";
+
+interface AddingState {
+  type: AddingType;
+  /** Pre-computed context for the new item */
+  parentWbsId: string | null;
+  targetWbsId: string | null;
+  depth: number;
+  /** Index in flatRows where the adding row should appear */
+  insertAfterIndex: number;
 }
 
 interface UseWbsTreeReturn {
@@ -22,6 +42,15 @@ interface UseWbsTreeReturn {
   selectedRowId: string | null;
   wbsNodes: WbsNodeData[];
   activities: ActivityData[];
+  relationships: ActivityRelationshipData[];
+  linkMode: LinkModeStatus;
+  linkChain: LinkChainEntry[];
+  canIndent: boolean;
+  canOutdent: boolean;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
   toggleExpand: (id: string) => void;
   expandAll: () => void;
   collapseAll: () => void;
@@ -29,7 +58,19 @@ interface UseWbsTreeReturn {
   addWbs: () => void;
   addActivity: () => void;
   addMilestone: () => void;
+  commitAdd: (name: string) => void;
+  cancelAdd: () => void;
   updateRow: (id: string, fields: Record<string, unknown>) => void;
+  moveWbs: (sourceId: string, targetId: string, position: DropPosition) => void;
+  moveRow: (sourceId: string, targetId: string, position: DropPosition) => void;
+  indentWbs: () => void;
+  outdentWbs: () => void;
+  enterLinkMode: () => void;
+  exitLinkMode: () => void;
+  addToLinkChain: (activityId: string, isParallel: boolean) => void;
+  removeFromLinkChain: (activityId: string) => void;
+  commitLinkChain: () => void;
+  updateProjectDates: (startDate: string, finishDate: string) => void;
 }
 
 /* ─────────────────────── Flatten logic ───────────────────────────── */
@@ -38,8 +79,20 @@ function flattenTree(
   wbsNodes: WbsNodeData[],
   activities: ActivityData[],
   expandedIds: Set<string>,
+  relationships?: ActivityRelationshipData[],
 ): SpreadsheetRow[] {
   const rows: SpreadsheetRow[] = [];
+
+  // Build predecessor display map: successorId → list of predecessor activityIds
+  const predDisplayMap = new Map<string, string[]>();
+  if (relationships) {
+    const actIdMap = new Map(activities.map((a) => [a.id, a.activityId]));
+    for (const rel of relationships) {
+      if (!predDisplayMap.has(rel.successorId)) predDisplayMap.set(rel.successorId, []);
+      const predLabel = actIdMap.get(rel.predecessorId) ?? rel.predecessorId;
+      predDisplayMap.get(rel.successorId)!.push(predLabel);
+    }
+  }
 
   // Build lookup maps
   const childWbsMap = new Map<string | null, WbsNodeData[]>();
@@ -81,6 +134,8 @@ function flattenTree(
         isExpanded,
         hasChildren,
         wbsCode: node.wbsCode,
+        icon: node.icon,
+        iconColor: node.iconColor,
       });
 
       if (isExpanded) {
@@ -89,6 +144,7 @@ function flattenTree(
 
         // Then activities under this WBS (only direct, not under child WBS)
         for (const act of nodeActivities) {
+          const preds = predDisplayMap.get(act.id);
           rows.push({
             id: act.id,
             type: act.activityType === "milestone" ? "milestone" : "activity",
@@ -102,6 +158,7 @@ function flattenTree(
             finishDate: act.finishDate,
             totalFloat: act.totalFloat,
             percentComplete: act.percentComplete,
+            predecessors: preds ? preds.join(", ") : undefined,
           });
         }
       }
@@ -154,36 +211,188 @@ function generateMilestoneId(activities: ActivityData[]): string {
   return `M${maxNum + 1}`;
 }
 
+/* ─────────────────────── wbsCode recalculation ────────────────────── */
+
+function recalculateAllWbsCodes(nodes: WbsNodeData[]): WbsNodeData[] {
+  const childMap = new Map<string | null, WbsNodeData[]>();
+  for (const n of nodes) {
+    if (!childMap.has(n.parentId)) childMap.set(n.parentId, []);
+    childMap.get(n.parentId)!.push(n);
+  }
+  for (const children of childMap.values()) {
+    children.sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  const codeMap = new Map<string, string>();
+
+  function walk(parentId: string | null, parentCode: string) {
+    const children = childMap.get(parentId) ?? [];
+    children.forEach((child, idx) => {
+      const code = parentCode ? `${parentCode}.${idx + 1}` : String(idx + 1);
+      codeMap.set(child.id, code);
+      walk(child.id, code);
+    });
+  }
+
+  walk(null, "");
+
+  return nodes.map((n) => ({
+    ...n,
+    wbsCode: codeMap.get(n.id) ?? n.wbsCode,
+  }));
+}
+
 /* ─────────────────────── Hook ───────────────────────────────────── */
+
+const EMPTY_RELATIONSHIPS: ActivityRelationshipData[] = [];
 
 function useWbsTree({
   initialWbsNodes,
   initialActivities,
+  initialRelationships = EMPTY_RELATIONSHIPS,
   projectId,
+  projectStartDate,
   queueEvent,
 }: UseWbsTreeOptions): UseWbsTreeReturn {
   const [wbsNodes, setWbsNodes] = useState<WbsNodeData[]>(initialWbsNodes);
   const [activities, setActivities] = useState<ActivityData[]>(initialActivities);
+  const [relationships, setRelationships] = useState<ActivityRelationshipData[]>(initialRelationships);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(initialWbsNodes.map((n) => n.id)),
   );
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [addingState, setAddingState] = useState<AddingState | null>(null);
+  const [linkMode, setLinkMode] = useState<LinkModeStatus>("idle");
+  const [linkChain, setLinkChain] = useState<LinkChainEntry[]>([]);
 
-  /* ── Sync when initial data arrives from API ── */
+  /* ── Undo/Redo history (delta-based) ── */
+
+  type ItemMap<T extends { id: string }> = Map<string, T>;
+
+  interface Patch {
+    wbs: { added: WbsNodeData[]; removed: WbsNodeData[]; modified: { before: WbsNodeData; after: WbsNodeData }[] };
+    act: { added: ActivityData[]; removed: ActivityData[]; modified: { before: ActivityData; after: ActivityData }[] };
+  }
+
+  function computePatch<T extends { id: string }>(
+    oldArr: T[],
+    newArr: T[],
+  ): { added: T[]; removed: T[]; modified: { before: T; after: T }[] } {
+    const oldMap = new Map(oldArr.map((item) => [item.id, item]));
+    const newMap = new Map(newArr.map((item) => [item.id, item]));
+    const added: T[] = [];
+    const removed: T[] = [];
+    const modified: { before: T; after: T }[] = [];
+
+    for (const [id, item] of newMap) {
+      const old = oldMap.get(id);
+      if (!old) { added.push(item); }
+      else if (old !== item) { modified.push({ before: old, after: item }); }
+    }
+    for (const [id, item] of oldMap) {
+      if (!newMap.has(id)) { removed.push(item); }
+    }
+    return { added, removed, modified };
+  }
+
+  function applyPatch<T extends { id: string }>(
+    arr: T[],
+    patch: { added: T[]; removed: T[]; modified: { before: T; after: T }[] },
+    forward: boolean,
+  ): T[] {
+    const removeIds = new Set((forward ? patch.removed : patch.added).map((i) => i.id));
+    let result = arr.filter((item) => !removeIds.has(item.id));
+    const addItems = forward ? patch.added : patch.removed;
+    result = [...result, ...addItems];
+    const modMap = new Map(
+      patch.modified.map((m) => [m.before.id, forward ? m.after : m.before]),
+    );
+    if (modMap.size > 0) {
+      result = result.map((item) => modMap.get(item.id) ?? item);
+    }
+    return result;
+  }
+
+  const baseStateRef = useRef<{ wbsNodes: WbsNodeData[]; activities: ActivityData[] }>({
+    wbsNodes: initialWbsNodes,
+    activities: initialActivities,
+  });
+  const patchesRef = useRef<Patch[]>([]);
+  const historyIndexRef = useRef(0); // 0 = base state, N = after N patches applied
+  const prevStateRef = useRef<{ wbsNodes: WbsNodeData[]; activities: ActivityData[] }>({
+    wbsNodes: initialWbsNodes,
+    activities: initialActivities,
+  });
+  const isRestoringRef = useRef(false);
+  const [historyTick, setHistoryTick] = useState(0);
+
+  /* ── Sync when initial data arrives from API (also resets history) ── */
   useEffect(() => {
+    isRestoringRef.current = true;
     setWbsNodes(initialWbsNodes);
-    setExpandedIds(new Set(initialWbsNodes.map((n) => n.id)));
-  }, [initialWbsNodes]);
-
-  useEffect(() => {
     setActivities(initialActivities);
-  }, [initialActivities]);
+    setRelationships(initialRelationships);
+    setExpandedIds(new Set(initialWbsNodes.map((n) => n.id)));
+    baseStateRef.current = { wbsNodes: initialWbsNodes, activities: initialActivities };
+    prevStateRef.current = { wbsNodes: initialWbsNodes, activities: initialActivities };
+    patchesRef.current = [];
+    historyIndexRef.current = 0;
+    setHistoryTick((t) => t + 1);
+  }, [initialWbsNodes, initialActivities, initialRelationships]);
 
-  /* ── Memoized flattened rows ── */
-  const flatRows = useMemo(
-    () => flattenTree(wbsNodes, activities, expandedIds),
-    [wbsNodes, activities, expandedIds],
-  );
+  /* ── Auto-push delta on data changes ── */
+  useEffect(() => {
+    if (isRestoringRef.current) {
+      isRestoringRef.current = false;
+      prevStateRef.current = { wbsNodes, activities };
+      return;
+    }
+    const prev = prevStateRef.current;
+    if (prev.wbsNodes === wbsNodes && prev.activities === activities) return;
+
+    const patch: Patch = {
+      wbs: computePatch(prev.wbsNodes, wbsNodes),
+      act: computePatch(prev.activities, activities),
+    };
+
+    // Skip empty patches (no actual data change)
+    if (
+      patch.wbs.added.length === 0 && patch.wbs.removed.length === 0 && patch.wbs.modified.length === 0 &&
+      patch.act.added.length === 0 && patch.act.removed.length === 0 && patch.act.modified.length === 0
+    ) {
+      prevStateRef.current = { wbsNodes, activities };
+      return;
+    }
+
+    // Truncate redo branch and push new patch
+    patchesRef.current = patchesRef.current.slice(0, historyIndexRef.current);
+    patchesRef.current.push(patch);
+    historyIndexRef.current = patchesRef.current.length;
+    prevStateRef.current = { wbsNodes, activities };
+    setHistoryTick((t) => t + 1);
+  }, [wbsNodes, activities]);
+
+  /* ── Memoized flattened rows (with optional adding placeholder) ── */
+  const flatRows = useMemo(() => {
+    const rows = flattenTree(wbsNodes, activities, expandedIds, relationships);
+
+    if (addingState) {
+      const addingRow: SpreadsheetRow = {
+        id: "__adding__",
+        type: addingState.type === "wbs" ? "wbs" : addingState.type === "milestone" ? "milestone" : "activity",
+        depth: addingState.depth,
+        name: "",
+        isExpanded: false,
+        hasChildren: false,
+        isAdding: true,
+      };
+      // Insert after the computed index
+      const insertIdx = Math.min(addingState.insertAfterIndex + 1, rows.length);
+      rows.splice(insertIdx, 0, addingRow);
+    }
+
+    return rows;
+  }, [wbsNodes, activities, expandedIds, addingState, relationships]);
 
   /* ── Expand/Collapse ── */
   const toggleExpand = useCallback((id: string) => {
@@ -205,7 +414,7 @@ function useWbsTree({
 
   /* ── Selection ── */
   const selectRow = useCallback((id: string | null) => {
-    setSelectedRowId(id);
+    setSelectedRowId(id || null);
   }, []);
 
   /* ── Find context for insertion ── */
@@ -228,175 +437,232 @@ function useWbsTree({
     return { parentWbsId: null, wbsNodeId: null };
   }, [selectedRowId, wbsNodes, activities]);
 
-  /* ── Add WBS ── */
+  /* ── Compute insertion context for adding ── */
+  const computeAddingState = useCallback(
+    (type: AddingType): AddingState => {
+      const currentRows = flattenTree(wbsNodes, activities, expandedIds);
+      const { parentWbsId, wbsNodeId } = getInsertionContext();
+
+      if (type === "wbs") {
+        const selectedIsWbs = selectedRowId ? wbsNodes.some((n) => n.id === selectedRowId) : false;
+        const newParentId = selectedIsWbs ? parentWbsId : (wbsNodeId ?? null);
+        const parentRow = selectedRowId ? currentRows.findIndex((r) => r.id === selectedRowId) : currentRows.length - 1;
+        const depth = newParentId ? (currentRows.find((r) => r.id === newParentId)?.depth ?? -1) + 1 : 0;
+        return { type, parentWbsId: newParentId, targetWbsId: null, depth, insertAfterIndex: parentRow };
+      }
+
+      // Activity or milestone
+      let targetWbsId: string | null = null;
+      if (wbsNodeId) {
+        targetWbsId = wbsNodeId;
+      } else if (wbsNodes.length > 0) {
+        targetWbsId = wbsNodes[wbsNodes.length - 1].id;
+      }
+
+      if (!targetWbsId && type === "milestone") {
+        return { type, parentWbsId: null, targetWbsId: null, depth: 1, insertAfterIndex: currentRows.length - 1 };
+      }
+
+      // Find the last row under this WBS to insert after
+      const wbsIdx = currentRows.findIndex((r) => r.id === targetWbsId);
+      const wbsDepth = wbsIdx >= 0 ? currentRows[wbsIdx].depth : 0;
+      let lastChildIdx = wbsIdx;
+      for (let i = wbsIdx + 1; i < currentRows.length; i++) {
+        if (currentRows[i].depth > wbsDepth) lastChildIdx = i;
+        else break;
+      }
+
+      return { type, parentWbsId: null, targetWbsId, depth: wbsDepth + 1, insertAfterIndex: lastChildIdx };
+    },
+    [wbsNodes, activities, expandedIds, getInsertionContext, selectedRowId],
+  );
+
+  /* ── Add WBS (opens inline input) ── */
   const addWbs = useCallback(() => {
-    const { parentWbsId, wbsNodeId } = getInsertionContext();
+    const state = computeAddingState("wbs");
+    setAddingState(state);
+  }, [computeAddingState]);
 
-    // If selected is a WBS, add sibling (same parent). If nothing selected, add top-level.
-    const selectedIsWbs = selectedRowId ? wbsNodes.some((n) => n.id === selectedRowId) : false;
-    const newParentId = selectedIsWbs ? parentWbsId : (wbsNodeId ?? null);
-
-    const wbsCode = generateWbsCode(wbsNodes, newParentId);
-    const id = crypto.randomUUID();
-    const siblings = wbsNodes.filter((n) => n.parentId === newParentId);
-    const sortOrder = siblings.length;
-
-    const newNode: WbsNodeData = {
-      id,
-      parentId: newParentId,
-      wbsCode,
-      name: "New WBS",
-      sortOrder,
-    };
-
-    setWbsNodes((prev) => [...prev, newNode]);
-    setExpandedIds((prev) => new Set([...prev, id]));
-    setSelectedRowId(id);
-
-    queueEvent({
-      eventType: "wbs.created",
-      entityType: "wbs",
-      entityId: id,
-      payload: {
-        projectId,
-        parentId: newParentId,
-        wbsCode,
-        name: "New WBS",
-        sortOrder,
-      },
-    });
-  }, [getInsertionContext, selectedRowId, wbsNodes, projectId, queueEvent]);
-
-  /* ── Add Activity ── */
+  /* ── Add Activity (opens inline input) ── */
   const addActivity = useCallback(() => {
-    let targetWbsId: string;
+    const state = computeAddingState("activity");
 
-    const { wbsNodeId } = getInsertionContext();
-
-    if (wbsNodeId) {
-      targetWbsId = wbsNodeId;
-    } else if (wbsNodes.length > 0) {
-      // No selection, add under last WBS
-      targetWbsId = wbsNodes[wbsNodes.length - 1].id;
-    } else {
-      // No WBS exists — auto-create root WBS first
+    // Auto-create root WBS if none exists
+    if (!state.targetWbsId && wbsNodes.length === 0) {
       const rootWbsId = crypto.randomUUID();
       const rootWbs: WbsNodeData = {
-        id: rootWbsId,
-        parentId: null,
-        wbsCode: "1",
-        name: "WBS 1",
-        sortOrder: 0,
+        id: rootWbsId, parentId: null, wbsCode: "1", name: "WBS 1", sortOrder: 0,
       };
       setWbsNodes((prev) => [...prev, rootWbs]);
       setExpandedIds((prev) => new Set([...prev, rootWbsId]));
-
       queueEvent({
-        eventType: "wbs.created",
-        entityType: "wbs",
-        entityId: rootWbsId,
-        payload: {
-          projectId,
-          parentId: null,
-          wbsCode: "1",
-          name: "WBS 1",
-          sortOrder: 0,
-        },
+        eventType: "wbs.created", entityType: "wbs", entityId: rootWbsId,
+        payload: { projectId, parentId: null, wbsCode: "1", name: "WBS 1", sortOrder: 0 },
+      });
+      state.targetWbsId = rootWbsId;
+      state.insertAfterIndex = 0;
+    }
+
+    setAddingState(state);
+  }, [computeAddingState, wbsNodes, projectId, queueEvent]);
+
+  /* ── Add Milestone (opens inline input) ── */
+  const addMilestone = useCallback(() => {
+    if (wbsNodes.length === 0) return;
+    const state = computeAddingState("milestone");
+    setAddingState(state);
+  }, [computeAddingState, wbsNodes]);
+
+  /* ── Commit the adding input ── */
+  const commitAdd = useCallback(
+    (name: string) => {
+      if (!addingState) return;
+      const { type, parentWbsId, targetWbsId } = addingState;
+
+      if (type === "wbs") {
+        const wbsCode = generateWbsCode(wbsNodes, parentWbsId);
+        const id = crypto.randomUUID();
+        const siblings = wbsNodes.filter((n) => n.parentId === parentWbsId);
+        const sortOrder = siblings.length;
+        const newNode: WbsNodeData = { id, parentId: parentWbsId, wbsCode, name, sortOrder };
+        setWbsNodes((prev) => [...prev, newNode]);
+        setExpandedIds((prev) => new Set([...prev, id]));
+        setSelectedRowId(id);
+        queueEvent({
+          eventType: "wbs.created", entityType: "wbs", entityId: id,
+          payload: { projectId, parentId: parentWbsId, wbsCode, name, sortOrder },
+        });
+      } else {
+        const effectiveWbsId = targetWbsId!;
+        const isMilestone = type === "milestone";
+        const activityId = isMilestone
+          ? generateMilestoneId(activities)
+          : generateActivityId(activities);
+        const id = crypto.randomUUID();
+        const siblings = activities.filter((a) => a.wbsNodeId === effectiveWbsId);
+        const sortOrder = siblings.length;
+        const newItem: ActivityData = {
+          id, wbsNodeId: effectiveWbsId, activityId, name,
+          activityType: isMilestone ? "milestone" : "task",
+          duration: 0,
+          startDate: projectStartDate ?? null,
+          finishDate: projectStartDate ?? null,
+          totalFloat: 0, percentComplete: 0, sortOrder,
+        };
+        setActivities((prev) => [...prev, newItem]);
+        setExpandedIds((prev) => new Set([...prev, effectiveWbsId]));
+        setSelectedRowId(id);
+        queueEvent({
+          eventType: "activity.created", entityType: "activity", entityId: id,
+          payload: { projectId, wbsNodeId: effectiveWbsId, activityId, name, activityType: newItem.activityType, duration: 0, sortOrder },
+        });
+      }
+
+      setAddingState(null);
+    },
+    [addingState, wbsNodes, activities, projectId, queueEvent],
+  );
+
+  /* ── Cancel the adding input ── */
+  const cancelAdd = useCallback(() => {
+    setAddingState(null);
+  }, []);
+
+  /* ── Move WBS (drag & drop) ── */
+  const moveWbs = useCallback(
+    (sourceId: string, targetId: string, position: DropPosition) => {
+      setWbsNodes((prev) => {
+        const source = prev.find((n) => n.id === sourceId);
+        const target = prev.find((n) => n.id === targetId);
+        if (!source || !target) return prev;
+
+        let newParentId: string | null;
+
+        if (position === "inside") {
+          newParentId = targetId;
+        } else {
+          newParentId = target.parentId;
+        }
+
+        // Step 1: Remove source from old parent and compact old siblings
+        let updated = prev.map((n) => {
+          if (n.parentId === source.parentId && n.id !== sourceId && n.sortOrder > source.sortOrder) {
+            return { ...n, sortOrder: n.sortOrder - 1 };
+          }
+          return n;
+        });
+
+        // Step 2: Calculate insertion index in the new parent
+        // Need to recalculate target's sortOrder after compaction (if same parent)
+        const targetAfterCompact = updated.find((n) => n.id === targetId)!;
+        let insertSortOrder: number;
+
+        if (position === "inside") {
+          const siblings = updated.filter((n) => n.parentId === targetId && n.id !== sourceId);
+          insertSortOrder = siblings.length;
+        } else {
+          insertSortOrder = position === "before"
+            ? targetAfterCompact.sortOrder
+            : targetAfterCompact.sortOrder + 1;
+        }
+
+        // Step 3: Shift new siblings to make room and place source
+        updated = updated.map((n) => {
+          if (n.id === sourceId) {
+            return { ...n, parentId: newParentId, sortOrder: insertSortOrder };
+          }
+          if (n.parentId === newParentId && n.id !== sourceId && n.sortOrder >= insertSortOrder) {
+            return { ...n, sortOrder: n.sortOrder + 1 };
+          }
+          return n;
+        });
+
+        // Step 4: Recalculate ALL wbsCodes (moved node + affected siblings)
+        return recalculateAllWbsCodes(updated);
       });
 
-      targetWbsId = rootWbsId;
-    }
+      queueEvent({
+        eventType: "wbs.moved",
+        entityType: "wbs",
+        entityId: sourceId,
+        payload: { targetId, position },
+      });
+    },
+    [queueEvent],
+  );
 
-    const activityId = generateActivityId(activities);
-    const id = crypto.randomUUID();
-    const siblings = activities.filter((a) => a.wbsNodeId === targetWbsId);
-    const sortOrder = siblings.length;
+  /* ── Run forward pass and apply cascading date changes ── */
+  const runForwardPass = useCallback(
+    (currentActivities: ActivityData[], currentRelationships: ActivityRelationshipData[]) => {
+      if (!projectStartDate || currentRelationships.length === 0) return currentActivities;
 
-    const newActivity: ActivityData = {
-      id,
-      wbsNodeId: targetWbsId,
-      activityId,
-      name: "New Activity",
-      activityType: "task",
-      duration: 0,
-      startDate: null,
-      finishDate: null,
-      totalFloat: 0,
-      percentComplete: 0,
-      sortOrder,
-    };
+      try {
+        const fpActivities = currentActivities.map((a) => ({ id: a.id, duration: a.duration }));
+        const fpRels = currentRelationships.map((r) => ({
+          predecessorId: r.predecessorId,
+          successorId: r.successorId,
+          lag: r.lag,
+        }));
+        const scheduled = forwardPass(fpActivities, fpRels, projectStartDate);
 
-    setActivities((prev) => [...prev, newActivity]);
-    setExpandedIds((prev) => new Set([...prev, targetWbsId]));
-    setSelectedRowId(id);
-
-    queueEvent({
-      eventType: "activity.created",
-      entityType: "activity",
-      entityId: id,
-      payload: {
-        projectId,
-        wbsNodeId: targetWbsId,
-        activityId,
-        name: "New Activity",
-        activityType: "task",
-        duration: 0,
-        sortOrder,
-      },
-    });
-  }, [getInsertionContext, wbsNodes, activities, projectId, queueEvent]);
-
-  /* ── Add Milestone ── */
-  const addMilestone = useCallback(() => {
-    let targetWbsId: string;
-    const { wbsNodeId } = getInsertionContext();
-
-    if (wbsNodeId) {
-      targetWbsId = wbsNodeId;
-    } else if (wbsNodes.length > 0) {
-      targetWbsId = wbsNodes[wbsNodes.length - 1].id;
-    } else {
-      return; // Can't add milestone without WBS
-    }
-
-    const milestoneId = generateMilestoneId(activities);
-    const id = crypto.randomUUID();
-    const siblings = activities.filter((a) => a.wbsNodeId === targetWbsId);
-    const sortOrder = siblings.length;
-
-    const newMilestone: ActivityData = {
-      id,
-      wbsNodeId: targetWbsId,
-      activityId: milestoneId,
-      name: "New Milestone",
-      activityType: "milestone",
-      duration: 0,
-      startDate: null,
-      finishDate: null,
-      totalFloat: 0,
-      percentComplete: 0,
-      sortOrder,
-    };
-
-    setActivities((prev) => [...prev, newMilestone]);
-    setExpandedIds((prev) => new Set([...prev, targetWbsId]));
-    setSelectedRowId(id);
-
-    queueEvent({
-      eventType: "activity.created",
-      entityType: "activity",
-      entityId: id,
-      payload: {
-        projectId,
-        wbsNodeId: targetWbsId,
-        activityId: milestoneId,
-        name: "New Milestone",
-        activityType: "milestone",
-        duration: 0,
-        sortOrder,
-      },
-    });
-  }, [getInsertionContext, wbsNodes, activities, projectId, queueEvent]);
+        let changed = false;
+        const updated = currentActivities.map((a) => {
+          const dates = scheduled.get(a.id);
+          if (!dates) return a;
+          if (a.startDate !== dates.startDate || a.finishDate !== dates.finishDate) {
+            changed = true;
+            return { ...a, startDate: dates.startDate, finishDate: dates.finishDate };
+          }
+          return a;
+        });
+        return changed ? updated : currentActivities;
+      } catch {
+        // Cycle or error — return unchanged
+        return currentActivities;
+      }
+    },
+    [projectStartDate],
+  );
 
   /* ── Update row ── */
   const updateRow = useCallback(
@@ -414,18 +680,475 @@ function useWbsTree({
           payload: fields,
         });
       } else {
-        setActivities((prev) =>
-          prev.map((a) => (a.id === id ? { ...a, ...fields } as ActivityData : a)),
+        // Auto-calculate start/finish when duration changes
+        let enrichedFields = { ...fields };
+        if ("duration" in fields && typeof fields.duration === "number") {
+          const activity = activities.find((a) => a.id === id);
+          const baseStart = activity?.startDate ?? projectStartDate;
+          if (baseStart) {
+            const start = new Date(baseStart);
+            const finish = new Date(start);
+            finish.setUTCDate(finish.getUTCDate() + (fields.duration as number));
+            enrichedFields = {
+              ...enrichedFields,
+              startDate: activity?.startDate ?? start.toISOString(),
+              finishDate: finish.toISOString(),
+            };
+          }
+        }
+
+        // Apply the field change first
+        const updatedActivities = activities.map((a) =>
+          a.id === id ? { ...a, ...enrichedFields } as ActivityData : a,
         );
+
+        // Run forward pass if relationships exist to cascade date changes
+        if (relationships.length > 0 && ("duration" in fields || "startDate" in fields || "finishDate" in fields)) {
+          const cascaded = runForwardPass(updatedActivities, relationships);
+          setActivities(cascaded);
+
+          // Queue events for all changed activities
+          for (const act of cascaded) {
+            const original = activities.find((a) => a.id === act.id);
+            if (original && (original.startDate !== act.startDate || original.finishDate !== act.finishDate)) {
+              if (act.id === id) {
+                queueEvent({
+                  eventType: "activity.updated",
+                  entityType: "activity",
+                  entityId: id,
+                  payload: { ...enrichedFields, startDate: act.startDate, finishDate: act.finishDate },
+                });
+              } else {
+                queueEvent({
+                  eventType: "activity.updated",
+                  entityType: "activity",
+                  entityId: act.id,
+                  payload: { startDate: act.startDate, finishDate: act.finishDate },
+                });
+              }
+            }
+          }
+        } else {
+          setActivities(updatedActivities);
+          queueEvent({
+            eventType: "activity.updated",
+            entityType: "activity",
+            entityId: id,
+            payload: enrichedFields,
+          });
+        }
+      }
+    },
+    [wbsNodes, activities, relationships, projectStartDate, queueEvent, runForwardPass],
+  );
+
+  /* ── Move row (unified for spreadsheet drag-drop) ── */
+
+  const moveRow = useCallback(
+    (sourceId: string, targetId: string, position: DropPosition) => {
+      const sourceIsWbs = wbsNodes.some((n) => n.id === sourceId);
+      const targetIsWbs = wbsNodes.some((n) => n.id === targetId);
+
+      if (sourceIsWbs && targetIsWbs) {
+        moveWbs(sourceId, targetId, position);
+        return;
+      }
+
+      // WBS dropped on an activity → move WBS relative to the activity's parent WBS
+      if (sourceIsWbs && !targetIsWbs) {
+        const targetAct = activities.find((a) => a.id === targetId);
+        if (!targetAct) return;
+        const targetParentWbs = targetAct.wbsNodeId;
+        // Place the WBS after the activity's parent WBS
+        moveWbs(sourceId, targetParentWbs, position === "before" ? "before" : "after");
+        return;
+      }
+
+      // Activity movement
+      if (!sourceIsWbs) {
+        const sourceAct = activities.find((a) => a.id === sourceId);
+        if (!sourceAct) return;
+
+        let newWbsNodeId: string;
+        let insertSortOrder: number;
+
+        if (targetIsWbs) {
+          // Dropping activity on/near a WBS row
+          if (position === "inside" || position === "after") {
+            newWbsNodeId = targetId;
+            const siblings = activities.filter(
+              (a) => a.wbsNodeId === targetId && a.id !== sourceId,
+            );
+            insertSortOrder = position === "inside" ? siblings.length : 0;
+          } else {
+            // "before" a WBS — insert at end of that WBS's parent's activities
+            const targetNode = wbsNodes.find((n) => n.id === targetId);
+            if (!targetNode || !targetNode.parentId) return;
+            newWbsNodeId = targetNode.parentId;
+            const siblings = activities.filter(
+              (a) => a.wbsNodeId === newWbsNodeId && a.id !== sourceId,
+            );
+            insertSortOrder = siblings.length;
+          }
+        } else {
+          // Dropping activity on another activity
+          const targetAct = activities.find((a) => a.id === targetId);
+          if (!targetAct) return;
+          newWbsNodeId = targetAct.wbsNodeId;
+          insertSortOrder = position === "before"
+            ? targetAct.sortOrder
+            : targetAct.sortOrder + 1;
+        }
+
+        setActivities((prev) => {
+          // Step 1: Compact old siblings
+          let updated = prev.map((a) => {
+            if (
+              a.wbsNodeId === sourceAct.wbsNodeId &&
+              a.id !== sourceId &&
+              a.sortOrder > sourceAct.sortOrder
+            ) {
+              return { ...a, sortOrder: a.sortOrder - 1 };
+            }
+            return a;
+          });
+
+          // Recalculate insertSortOrder if same WBS (compaction may have shifted target)
+          if (newWbsNodeId === sourceAct.wbsNodeId && !targetIsWbs) {
+            const targetAfter = updated.find((a) => a.id === targetId);
+            if (targetAfter) {
+              insertSortOrder = position === "before"
+                ? targetAfter.sortOrder
+                : targetAfter.sortOrder + 1;
+            }
+          }
+
+          // Step 2: Shift new siblings and place source
+          updated = updated.map((a) => {
+            if (a.id === sourceId) {
+              return { ...a, wbsNodeId: newWbsNodeId, sortOrder: insertSortOrder };
+            }
+            if (
+              a.wbsNodeId === newWbsNodeId &&
+              a.id !== sourceId &&
+              a.sortOrder >= insertSortOrder
+            ) {
+              return { ...a, sortOrder: a.sortOrder + 1 };
+            }
+            return a;
+          });
+
+          return updated;
+        });
+
+        // Expand target WBS so the activity is visible
+        setExpandedIds((prev) => new Set([...prev, newWbsNodeId]));
+
         queueEvent({
-          eventType: "activity.updated",
+          eventType: "activity.moved",
           entityType: "activity",
-          entityId: id,
-          payload: fields,
+          entityId: sourceId,
+          payload: { targetId, position, wbsNodeId: newWbsNodeId },
         });
       }
     },
-    [wbsNodes, queueEvent],
+    [wbsNodes, activities, moveWbs, queueEvent],
+  );
+
+  /* ── Indent / Outdent ── */
+
+  const canIndent = useMemo(() => {
+    if (!selectedRowId) return false;
+
+    // WBS: must have a previous sibling to indent into
+    const node = wbsNodes.find((n) => n.id === selectedRowId);
+    if (node) {
+      const siblings = wbsNodes
+        .filter((n) => n.parentId === node.parentId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      const idx = siblings.findIndex((n) => n.id === node.id);
+      return idx > 0;
+    }
+
+    // Activity: current WBS must have child WBS nodes to move into
+    const act = activities.find((a) => a.id === selectedRowId);
+    if (act) {
+      return wbsNodes.some((n) => n.parentId === act.wbsNodeId);
+    }
+
+    return false;
+  }, [selectedRowId, wbsNodes, activities]);
+
+  const canOutdent = useMemo(() => {
+    if (!selectedRowId) return false;
+
+    // WBS: must have a parent
+    const node = wbsNodes.find((n) => n.id === selectedRowId);
+    if (node) return node.parentId !== null;
+
+    // Activity: current WBS must have a parent WBS
+    const act = activities.find((a) => a.id === selectedRowId);
+    if (act) {
+      const parentWbs = wbsNodes.find((n) => n.id === act.wbsNodeId);
+      return parentWbs ? parentWbs.parentId !== null : false;
+    }
+
+    return false;
+  }, [selectedRowId, wbsNodes, activities]);
+
+  const indentWbs = useCallback(() => {
+    if (!selectedRowId || !canIndent) return;
+
+    // WBS indent
+    const node = wbsNodes.find((n) => n.id === selectedRowId);
+    if (node) {
+      const siblings = wbsNodes
+        .filter((n) => n.parentId === node.parentId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      const idx = siblings.findIndex((n) => n.id === node.id);
+      const prevSibling = siblings[idx - 1];
+      moveWbs(selectedRowId, prevSibling.id, "inside");
+      setExpandedIds((prev) => new Set([...prev, prevSibling.id]));
+      return;
+    }
+
+    // Activity indent: move to first child WBS of current WBS
+    const act = activities.find((a) => a.id === selectedRowId);
+    if (act) {
+      const childWbs = wbsNodes
+        .filter((n) => n.parentId === act.wbsNodeId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      if (childWbs.length === 0) return;
+      const targetWbs = childWbs[0];
+      moveRow(selectedRowId, targetWbs.id, "inside");
+      setExpandedIds((prev) => new Set([...prev, targetWbs.id]));
+    }
+  }, [selectedRowId, canIndent, wbsNodes, activities, moveWbs, moveRow]);
+
+  const outdentWbs = useCallback(() => {
+    if (!selectedRowId || !canOutdent) return;
+
+    // WBS outdent
+    const node = wbsNodes.find((n) => n.id === selectedRowId);
+    if (node) {
+      if (node.parentId === null) return;
+      moveWbs(selectedRowId, node.parentId, "after");
+      return;
+    }
+
+    // Activity outdent: move to parent WBS of current WBS
+    const act = activities.find((a) => a.id === selectedRowId);
+    if (act) {
+      const parentWbs = wbsNodes.find((n) => n.id === act.wbsNodeId);
+      if (!parentWbs || parentWbs.parentId === null) return;
+      moveRow(selectedRowId, parentWbs.parentId, "inside");
+      setExpandedIds((prev) => new Set([...prev, parentWbs.parentId!]));
+    }
+  }, [selectedRowId, canOutdent, wbsNodes, activities, moveWbs, moveRow]);
+
+  /* ── Undo / Redo ── */
+
+  // Reconstruct state at a given history index by applying patches from base
+  const reconstructState = useCallback(
+    (targetIndex: number) => {
+      let wbs = baseStateRef.current.wbsNodes;
+      let acts = baseStateRef.current.activities;
+      for (let i = 0; i < targetIndex; i++) {
+        const p = patchesRef.current[i];
+        wbs = applyPatch(wbs, p.wbs, true);
+        acts = applyPatch(acts, p.act, true);
+      }
+      return { wbsNodes: wbs, activities: acts };
+    },
+    [],
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const canUndo = useMemo(() => historyIndexRef.current > 0, [historyTick]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const canRedo = useMemo(() => historyIndexRef.current < patchesRef.current.length, [historyTick]);
+
+  const undo = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    isRestoringRef.current = true;
+    historyIndexRef.current--;
+    const state = reconstructState(historyIndexRef.current);
+    setWbsNodes(state.wbsNodes);
+    setActivities(state.activities);
+    setHistoryTick((t) => t + 1);
+  }, [reconstructState]);
+
+  const redo = useCallback(() => {
+    if (historyIndexRef.current >= patchesRef.current.length) return;
+    isRestoringRef.current = true;
+    historyIndexRef.current++;
+    const state = reconstructState(historyIndexRef.current);
+    setWbsNodes(state.wbsNodes);
+    setActivities(state.activities);
+    setHistoryTick((t) => t + 1);
+  }, [reconstructState]);
+
+  /* ── Link mode ── */
+
+  const enterLinkMode = useCallback(() => {
+    setLinkMode("linking");
+    setLinkChain([]);
+  }, []);
+
+  const exitLinkMode = useCallback(() => {
+    setLinkMode("idle");
+    setLinkChain([]);
+  }, []);
+
+  const addToLinkChain = useCallback((activityId: string, isParallel: boolean) => {
+    setLinkChain((prev) => {
+      // Don't add duplicates
+      if (prev.some((e) => e.activityId === activityId)) return prev;
+      return [...prev, { activityId, isParallel }];
+    });
+  }, []);
+
+  const removeFromLinkChain = useCallback((activityId: string) => {
+    setLinkChain((prev) => prev.filter((e) => e.activityId !== activityId));
+  }, []);
+
+  const commitLinkChain = useCallback(() => {
+    if (linkChain.length < 2) return;
+
+    // Parse chain into levels: non-parallel = new level, parallel = same level
+    const levels: string[][] = [];
+    for (const entry of linkChain) {
+      if (entry.isParallel && levels.length > 0) {
+        levels[levels.length - 1].push(entry.activityId);
+      } else {
+        levels.push([entry.activityId]);
+      }
+    }
+
+    // Create FS relationships between consecutive levels (all-to-all)
+    const newRels: ActivityRelationshipData[] = [];
+    for (let i = 0; i < levels.length - 1; i++) {
+      const preds = levels[i];
+      const succs = levels[i + 1];
+      for (const predId of preds) {
+        for (const succId of succs) {
+          // Skip if relationship already exists
+          const exists = relationships.some(
+            (r) => r.predecessorId === predId && r.successorId === succId,
+          );
+          if (exists) continue;
+
+          const relId = crypto.randomUUID();
+          const rel: ActivityRelationshipData = {
+            id: relId,
+            predecessorId: predId,
+            successorId: succId,
+            relationshipType: "FS",
+            lag: 0,
+          };
+          newRels.push(rel);
+        }
+      }
+    }
+
+    if (newRels.length === 0) {
+      exitLinkMode();
+      return;
+    }
+
+    // Cycle check: try forward pass with new relationships before committing
+    const allRels = [...relationships, ...newRels];
+    const fpActivities = activities.map((a) => ({ id: a.id, duration: a.duration }));
+    const fpRels = allRels.map((r) => ({
+      predecessorId: r.predecessorId,
+      successorId: r.successorId,
+      lag: r.lag,
+    }));
+
+    try {
+      if (projectStartDate) {
+        forwardPass(fpActivities, fpRels, projectStartDate);
+      }
+    } catch {
+      // Cycle detected — abort
+      exitLinkMode();
+      return;
+    }
+
+    // Commit: add relationships
+    const updatedRels = [...relationships, ...newRels];
+    setRelationships(updatedRels);
+
+    // Queue relationship events
+    for (const rel of newRels) {
+      queueEvent({
+        eventType: "relationship.created",
+        entityType: "relationship",
+        entityId: rel.id,
+        payload: {
+          projectId,
+          predecessorId: rel.predecessorId,
+          successorId: rel.successorId,
+          relationshipType: rel.relationshipType,
+          lag: rel.lag,
+        },
+      });
+    }
+
+    // Run forward pass to recalculate dates
+    if (projectStartDate) {
+      const cascaded = runForwardPass(activities, updatedRels);
+      if (cascaded !== activities) {
+        setActivities(cascaded);
+        // Queue date change events
+        for (const act of cascaded) {
+          const original = activities.find((a) => a.id === act.id);
+          if (original && (original.startDate !== act.startDate || original.finishDate !== act.finishDate)) {
+            queueEvent({
+              eventType: "activity.updated",
+              entityType: "activity",
+              entityId: act.id,
+              payload: { startDate: act.startDate, finishDate: act.finishDate },
+            });
+          }
+        }
+      }
+    }
+
+    exitLinkMode();
+  }, [linkChain, relationships, activities, projectId, projectStartDate, queueEvent, runForwardPass, exitLinkMode]);
+
+  /* ── Update project dates ── */
+
+  const updateProjectDates = useCallback(
+    (startDate: string, finishDate: string) => {
+      queueEvent({
+        eventType: "project.updated",
+        entityType: "project",
+        entityId: projectId,
+        payload: { startDate, finishDate },
+      });
+
+      // Recalculate all activity dates via forward pass with new start
+      if (relationships.length > 0) {
+        const cascaded = runForwardPass(activities, relationships);
+        if (cascaded !== activities) {
+          setActivities(cascaded);
+          for (const act of cascaded) {
+            const original = activities.find((a) => a.id === act.id);
+            if (original && (original.startDate !== act.startDate || original.finishDate !== act.finishDate)) {
+              queueEvent({
+                eventType: "activity.updated",
+                entityType: "activity",
+                entityId: act.id,
+                payload: { startDate: act.startDate, finishDate: act.finishDate },
+              });
+            }
+          }
+        }
+      }
+    },
+    [projectId, activities, relationships, queueEvent, runForwardPass],
   );
 
   return {
@@ -433,6 +1156,15 @@ function useWbsTree({
     selectedRowId,
     wbsNodes,
     activities,
+    relationships,
+    linkMode,
+    linkChain,
+    canIndent,
+    canOutdent,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
     toggleExpand,
     expandAll,
     collapseAll,
@@ -440,9 +1172,21 @@ function useWbsTree({
     addWbs,
     addActivity,
     addMilestone,
+    commitAdd,
+    cancelAdd,
     updateRow,
+    moveWbs,
+    moveRow,
+    indentWbs,
+    outdentWbs,
+    enterLinkMode,
+    exitLinkMode,
+    addToLinkChain,
+    removeFromLinkChain,
+    commitLinkChain,
+    updateProjectDates,
   };
 }
 
-export { useWbsTree, flattenTree, generateActivityId, generateWbsCode };
+export { useWbsTree, flattenTree, generateActivityId, generateWbsCode, recalculateAllWbsCodes };
 export type { UseWbsTreeReturn };

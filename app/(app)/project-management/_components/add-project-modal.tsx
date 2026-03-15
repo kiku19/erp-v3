@@ -42,11 +42,11 @@ function AddProjectModal({
 
   const handleSubmit = () => {
     const trimmedName = name.trim();
-    if (!epsId || !trimmedName) return;
+    if (!epsId || !trimmedName || !startDate) return;
     onSubmit(epsId, {
       name: trimmedName,
       responsibleManager: manager.trim() || undefined,
-      startDate: startDate ? new Date(startDate).toISOString() : undefined,
+      startDate: new Date(startDate).toISOString(),
       endDate: endDate ? new Date(endDate).toISOString() : undefined,
     });
     resetForm();
@@ -80,7 +80,7 @@ function AddProjectModal({
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-foreground">
-              EPS Name
+              EPS Name <span className="text-destructive">*</span>
             </label>
             <Select
               options={epsOptions}
@@ -91,7 +91,7 @@ function AddProjectModal({
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-foreground">
-              Project Name
+              Project Name <span className="text-destructive">*</span>
             </label>
             <Input
               placeholder="Enter project name..."
@@ -112,7 +112,7 @@ function AddProjectModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-foreground">
-                Start Date
+                Start Date <span className="text-destructive">*</span>
               </label>
               <Input
                 type="date"
@@ -137,7 +137,7 @@ function AddProjectModal({
         <Button variant="outline" onClick={handleClose}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={!epsId || !name.trim()}>
+        <Button onClick={handleSubmit} disabled={!epsId || !name.trim() || !startDate}>
           <FolderPlus size={16} />
           Add Project
         </Button>

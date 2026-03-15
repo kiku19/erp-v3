@@ -1,14 +1,29 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useCallback, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { SpreadsheetRowComponent, COL_ID, COL_NAME, COL_DURATION, COL_START, COL_FINISH, COL_FLOAT, COL_PCT } from "./spreadsheet-row";
-import type { SpreadsheetRow } from "./types";
+import { SpreadsheetRowComponent, DEFAULT_COL_WIDTHS } from "./spreadsheet-row";
+import type { SpreadsheetDropPosition, ColumnWidths } from "./spreadsheet-row";
+import type { SpreadsheetRow, LinkModeStatus, LinkChainEntry } from "./types";
 
 /* ─────────────────────── Constants ───────────────────────────────── */
 
 const ROW_HEIGHT = 32;
 const OVERSCAN = 15;
+const MIN_COL_WIDTH = 30;
+
+type ColKey = keyof ColumnWidths;
+
+const COLUMNS: { key: ColKey; label: string; align?: "end" }[] = [
+  { key: "id", label: "ID" },
+  { key: "name", label: "Activity Name" },
+  { key: "duration", label: "Dur", align: "end" },
+  { key: "start", label: "Start" },
+  { key: "finish", label: "Finish" },
+  { key: "float", label: "TF", align: "end" },
+  { key: "pct", label: "%", align: "end" },
+  { key: "pred", label: "Pred" },
+];
 
 /* ─────────────────────── Props ───────────────────────────────────── */
 
@@ -18,6 +33,63 @@ interface ActivitySpreadsheetProps {
   onToggleExpand: (id: string) => void;
   onSelect: (id: string) => void;
   onUpdate: (id: string, fields: Record<string, unknown>) => void;
+  onCommitAdd?: (name: string) => void;
+  onCancelAdd?: () => void;
+  onMoveRow?: (sourceId: string, targetId: string, position: SpreadsheetDropPosition) => void;
+  linkMode?: LinkModeStatus;
+  linkChain?: LinkChainEntry[];
+  onLinkClick?: (id: string, isShift: boolean) => void;
+}
+
+/* ─────────────────────── Drop position calc ──────────────────────── */
+
+function calcDropPosition(e: DragEvent, targetIsWbs: boolean): SpreadsheetDropPosition {
+  const el = e.currentTarget as HTMLElement;
+  const rect = el.getBoundingClientRect();
+  const y = e.clientY - rect.top;
+  const height = rect.height || 1;
+  const threshold = height * 0.25;
+
+  if (y < threshold) return "before";
+  if (y > height - threshold) return "after";
+  return targetIsWbs ? "inside" : "after";
+}
+
+/* ─────────────────────── Resize handle ───────────────────────────── */
+
+function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
+  const handleMouseDown = useCallback(
+    (e: ReactMouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+
+      const onMouseMove = (ev: globalThis.MouseEvent) => {
+        onResize(ev.clientX - startX);
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [onResize],
+  );
+
+  return (
+    <div
+      data-testid="col-resize-handle"
+      className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize z-10 hover:bg-primary/30 active:bg-primary/50"
+      onMouseDown={handleMouseDown}
+    />
+  );
 }
 
 /* ─────────────────────── Component ───────────────────────────────── */
@@ -28,8 +100,73 @@ function ActivitySpreadsheet({
   onToggleExpand,
   onSelect,
   onUpdate,
+  onCommitAdd,
+  onCancelAdd,
+  onMoveRow,
+  linkMode = "idle",
+  linkChain = [],
+  onLinkClick,
 }: ActivitySpreadsheetProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const draggedIdRef = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<SpreadsheetDropPosition | null>(null);
+  const [colWidths, setColWidths] = useState<ColumnWidths>({ ...DEFAULT_COL_WIDTHS });
+
+  // We store the width at drag start so delta is always from the original
+  const dragStartWidthRef = useRef<number>(0);
+
+  const handleColumnResizeStart = useCallback(
+    (key: ColKey) => {
+      dragStartWidthRef.current = colWidths[key];
+    },
+    [colWidths],
+  );
+
+  const makeResizeHandler = useCallback(
+    (key: ColKey) => (delta: number) => {
+      // On first move of a drag, capture the starting width
+      if (dragStartWidthRef.current === 0) {
+        dragStartWidthRef.current = colWidths[key];
+      }
+      setColWidths((prev) => ({
+        ...prev,
+        [key]: Math.max(MIN_COL_WIDTH, dragStartWidthRef.current + delta),
+      }));
+    },
+    [colWidths],
+  );
+
+  // Wrap to capture start width on mousedown
+  const handleResizeMouseDown = useCallback(
+    (key: ColKey) => (e: ReactMouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startWidth = colWidths[key];
+
+      const onMouseMove = (ev: globalThis.MouseEvent) => {
+        const delta = ev.clientX - startX;
+        setColWidths((prev) => ({
+          ...prev,
+          [key]: Math.max(MIN_COL_WIDTH, startWidth + delta),
+        }));
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [colWidths],
+  );
 
   const virtualizer = useVirtualizer({
     count: flatRows.length,
@@ -38,52 +175,69 @@ function ActivitySpreadsheet({
     overscan: OVERSCAN,
   });
 
+  const handleDragStart = useCallback((e: DragEvent, id: string) => {
+    draggedIdRef.current = id;
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+  }, []);
+
+  const handleDragOver = useCallback(
+    (e: DragEvent, id: string) => {
+      const draggedId = draggedIdRef.current;
+      if (!draggedId || draggedId === id) return;
+
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+
+      const targetRow = flatRows.find((r) => r.id === id);
+      const pos = calcDropPosition(e, targetRow?.type === "wbs");
+      setDragOverId(id);
+      setDropPosition(pos);
+    },
+    [flatRows],
+  );
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverId(null);
+    setDropPosition(null);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: DragEvent, targetId: string) => {
+      e.preventDefault();
+      setDragOverId(null);
+      setDropPosition(null);
+
+      const sourceId = e.dataTransfer.getData("text/plain") || draggedIdRef.current;
+      draggedIdRef.current = null;
+
+      if (!sourceId || sourceId === targetId) return;
+
+      const targetRow = flatRows.find((r) => r.id === targetId);
+      const pos = calcDropPosition(e, targetRow?.type === "wbs");
+      onMoveRow?.(sourceId, targetId, pos);
+    },
+    [flatRows, onMoveRow],
+  );
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Column Headers */}
       <div className="flex items-center h-9 border-b border-border bg-muted shrink-0">
-        <div
-          className="flex items-center h-full px-2 text-[11px] font-semibold text-muted-foreground"
-          style={{ width: COL_ID }}
-        >
-          ID
-        </div>
-        <div
-          className="flex items-center h-full px-2 border-l border-border text-[11px] font-semibold text-muted-foreground"
-          style={{ width: COL_NAME }}
-        >
-          Activity Name
-        </div>
-        <div
-          className="flex items-center h-full px-2 border-l border-border text-[11px] font-semibold text-muted-foreground justify-end"
-          style={{ width: COL_DURATION }}
-        >
-          Dur
-        </div>
-        <div
-          className="flex items-center h-full px-2 border-l border-border text-[11px] font-semibold text-muted-foreground"
-          style={{ width: COL_START }}
-        >
-          Start
-        </div>
-        <div
-          className="flex items-center h-full px-2 border-l border-border text-[11px] font-semibold text-muted-foreground"
-          style={{ width: COL_FINISH }}
-        >
-          Finish
-        </div>
-        <div
-          className="flex items-center h-full px-2 border-l border-border text-[11px] font-semibold text-muted-foreground justify-end"
-          style={{ width: COL_FLOAT }}
-        >
-          TF
-        </div>
-        <div
-          className="flex items-center h-full px-1 border-l border-border text-[11px] font-semibold text-muted-foreground justify-end"
-          style={{ width: COL_PCT }}
-        >
-          %
-        </div>
+        {COLUMNS.map((col, i) => (
+          <div
+            key={col.key}
+            className={`relative flex items-center h-full ${col.key === "pct" ? "px-1" : "px-2"} ${i > 0 ? "border-l border-border" : ""} text-[11px] font-semibold text-muted-foreground ${col.align === "end" ? "justify-end" : ""}`}
+            style={{ width: colWidths[col.key] }}
+          >
+            {col.label}
+            <div
+              data-testid={`col-resize-${col.key}`}
+              className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize z-10 hover:bg-primary/30 active:bg-primary/50"
+              onMouseDown={handleResizeMouseDown(col.key)}
+            />
+          </div>
+        ))}
       </div>
 
       {/* Virtualized rows */}
@@ -94,7 +248,10 @@ function ActivitySpreadsheet({
           </p>
         </div>
       ) : (
-        <div ref={parentRef} className="flex-1 overflow-auto">
+        <div
+          ref={parentRef}
+          className="flex-1 overflow-auto"
+        >
           <div
             style={{
               height: `${virtualizer.getTotalSize()}px`,
@@ -104,6 +261,8 @@ function ActivitySpreadsheet({
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const row = flatRows[virtualRow.index];
+              const chainEntry = linkChain.find((e) => e.activityId === row.id);
+              const chainIdx = chainEntry ? linkChain.indexOf(chainEntry) + 1 : null;
               return (
                 <div
                   key={row.id}
@@ -122,6 +281,19 @@ function ActivitySpreadsheet({
                     onToggleExpand={onToggleExpand}
                     onSelect={onSelect}
                     onUpdate={onUpdate}
+                    onCommitAdd={onCommitAdd}
+                    onCancelAdd={onCancelAdd}
+                    isDragOver={dragOverId === row.id}
+                    dropPosition={dragOverId === row.id ? dropPosition : null}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    columnWidths={colWidths}
+                    linkMode={linkMode}
+                    linkChainIndex={chainIdx}
+                    isParallelInChain={chainEntry?.isParallel ?? false}
+                    onLinkClick={onLinkClick}
                   />
                 </div>
               );

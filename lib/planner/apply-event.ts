@@ -104,6 +104,36 @@ async function applyPlannerEvent(
       });
       break;
 
+    /* ── Relationship ── */
+    case "relationship.created":
+      await tx.activityRelationship.create({
+        data: {
+          id: entityId,
+          tenantId,
+          projectId: payload.projectId as string,
+          predecessorId: payload.predecessorId as string,
+          successorId: payload.successorId as string,
+          relationshipType: (payload.relationshipType as string) ?? "FS",
+          lag: (payload.lag as number) ?? 0,
+        },
+      });
+      break;
+
+    case "relationship.deleted":
+      await tx.activityRelationship.update({
+        where: { id: entityId },
+        data: { isDeleted: true },
+      });
+      break;
+
+    /* ── Project ── */
+    case "project.updated":
+      await tx.project.update({
+        where: { id: entityId },
+        data: extractUpdateFields(payload, ["startDate", "finishDate"]),
+      });
+      break;
+
     default:
       throw new Error(`Unknown event type: ${eventType}`);
   }

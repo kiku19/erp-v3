@@ -29,6 +29,9 @@ vi.mock("@/lib/api-auth", () => ({
   authenticateRequest: vi.fn(),
   isAuthError: vi.fn((r: unknown) => r instanceof Response),
 }));
+vi.mock("@/lib/planner/build-planner-state", () => ({
+  buildPlannerState: vi.fn().mockResolvedValue({ wbsNodes: [], activities: [], relationships: [] }),
+}));
 
 async function makeRequest(projectId?: string, authenticated = true): Promise<Response> {
   const { authenticateRequest } = await import("@/lib/api-auth");

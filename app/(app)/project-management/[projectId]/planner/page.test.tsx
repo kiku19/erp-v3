@@ -31,6 +31,7 @@ const defaultCanvasReturn: UsePlannerCanvasReturn = {
   pendingCount: 0,
   initialWbsNodes: [],
   initialActivities: [],
+  initialRelationships: [],
   queueEvent: vi.fn(),
   reload: vi.fn(),
 };

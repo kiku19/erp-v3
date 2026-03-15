@@ -30,6 +30,7 @@ function PlannerLayout({
     initialWbsNodes,
     initialActivities,
     projectId,
+    projectStartDate: null,
     queueEvent,
   });
 
@@ -68,6 +69,7 @@ function PlannerLayout({
         selectedWbsId={selectedWbsId}
         onSelectWbs={handleSelectWbs}
         onRenameWbs={handleRenameWbs}
+        onMoveWbs={wbsTree.moveWbs}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={handleToggleSidebar}
       />

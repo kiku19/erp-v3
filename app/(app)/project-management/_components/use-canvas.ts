@@ -135,7 +135,7 @@ function useCanvas(): UseCanvasReturn {
   const [treeData, setTreeData] = useState<EpsTreeNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<SelectionType>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isStale, setIsStale] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");

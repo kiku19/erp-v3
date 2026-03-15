@@ -393,6 +393,7 @@ function ProjectManagementPageInner() {
           ref={treePanelRef}
           treeData={treeData}
           selectedId={selectedId}
+          loading={loading}
           onSelect={handleTreeSelect}
           onDoubleClick={handleTreeDoubleClick}
           stats={stats}

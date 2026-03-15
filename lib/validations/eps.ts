@@ -29,7 +29,7 @@ const createProjectSchema = z.object({
   name: z.string().trim().min(1, "Project name is required").max(255),
   nodeId: z.string().optional(),
   responsibleManager: z.string().trim().max(255).optional(),
-  startDate: z.string().datetime().optional(),
+  startDate: z.string().datetime("Start date is required"),
   finishDate: z.string().datetime().optional(),
 });
 

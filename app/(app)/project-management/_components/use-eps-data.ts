@@ -20,7 +20,7 @@ interface CreateProjectData {
   name: string;
   nodeId?: string;
   responsibleManager?: string;
-  startDate?: string;
+  startDate: string;
   endDate?: string;
 }
 

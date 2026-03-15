@@ -45,10 +45,11 @@ describe("WbsSidebarTree", () => {
     expect(onSelectWbs).toHaveBeenCalledWith("w3");
   });
 
-  it("highlights selected WBS node", () => {
+  it("highlights selected WBS node with muted style", () => {
     render(<WbsSidebarTree {...defaultProps} selectedWbsId="w1" />);
     const node = screen.getAllByText("Engineering")[0].closest("[data-wbs-id]");
-    expect(node?.className).toContain("bg-primary-active");
+    expect(node?.className).toContain("bg-muted");
+    expect(node?.className).not.toContain("bg-primary-active");
   });
 
   it("hides content but keeps container when collapsed", () => {
@@ -100,6 +101,57 @@ describe("WbsSidebarTree", () => {
     render(<WbsSidebarTree {...defaultProps} isCollapsed={false} />);
     const sidebar = screen.getByTestId("wbs-sidebar");
     expect(sidebar.style.transition).toContain("width");
+  });
+
+  /* ─── Deep nesting tests ─── */
+
+  it("renders deeply nested WBS nodes (n-level)", () => {
+    const deepNodes: WbsNodeData[] = [
+      { id: "d1", parentId: null, wbsCode: "1", name: "Level 1", sortOrder: 0 },
+      { id: "d2", parentId: "d1", wbsCode: "1.1", name: "Level 2", sortOrder: 0 },
+      { id: "d3", parentId: "d2", wbsCode: "1.1.1", name: "Level 3", sortOrder: 0 },
+      { id: "d4", parentId: "d3", wbsCode: "1.1.1.1", name: "Level 4", sortOrder: 0 },
+      { id: "d5", parentId: "d4", wbsCode: "1.1.1.1.1", name: "Level 5", sortOrder: 0 },
+    ];
+    render(
+      <WbsSidebarTree {...defaultProps} wbsNodes={deepNodes} />,
+    );
+
+    expect(screen.getByText("Level 1")).toBeDefined();
+    expect(screen.getByText("Level 2")).toBeDefined();
+    expect(screen.getByText("Level 3")).toBeDefined();
+    expect(screen.getByText("Level 4")).toBeDefined();
+    expect(screen.getByText("Level 5")).toBeDefined();
+
+    // Verify increasing indentation
+    const level1 = screen.getByText("Level 1").closest("[data-wbs-id]") as HTMLElement;
+    const level5 = screen.getByText("Level 5").closest("[data-wbs-id]") as HTMLElement;
+    const indent1 = parseInt(level1.style.paddingLeft);
+    const indent5 = parseInt(level5.style.paddingLeft);
+    expect(indent5).toBeGreaterThan(indent1);
+  });
+
+  it("collapses deeply nested subtree when parent is toggled", () => {
+    const deepNodes: WbsNodeData[] = [
+      { id: "d1", parentId: null, wbsCode: "1", name: "Level 1", sortOrder: 0 },
+      { id: "d2", parentId: "d1", wbsCode: "1.1", name: "Level 2", sortOrder: 0 },
+      { id: "d3", parentId: "d2", wbsCode: "1.1.1", name: "Level 3", sortOrder: 0 },
+      { id: "d4", parentId: "d3", wbsCode: "1.1.1.1", name: "Level 4", sortOrder: 0 },
+    ];
+    render(
+      <WbsSidebarTree {...defaultProps} wbsNodes={deepNodes} />,
+    );
+
+    // All visible initially
+    expect(screen.getByText("Level 4")).toBeDefined();
+
+    // Collapse Level 2 — Level 3 and 4 should disappear
+    fireEvent.click(screen.getByText("Level 2"));
+    expect(screen.queryByText("Level 3")).toBeNull();
+    expect(screen.queryByText("Level 4")).toBeNull();
+    // Level 1 and 2 still visible
+    expect(screen.getByText("Level 1")).toBeDefined();
+    expect(screen.getByText("Level 2")).toBeDefined();
   });
 
   /* ─── Inline rename tests ─── */
@@ -189,5 +241,178 @@ describe("WbsSidebarTree", () => {
 
     expect(onRenameWbs).not.toHaveBeenCalled();
     expect(screen.getAllByText("Construction").length).toBeGreaterThanOrEqual(1);
+  });
+
+  /* ─── Cursor pointer tests ─── */
+
+  it("has cursor-pointer on the collapse button", () => {
+    render(<WbsSidebarTree {...defaultProps} />);
+    const collapseBtn = screen.getByTestId("wbs-collapse-btn");
+    expect(collapseBtn.className).toContain("cursor-pointer");
+  });
+
+  it("has cursor-pointer on the expand button", () => {
+    render(<WbsSidebarTree {...defaultProps} isCollapsed={true} />);
+    const expandBtn = screen.getByTestId("wbs-expand-btn");
+    expect(expandBtn.className).toContain("cursor-pointer");
+  });
+
+  /* ─── Drag and drop tests ─── */
+
+  it("renders drag handle on each WBS node", () => {
+    render(<WbsSidebarTree {...defaultProps} />);
+    const dragHandles = screen.getAllByTestId("wbs-drag-handle");
+    // 3 nodes: Engineering, Design, Construction
+    expect(dragHandles.length).toBe(3);
+  });
+
+  it("makes each WBS node draggable", () => {
+    render(<WbsSidebarTree {...defaultProps} />);
+    const nodes = screen.getAllByTestId(/^wbs-node-/);
+    for (const node of nodes) {
+      expect(node.getAttribute("draggable")).toBe("true");
+    }
+  });
+
+  it("calls onMoveWbs when a node is dropped on another", () => {
+    const onMoveWbs = vi.fn();
+    render(<WbsSidebarTree {...defaultProps} onMoveWbs={onMoveWbs} />);
+
+    const sourceNode = screen.getByTestId("wbs-node-w3");
+    const targetNode = screen.getByTestId("wbs-node-w1");
+
+    // Simulate drag start
+    const dataTransfer = {
+      setData: vi.fn(),
+      getData: vi.fn(() => "w3"),
+      effectAllowed: "",
+      dropEffect: "",
+    };
+
+    fireEvent.dragStart(sourceNode, { dataTransfer });
+
+    // Simulate drop on target (clientY in middle for "inside")
+    const rect = targetNode.getBoundingClientRect();
+    fireEvent.dragOver(targetNode, {
+      dataTransfer,
+      clientY: rect.top + rect.height / 2,
+      preventDefault: vi.fn(),
+    });
+    fireEvent.drop(targetNode, {
+      dataTransfer,
+      clientY: rect.top + rect.height / 2,
+      preventDefault: vi.fn(),
+    });
+
+    expect(onMoveWbs).toHaveBeenCalledWith("w3", "w1", expect.any(String));
+  });
+
+  it("shows drop indicator when dragging over a node", () => {
+    render(<WbsSidebarTree {...defaultProps} onMoveWbs={vi.fn()} />);
+
+    const sourceNode = screen.getByTestId("wbs-node-w3");
+    const targetNode = screen.getByTestId("wbs-node-w1");
+
+    const dataTransfer = {
+      setData: vi.fn(),
+      getData: vi.fn(() => "w3"),
+      effectAllowed: "",
+      dropEffect: "",
+    };
+
+    fireEvent.dragStart(sourceNode, { dataTransfer });
+
+    const rect = targetNode.getBoundingClientRect();
+    fireEvent.dragOver(targetNode, {
+      dataTransfer,
+      clientY: rect.top + rect.height / 2,
+      preventDefault: vi.fn(),
+    });
+
+    // Should show a drop indicator (ring or line)
+    const indicator = targetNode.querySelector("[data-drop-indicator]");
+    expect(indicator).not.toBeNull();
+  });
+
+  /* ─── Icon cycling tests ─── */
+
+  it("calls onUpdateIcon when icon is left-clicked", () => {
+    const onUpdateIcon = vi.fn();
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        iconOrder={["Folder", "Star", "Circle"]}
+        onUpdateIcon={onUpdateIcon}
+      />,
+    );
+
+    const iconBtn = screen.getByTestId("wbs-icon-w3");
+    fireEvent.click(iconBtn);
+
+    expect(onUpdateIcon).toHaveBeenCalledWith("w3", "Star");
+  });
+
+  it("cycles icon back to first when at end of order", () => {
+    const onUpdateIcon = vi.fn();
+    const nodes: WbsNodeData[] = [
+      { id: "w1", parentId: null, wbsCode: "1", name: "Test", sortOrder: 0, icon: "Circle" },
+    ];
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        wbsNodes={nodes}
+        iconOrder={["Folder", "Star", "Circle"]}
+        onUpdateIcon={onUpdateIcon}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("wbs-icon-w1"));
+    expect(onUpdateIcon).toHaveBeenCalledWith("w1", "Folder");
+  });
+
+  /* ─── Icon color cycling tests ─── */
+
+  it("calls onUpdateIconColor on right-click of icon", () => {
+    const onUpdateIconColor = vi.fn();
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        onUpdateIconColor={onUpdateIconColor}
+      />,
+    );
+
+    const iconBtn = screen.getByTestId("wbs-icon-w3");
+    fireEvent.contextMenu(iconBtn);
+
+    // Default is "text-warning", next should be "text-info"
+    expect(onUpdateIconColor).toHaveBeenCalledWith("w3", "text-info");
+  });
+
+  it("cycles through icon colors on repeated right-clicks", () => {
+    const onUpdateIconColor = vi.fn();
+    const nodes: WbsNodeData[] = [
+      { id: "w1", parentId: null, wbsCode: "1", name: "Test", sortOrder: 0, iconColor: "text-info" },
+    ];
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        wbsNodes={nodes}
+        onUpdateIconColor={onUpdateIconColor}
+      />,
+    );
+
+    fireEvent.contextMenu(screen.getByTestId("wbs-icon-w1"));
+    // "text-info" → next is "text-success"
+    expect(onUpdateIconColor).toHaveBeenCalledWith("w1", "text-success");
+  });
+
+  it("applies icon color class to the icon button", () => {
+    const nodes: WbsNodeData[] = [
+      { id: "w1", parentId: null, wbsCode: "1", name: "Test", sortOrder: 0, iconColor: "text-success" },
+    ];
+    render(<WbsSidebarTree {...defaultProps} wbsNodes={nodes} />);
+
+    const iconBtn = screen.getByTestId("wbs-icon-w1");
+    expect(iconBtn.className).toContain("text-success");
   });
 });

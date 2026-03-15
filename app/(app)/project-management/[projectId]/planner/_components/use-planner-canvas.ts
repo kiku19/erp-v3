@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
-import type { ProjectData, PlannerEventInput, WbsNodeData, ActivityData } from "./types";
+import type { ProjectData, PlannerEventInput, WbsNodeData, ActivityData, ActivityRelationshipData } from "./types";
 import type { SaveStatus } from "@/components/ui/stale-banner";
 
 /* ─────────────────────── Constants ────────────────────────────────────── */
@@ -24,6 +24,7 @@ interface UsePlannerCanvasReturn {
   pendingCount: number;
   initialWbsNodes: WbsNodeData[];
   initialActivities: ActivityData[];
+  initialRelationships: ActivityRelationshipData[];
   queueEvent: (event: PlannerEventInput) => void;
   reload: () => Promise<void>;
 }
@@ -35,6 +36,7 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
   const [project, setProject] = useState<ProjectData | null>(null);
   const [initialWbsNodes, setInitialWbsNodes] = useState<WbsNodeData[]>([]);
   const [initialActivities, setInitialActivities] = useState<ActivityData[]>([]);
+  const [initialRelationships, setInitialRelationships] = useState<ActivityRelationshipData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
@@ -72,6 +74,7 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
         setProject(data.project);
         setInitialWbsNodes(data.wbsNodes ?? []);
         setInitialActivities(data.activities ?? []);
+        setInitialRelationships(data.relationships ?? []);
         localVersionRef.current = data.version ?? 0;
         setIsStale(false);
         pendingEventsRef.current = [];
@@ -263,6 +266,7 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
     pendingCount,
     initialWbsNodes,
     initialActivities,
+    initialRelationships,
     queueEvent,
     reload,
   };

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useCallback } from "react";
 import {
   LayoutDashboard,
   Workflow,
@@ -7,15 +8,19 @@ import {
   TrendingUp,
   Play,
   Flag,
+  Calendar,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AutosaveIndicator, type SaveStatus } from "@/components/ui/stale-banner";
 import type { ViewMode } from "./types";
 
 interface TopBarProps {
   projectName: string;
   projectCode: string;
+  projectStartDate: string | null;
+  projectFinishDate: string | null;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   saveStatus: SaveStatus;
@@ -23,6 +28,15 @@ interface TopBarProps {
   pendingCount: number;
   isStale: boolean;
   onReload?: () => void;
+  onUpdateProjectDates?: (startDate: string, finishDate: string) => void;
+}
+
+function formatTopBarDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${day}-${months[d.getUTCMonth()]}-${d.getUTCFullYear()}`;
 }
 
 const VIEW_TABS: { mode: ViewMode; label: string; icon: typeof LayoutDashboard }[] = [
@@ -35,6 +49,8 @@ const VIEW_TABS: { mode: ViewMode; label: string; icon: typeof LayoutDashboard }
 export function TopBar({
   projectName,
   projectCode,
+  projectStartDate,
+  projectFinishDate,
   viewMode,
   onViewModeChange,
   saveStatus,
@@ -42,7 +58,49 @@ export function TopBar({
   pendingCount,
   isStale,
   onReload,
+  onUpdateProjectDates,
 }: TopBarProps) {
+  const [editingDate, setEditingDate] = useState<"start" | "finish" | null>(null);
+  const [editStartValue, setEditStartValue] = useState("");
+  const [editFinishValue, setEditFinishValue] = useState("");
+  const startInputRef = useRef<HTMLInputElement>(null);
+  const finishInputRef = useRef<HTMLInputElement>(null);
+
+  const toInputDate = (iso: string | null): string => {
+    if (!iso) return "";
+    return iso.slice(0, 10); // "YYYY-MM-DD"
+  };
+
+  const handleStartClick = useCallback(() => {
+    setEditStartValue(toInputDate(projectStartDate));
+    setEditingDate("start");
+    setTimeout(() => startInputRef.current?.focus(), 0);
+  }, [projectStartDate]);
+
+  const handleFinishClick = useCallback(() => {
+    setEditFinishValue(toInputDate(projectFinishDate));
+    setEditingDate("finish");
+    setTimeout(() => finishInputRef.current?.focus(), 0);
+  }, [projectFinishDate]);
+
+  const commitStartDate = useCallback(() => {
+    setEditingDate(null);
+    if (editStartValue && onUpdateProjectDates) {
+      const newStart = new Date(editStartValue + "T00:00:00.000Z").toISOString();
+      const finish = projectFinishDate ?? newStart;
+      onUpdateProjectDates(newStart, finish);
+    }
+  }, [editStartValue, projectFinishDate, onUpdateProjectDates]);
+
+  const commitFinishDate = useCallback(() => {
+    setEditingDate(null);
+    if (editFinishValue && onUpdateProjectDates) {
+      const newFinish = new Date(editFinishValue + "T00:00:00.000Z").toISOString();
+      const start = projectStartDate ?? newFinish;
+      onUpdateProjectDates(start, newFinish);
+    }
+  }, [editFinishValue, projectStartDate, onUpdateProjectDates]);
+
   return (
     <div className="flex items-center justify-between px-5 h-14 border-b border-border bg-card shrink-0">
       {/* Left: Project Name + Code */}
@@ -51,6 +109,55 @@ export function TopBar({
         <Badge variant="secondary" className="text-[11px] font-semibold">
           {projectCode}
         </Badge>
+        <div className="w-px h-4 bg-border" />
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Calendar size={12} />
+          {editingDate === "start" ? (
+            <Input
+              ref={startInputRef}
+              type="date"
+              value={editStartValue}
+              onChange={(e) => setEditStartValue(e.target.value)}
+              onBlur={commitStartDate}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitStartDate();
+                if (e.key === "Escape") setEditingDate(null);
+              }}
+              className="h-5 w-[120px] text-[11px] px-1 py-0 rounded-[2px] border-[0.5px] border-input/60"
+            />
+          ) : (
+            <span
+              className="cursor-pointer hover:text-foreground transition-colors duration-[var(--duration-fast)]"
+              onClick={handleStartClick}
+              title="Click to edit start date"
+            >
+              {formatTopBarDate(projectStartDate)}
+            </span>
+          )}
+          <span>→</span>
+          {editingDate === "finish" ? (
+            <Input
+              ref={finishInputRef}
+              type="date"
+              value={editFinishValue}
+              onChange={(e) => setEditFinishValue(e.target.value)}
+              onBlur={commitFinishDate}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") commitFinishDate();
+                if (e.key === "Escape") setEditingDate(null);
+              }}
+              className="h-5 w-[120px] text-[11px] px-1 py-0 rounded-[2px] border-[0.5px] border-input/60"
+            />
+          ) : (
+            <span
+              className="cursor-pointer hover:text-foreground transition-colors duration-[var(--duration-fast)]"
+              onClick={handleFinishClick}
+              title="Click to edit finish date"
+            >
+              {formatTopBarDate(projectFinishDate)}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Right: View toggles + actions */}

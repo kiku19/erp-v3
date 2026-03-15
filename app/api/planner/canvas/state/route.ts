@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
       version: snapshot?.version ?? 0,
       wbsNodes: plannerState.wbsNodes,
       activities: plannerState.activities,
+      relationships: plannerState.relationships,
     });
   } catch (error) {
     console.error("Planner state error:", error);

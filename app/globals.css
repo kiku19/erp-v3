@@ -36,6 +36,13 @@
   --color-destructive-hover: #b91c1c;
   --color-muted-hover: #e5e5e5;
 
+  /* WBS Depth Level Colors (distinct light tints) */
+  --color-wbs-level-0: #cfd4f7;
+  --color-wbs-level-1: #d4ecd4;
+  --color-wbs-level-2: #f5dcc0;
+  --color-wbs-level-3: #d4e4f7;
+  --color-wbs-level-4: #f0d4ec;
+
   /* Status Colors */
   --color-success: #16a34a;
   --color-success-bg: #f0fdf4;
