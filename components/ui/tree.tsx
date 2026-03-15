@@ -20,6 +20,7 @@ import {
   Search,
   UserPlus,
 } from "lucide-react";
+import { useTreeDragDrop } from "./use-tree-drag-drop";
 
 /* ─────────────────────── Types ───────────────────────────────────── */
 
@@ -27,7 +28,7 @@ type DropPosition = "before" | "inside" | "after";
 
 type NodeColor = "accent" | "info" | "warning" | "success" | "error";
 
-interface OrgTreeNodeData {
+interface TreeNodeData {
   id: string;
   name: string;
   initials?: string;
@@ -36,7 +37,7 @@ interface OrgTreeNodeData {
   roleColor?: NodeColor;
   badge?: { label: string; color: NodeColor };
   expanded?: boolean;
-  children?: OrgTreeNodeData[];
+  children?: TreeNodeData[];
 }
 
 interface ShortcutItem {
@@ -70,9 +71,9 @@ const statColorMap: Record<string, string> = {
 /* ─────────────────────── Tree helpers ────────────────────────────── */
 
 function toggleNodeById(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   id: string,
-): OrgTreeNodeData[] {
+): TreeNodeData[] {
   return nodes.map((node) => {
     if (node.id === id) {
       return { ...node, expanded: !node.expanded };
@@ -85,9 +86,9 @@ function toggleNodeById(
 }
 
 function expandNodeById(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   id: string,
-): OrgTreeNodeData[] {
+): TreeNodeData[] {
   return nodes.map((node) => {
     if (node.id === id) {
       return { ...node, expanded: true };
@@ -100,10 +101,10 @@ function expandNodeById(
 }
 
 function renameNodeById(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   id: string,
   newName: string,
-): OrgTreeNodeData[] {
+): TreeNodeData[] {
   return nodes.map((node) => {
     if (node.id === id) {
       return { ...node, name: newName };
@@ -116,10 +117,10 @@ function renameNodeById(
 }
 
 function addChildToNode(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   parentId: string,
-  child: OrgTreeNodeData,
-): OrgTreeNodeData[] {
+  child: TreeNodeData,
+): TreeNodeData[] {
   return nodes.map((node) => {
     if (node.id === parentId) {
       return {
@@ -136,11 +137,11 @@ function addChildToNode(
 }
 
 function removeNodeById(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   id: string,
-): { nodes: OrgTreeNodeData[]; removed: OrgTreeNodeData | null } {
-  let removed: OrgTreeNodeData | null = null;
-  const result = nodes.reduce<OrgTreeNodeData[]>((acc, node) => {
+): { nodes: TreeNodeData[]; removed: TreeNodeData | null } {
+  let removed: TreeNodeData | null = null;
+  const result = nodes.reduce<TreeNodeData[]>((acc, node) => {
     if (node.id === id) {
       removed = node;
       return acc;
@@ -158,12 +159,12 @@ function removeNodeById(
 }
 
 function insertNodeNear(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   targetId: string,
-  nodeToInsert: OrgTreeNodeData,
+  nodeToInsert: TreeNodeData,
   position: "before" | "after",
-): OrgTreeNodeData[] {
-  const result: OrgTreeNodeData[] = [];
+): TreeNodeData[] {
+  const result: TreeNodeData[] = [];
   for (const node of nodes) {
     if (node.id === targetId) {
       if (position === "before") {
@@ -183,7 +184,7 @@ function insertNodeNear(
   return result;
 }
 
-function hasDescendant(node: OrgTreeNodeData, targetId: string): boolean {
+function hasDescendant(node: TreeNodeData, targetId: string): boolean {
   if (!node.children) return false;
   for (const child of node.children) {
     if (child.id === targetId) return true;
@@ -193,7 +194,7 @@ function hasDescendant(node: OrgTreeNodeData, targetId: string): boolean {
 }
 
 function isDescendantOf(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   parentId: string,
   childId: string,
 ): boolean {
@@ -209,9 +210,9 @@ function isDescendantOf(
 }
 
 function findNodeById(
-  nodes: OrgTreeNodeData[],
+  nodes: TreeNodeData[],
   id: string,
-): OrgTreeNodeData | null {
+): TreeNodeData | null {
   for (const n of nodes) {
     if (n.id === id) return n;
     if (n.children) {
@@ -231,13 +232,13 @@ function generateInitials(name: string): string {
     .join("");
 }
 
-/* ─────────────────────── OrgTree (container) ─────────────────────── */
+/* ─────────────────────── Tree (container) ─────────────────────── */
 
-interface OrgTreeProps extends HTMLAttributes<HTMLDivElement> {
+interface TreeProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-const OrgTree = forwardRef<HTMLDivElement, OrgTreeProps>(
+const Tree = forwardRef<HTMLDivElement, TreeProps>(
   ({ children, className, ...props }, ref) => {
     return (
       <div
@@ -254,21 +255,21 @@ const OrgTree = forwardRef<HTMLDivElement, OrgTreeProps>(
   },
 );
 
-OrgTree.displayName = "OrgTree";
+Tree.displayName = "Tree";
 
-/* ─────────────────────── OrgTreeHeader ───────────────────────────── */
+/* ─────────────────────── TreeHeader ───────────────────────────── */
 
-interface OrgTreeHeaderProps extends HTMLAttributes<HTMLDivElement> {
+interface TreeHeaderProps extends HTMLAttributes<HTMLDivElement> {
   title: string;
   onAddPerson?: () => void;
 }
 
-function OrgTreeHeader({
+function TreeHeader({
   title,
   onAddPerson,
   className,
   ...props
-}: OrgTreeHeaderProps) {
+}: TreeHeaderProps) {
   return (
     <div
       className={cn(
@@ -281,7 +282,7 @@ function OrgTreeHeader({
       <div className="flex items-center gap-1">
         {onAddPerson && (
           <button
-            data-testid="org-tree-add-person"
+            data-testid="tree-add-person"
             type="button"
             className="flex items-center justify-center h-[30px] w-[30px] rounded-md border border-border bg-background text-muted-foreground hover:bg-muted-hover cursor-pointer transition-colors duration-[var(--duration-fast)]"
             onClick={onAddPerson}
@@ -295,17 +296,17 @@ function OrgTreeHeader({
   );
 }
 
-/* ─────────────────────── OrgTreeSearch ───────────────────────────── */
+/* ─────────────────────── TreeSearch ───────────────────────────── */
 
-interface OrgTreeSearchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
+interface TreeSearchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   "data-testid"?: string;
 }
 
-function OrgTreeSearch({
+function TreeSearch({
   className,
   "data-testid": testId,
   ...props
-}: OrgTreeSearchProps) {
+}: TreeSearchProps) {
   return (
     <div
       data-testid={testId}
@@ -324,13 +325,13 @@ function OrgTreeSearch({
   );
 }
 
-/* ─────────────────────── OrgTreeContent ──────────────────────────── */
+/* ─────────────────────── TreeContent ──────────────────────────── */
 
-interface OrgTreeContentProps extends HTMLAttributes<HTMLDivElement> {
+interface TreeContentProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
 }
 
-function OrgTreeContent({ children, className, ...props }: OrgTreeContentProps) {
+function TreeContent({ children, className, ...props }: TreeContentProps) {
   return (
     <div
       className={cn("flex-1 overflow-y-auto py-2", className)}
@@ -374,7 +375,7 @@ function RenameInput({
   return (
     <input
       ref={inputRef}
-      data-testid="org-tree-rename-input"
+      data-testid="tree-rename-input"
       type="text"
       defaultValue={defaultValue}
       className="flex-1 min-w-0 bg-background border border-input rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -424,7 +425,7 @@ function AddChildInput({
       </div>
       <input
         ref={inputRef}
-        data-testid="org-tree-add-child-input"
+        data-testid="tree-add-child-input"
         type="text"
         placeholder="Enter person name..."
         className="flex-1 min-w-0 bg-background border border-input rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -435,10 +436,10 @@ function AddChildInput({
   );
 }
 
-/* ─────────────────────── OrgTreeNode ─────────────────────────────── */
+/* ─────────────────────── TreeNode ─────────────────────────────── */
 
-interface OrgTreeNodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "onClick" | "onToggle"> {
-  node: OrgTreeNodeData;
+interface TreeNodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "onClick" | "onDoubleClick" | "onToggle"> {
+  node: TreeNodeData;
   level: number;
   active?: boolean;
   draggable?: boolean;
@@ -451,6 +452,7 @@ interface OrgTreeNodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "onClick
   dropPosition?: DropPosition;
   onToggle?: (id: string) => void;
   onClick?: (id: string) => void;
+  onDoubleClick?: (id: string) => void;
   onRenameSubmit?: (id: string, newName: string) => void;
   onRenameCancel?: () => void;
   onAddChildSubmit?: (parentId: string, name: string) => void;
@@ -463,7 +465,7 @@ interface OrgTreeNodeProps extends Omit<HTMLAttributes<HTMLDivElement>, "onClick
   "data-testid"?: string;
 }
 
-function OrgTreeNode({
+function TreeNode({
   node,
   level,
   active = false,
@@ -477,6 +479,7 @@ function OrgTreeNode({
   dropPosition = "inside",
   onToggle,
   onClick,
+  onDoubleClick,
   onRenameSubmit,
   onRenameCancel,
   onAddChildSubmit,
@@ -489,7 +492,7 @@ function OrgTreeNode({
   className,
   "data-testid": testId,
   ...props
-}: OrgTreeNodeProps) {
+}: TreeNodeProps) {
   const hasChildren = node.children && node.children.length > 0;
   const paddingLeft = 12 + level * 16;
 
@@ -506,6 +509,7 @@ function OrgTreeNode({
         )}
         style={{ paddingLeft, paddingRight: 12, paddingTop: 5, paddingBottom: 5 }}
         onClick={() => onClick?.(node.id)}
+        onDoubleClick={() => onDoubleClick?.(node.id)}
         role="treeitem"
         aria-expanded={hasChildren ? node.expanded : undefined}
         draggable={isDraggable}
@@ -532,7 +536,7 @@ function OrgTreeNode({
         {/* Drag handle */}
         {isDraggable && (
           <span
-            data-testid={`org-tree-drag-${node.id}`}
+            data-testid={`tree-drag-${node.id}`}
             className={cn(
               "shrink-0 opacity-40",
               active ? "text-primary-active-foreground" : "text-muted-foreground",
@@ -545,7 +549,7 @@ function OrgTreeNode({
         {/* Chevron — shown only when node has children */}
         {hasChildren && (
           <button
-            data-testid={`org-tree-chevron-${node.id}`}
+            data-testid={`tree-chevron-${node.id}`}
             type="button"
             className={cn(
               "shrink-0 cursor-pointer",
@@ -657,17 +661,17 @@ function OrgTreeNode({
   );
 }
 
-/* ─────────────────────── OrgTreeShortcuts ────────────────────────── */
+/* ─────────────────────── TreeShortcuts ────────────────────────── */
 
-interface OrgTreeShortcutsProps extends HTMLAttributes<HTMLDivElement> {
+interface TreeShortcutsProps extends HTMLAttributes<HTMLDivElement> {
   shortcuts: ShortcutItem[];
 }
 
-function OrgTreeShortcuts({
+function TreeShortcuts({
   shortcuts,
   className,
   ...props
-}: OrgTreeShortcutsProps) {
+}: TreeShortcutsProps) {
   return (
     <div
       className={cn(
@@ -690,13 +694,13 @@ function OrgTreeShortcuts({
   );
 }
 
-/* ─────────────────────── OrgTreeFooter ───────────────────────────── */
+/* ─────────────────────── TreeFooter ───────────────────────────── */
 
-interface OrgTreeFooterProps extends HTMLAttributes<HTMLDivElement> {
+interface TreeFooterProps extends HTMLAttributes<HTMLDivElement> {
   stats: StatItem[];
 }
 
-function OrgTreeFooter({ stats, className, ...props }: OrgTreeFooterProps) {
+function TreeFooter({ stats, className, ...props }: TreeFooterProps) {
   return (
     <div
       className={cn(
@@ -724,17 +728,17 @@ function OrgTreeFooter({ stats, className, ...props }: OrgTreeFooterProps) {
   );
 }
 
-/* ─────────────────────── InteractiveOrgTree ──────────────────────── */
+/* ─────────────────────── InteractiveTree ──────────────────────── */
 
-interface InteractiveOrgTreeProps extends HTMLAttributes<HTMLDivElement> {
-  data: OrgTreeNodeData[];
+interface InteractiveTreeProps extends HTMLAttributes<HTMLDivElement> {
+  data: TreeNodeData[];
   title?: string;
   shortcuts?: ShortcutItem[];
   stats?: StatItem[];
-  onTreeChange?: (tree: OrgTreeNodeData[]) => void;
+  onTreeChange?: (tree: TreeNodeData[]) => void;
 }
 
-function InteractiveOrgTree({
+function InteractiveTree({
   data,
   title = "Organization Tree",
   shortcuts,
@@ -742,21 +746,17 @@ function InteractiveOrgTree({
   onTreeChange,
   className,
   ...props
-}: InteractiveOrgTreeProps) {
-  const [tree, setTree] = useState<OrgTreeNodeData[]>(data);
+}: InteractiveTreeProps) {
+  const [tree, setTree] = useState<TreeNodeData[]>(data);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [addingChildToId, setAddingChildToId] = useState<string | null>(null);
   const [addingAfterSelectedId, setAddingAfterSelectedId] = useState<string | null>(null);
   const [addingRootPerson, setAddingRootPerson] = useState(false);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const [dropPosition, setDropPosition] = useState<DropPosition>("inside");
-  const dropPositionRef = useRef<DropPosition>("inside");
-  const draggedIdRef = useRef<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const updateTree = useCallback(
-    (newTree: OrgTreeNodeData[]) => {
+    (newTree: TreeNodeData[]) => {
       setTree(newTree);
       onTreeChange?.(newTree);
     },
@@ -797,7 +797,7 @@ function InteractiveOrgTree({
   /* ── Add child (report) ── */
   const handleAddChildSubmit = useCallback(
     (parentId: string, name: string) => {
-      const newPerson: OrgTreeNodeData = {
+      const newPerson: TreeNodeData = {
         id: `person-${Date.now()}`,
         name,
         initials: generateInitials(name),
@@ -828,7 +828,7 @@ function InteractiveOrgTree({
   const handleAddAfterSelectedSubmit = useCallback(
     (name: string) => {
       if (!addingAfterSelectedId) return;
-      const newPerson: OrgTreeNodeData = {
+      const newPerson: TreeNodeData = {
         id: `person-${Date.now()}`,
         name,
         initials: generateInitials(name),
@@ -846,7 +846,7 @@ function InteractiveOrgTree({
 
   const handleAddRootSubmit = useCallback(
     (name: string) => {
-      const newPerson: OrgTreeNodeData = {
+      const newPerson: TreeNodeData = {
         id: `person-${Date.now()}`,
         name,
         initials: generateInitials(name),
@@ -862,94 +862,33 @@ function InteractiveOrgTree({
     setAddingRootPerson(false);
   }, []);
 
-  /* ── Drag & Drop — any user can be a drop target ── */
-  const handleDragStart = useCallback((e: DragEvent, id: string) => {
-    draggedIdRef.current = id;
-    e.dataTransfer.setData("text/plain", id);
-    e.dataTransfer.effectAllowed = "move";
-  }, []);
-
-  const handleDragOver = useCallback(
-    (e: DragEvent, id: string) => {
-      if (draggedIdRef.current === id) return;
-      if (draggedIdRef.current && isDescendantOf(tree, draggedIdRef.current, id)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-
-      // Calculate drop zone from cursor Y position
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const height = rect.height;
-      const threshold = height * 0.25;
-
-      let pos: DropPosition;
-      if (y < threshold) {
-        pos = "before";
-      } else if (y > height - threshold) {
-        pos = "after";
-      } else {
-        pos = "inside";
-      }
-
-      setDragOverId(id);
-      setDropPosition(pos);
-      dropPositionRef.current = pos;
-    },
-    [tree],
-  );
-
-  const handleDragLeave = useCallback(() => {
-    setDragOverId(null);
-    setDropPosition("inside");
-    dropPositionRef.current = "inside";
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: DragEvent, targetId: string) => {
-      e.preventDefault();
-
-      // Compute drop position from cursor Y on the drop target
-      // Use nativeEvent.target for jsdom compatibility (e.currentTarget can be null in synthetic events)
-      const el = (e.nativeEvent?.target ?? e.currentTarget ?? e.target) as HTMLElement;
-      const rect = el.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const height = rect.height || 1;
-      const threshold = height * 0.25;
-      let currentDropPos: DropPosition = "inside";
-      if (y < threshold) currentDropPos = "before";
-      else if (y > height - threshold) currentDropPos = "after";
-
-      setDragOverId(null);
-      setDropPosition("inside");
-      dropPositionRef.current = "inside";
-
-      const sourceId = e.dataTransfer.getData("text/plain") || draggedIdRef.current;
-      draggedIdRef.current = null;
-      if (!sourceId || sourceId === targetId) return;
-
-      // Don't allow dropping a parent into its own descendant
-      if (isDescendantOf(tree, sourceId, targetId)) return;
-
-      // Remove source from tree
+  /* ── Drag & Drop via shared hook ── */
+  const handleTreeDrop = useCallback(
+    (sourceId: string, targetId: string, position: DropPosition) => {
       const { nodes: treeAfterRemove, removed } = removeNodeById(tree, sourceId);
       if (!removed) return;
 
-      let newTree: OrgTreeNodeData[];
-      if (currentDropPos === "inside") {
-        // Nest as child of target
+      let newTree: TreeNodeData[];
+      if (position === "inside") {
         newTree = addChildToNode(
           expandNodeById(treeAfterRemove, targetId),
           targetId,
           removed,
         );
       } else {
-        // Insert before or after the target at the same level
-        newTree = insertNodeNear(treeAfterRemove, targetId, removed, currentDropPos);
+        newTree = insertNodeNear(treeAfterRemove, targetId, removed, position);
       }
       updateTree(newTree);
     },
     [tree, updateTree],
   );
+
+  const { dragOverId, dropPosition, handlers: dragHandlers } = useTreeDragDrop({
+    nodes: tree,
+    getId: (n) => n.id,
+    getChildren: (n) => n.children ?? [],
+    onDrop: handleTreeDrop,
+  });
 
   /* ── Keyboard shortcuts ── */
   const handleKeyDown = useCallback(
@@ -981,11 +920,11 @@ function InteractiveOrgTree({
 
   /* ── Recursive renderer ── */
   const renderNodes = useCallback(
-    (nodes: OrgTreeNodeData[], level: number): ReactNode => {
+    (nodes: TreeNodeData[], level: number): ReactNode => {
       return nodes.map((node) => (
-        <OrgTreeNode
+        <TreeNode
           key={node.id}
-          data-testid={`org-tree-row-${node.id}`}
+          data-testid={`tree-row-${node.id}`}
           node={node}
           level={level}
           draggable
@@ -996,22 +935,22 @@ function InteractiveOrgTree({
           onAddAfterSubmit={handleAddAfterSelectedSubmit}
           onAddAfterCancel={handleAddAfterSelectedCancel}
           dragOver={dragOverId === node.id}
-          dropPosition={dragOverId === node.id ? dropPosition : "inside"}
+          dropPosition={dragOverId === node.id ? (dropPosition ?? "inside") : "inside"}
           onClick={handleNodeClick}
           onToggle={handleToggle}
           onRenameSubmit={handleRenameSubmit}
           onRenameCancel={handleRenameCancel}
           onAddChildSubmit={handleAddChildSubmit}
           onAddChildCancel={handleAddChildCancel}
-          onNodeDragStart={handleDragStart}
-          onNodeDragOver={handleDragOver}
-          onNodeDragLeave={handleDragLeave}
-          onNodeDrop={handleDrop}
+          onNodeDragStart={dragHandlers.onDragStart}
+          onNodeDragOver={dragHandlers.onDragOver}
+          onNodeDragLeave={dragHandlers.onDragLeave}
+          onNodeDrop={dragHandlers.onDrop}
         >
           {node.expanded && node.children
             ? renderNodes(node.children, level + 1)
             : null}
-        </OrgTreeNode>
+        </TreeNode>
       ));
     },
     [
@@ -1029,22 +968,19 @@ function InteractiveOrgTree({
       handleAddChildCancel,
       handleAddAfterSelectedSubmit,
       handleAddAfterSelectedCancel,
-      handleDragStart,
-      handleDragOver,
-      handleDragLeave,
-      handleDrop,
+      dragHandlers,
     ],
   );
 
   return (
-    <OrgTree
+    <Tree
       ref={containerRef}
       className={cn("outline-none", className)}
       tabIndex={0}
       {...props}
     >
-      <OrgTreeHeader title={title} onAddPerson={handleHeaderAddPerson} />
-      <OrgTreeContent>
+      <TreeHeader title={title} onAddPerson={handleHeaderAddPerson} />
+      <TreeContent>
         {renderNodes(tree, 0)}
         {addingRootPerson && (
           <AddChildInput
@@ -1053,35 +989,35 @@ function InteractiveOrgTree({
             onCancel={handleAddRootCancel}
           />
         )}
-      </OrgTreeContent>
-      {shortcuts && <OrgTreeShortcuts shortcuts={shortcuts} />}
-      {stats && <OrgTreeFooter stats={stats} />}
-    </OrgTree>
+      </TreeContent>
+      {shortcuts && <TreeShortcuts shortcuts={shortcuts} />}
+      {stats && <TreeFooter stats={stats} />}
+    </Tree>
   );
 }
 
 /* ─────────────────────── Exports ─────────────────────────────────── */
 
 export {
-  OrgTree,
-  OrgTreeHeader,
-  OrgTreeSearch,
-  OrgTreeContent,
-  OrgTreeNode,
-  OrgTreeShortcuts,
-  OrgTreeFooter,
-  InteractiveOrgTree,
+  Tree,
+  TreeHeader,
+  TreeSearch,
+  TreeContent,
+  TreeNode,
+  TreeShortcuts,
+  TreeFooter,
+  InteractiveTree,
   insertNodeNear,
   removeNodeById,
-  type OrgTreeProps,
-  type OrgTreeHeaderProps,
-  type OrgTreeSearchProps,
-  type OrgTreeContentProps,
-  type OrgTreeNodeProps,
-  type OrgTreeNodeData,
-  type OrgTreeShortcutsProps,
-  type OrgTreeFooterProps,
-  type InteractiveOrgTreeProps,
+  type TreeProps,
+  type TreeHeaderProps,
+  type TreeSearchProps,
+  type TreeContentProps,
+  type TreeNodeProps,
+  type TreeNodeData,
+  type TreeShortcutsProps,
+  type TreeFooterProps,
+  type InteractiveTreeProps,
   type ShortcutItem,
   type StatItem,
 };

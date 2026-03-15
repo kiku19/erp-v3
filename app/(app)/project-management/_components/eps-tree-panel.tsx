@@ -1,21 +1,19 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, type ReactNode, type DragEvent } from "react";
+import { useCallback, useRef, useEffect, useImperativeHandle, forwardRef, type ReactNode } from "react";
 import { Briefcase, Folder, FileText } from "lucide-react";
 import {
-  OrgTree,
-  OrgTreeHeader,
-  OrgTreeContent,
-  OrgTreeNode,
-  OrgTreeFooter,
-  type OrgTreeNodeData,
+  Tree,
+  TreeHeader,
+  TreeContent,
+  TreeNode,
+  TreeFooter,
+  type TreeNodeData,
   type StatItem,
-} from "@/components/ui/org-tree";
-import { type TreeNode } from "./use-eps-data";
-
-/* ─────────────────────── Types ───────────────────────────────────── */
-
-type DropPosition = "before" | "inside" | "after";
+} from "@/components/ui/tree";
+import { useTreeDragDrop, type DropPosition } from "@/components/ui/use-tree-drag-drop";
+import { useTreeExpand } from "@/components/ui/use-tree-expand";
+import { type EpsTreeNode } from "./use-eps-data";
 
 interface DragDropCallbacks {
   onReorderEps?: (orderedIds: string[]) => void;
@@ -23,10 +21,17 @@ interface DragDropCallbacks {
   onMoveProject?: (projectId: string, targetEpsId: string, nodeId: string | null, sortOrder: number) => void;
 }
 
+interface EpsTreePanelHandle {
+  collapseAll: () => void;
+  expandAll: () => void;
+  allCollapsed: boolean;
+}
+
 interface EpsTreePanelProps extends DragDropCallbacks {
-  treeData: TreeNode[];
+  treeData: EpsTreeNode[];
   selectedId: string | null;
   onSelect: (id: string, type: "eps" | "node" | "project") => void;
+  onDoubleClick?: (id: string, type: "eps" | "node" | "project") => void;
   stats: { nodes: number; projects: number; active: number };
   addingEps?: boolean;
   onAddEpsSubmit?: (name: string) => void;
@@ -37,6 +42,7 @@ interface EpsTreePanelProps extends DragDropCallbacks {
   addingProjectToId?: string | null;
   onAddProjectSubmit?: (name: string) => void;
   onAddProjectCancel?: () => void;
+  onAllCollapsedChange?: (allCollapsed: boolean) => void;
 }
 
 /* ─────────────────────── Status → badge color mapping ────────────── */
@@ -50,11 +56,11 @@ function statusBadgeColor(status?: string): "success" | "warning" | "info" | "ac
   return "accent";
 }
 
-/* ─────────────────────── Map TreeNode → OrgTreeNodeData ──────────── */
+/* ─────────────────────── Map EpsTreeNode → TreeNodeData ──────────── */
 
-function mapToOrgTreeNode(node: TreeNode): OrgTreeNodeData {
+function mapToTreeNode(node: EpsTreeNode, isExpanded: (id: string) => boolean): TreeNodeData {
   let icon: ReactNode;
-  let badge: OrgTreeNodeData["badge"];
+  let badge: TreeNodeData["badge"];
 
   switch (node.type) {
     case "eps":
@@ -76,9 +82,9 @@ function mapToOrgTreeNode(node: TreeNode): OrgTreeNodeData {
     name: node.name,
     icon,
     badge,
-    expanded: true,
+    expanded: isExpanded(node.id),
     children: node.children.length > 0
-      ? node.children.map(mapToOrgTreeNode)
+      ? node.children.map((child) => mapToTreeNode(child, isExpanded))
       : undefined,
   };
 }
@@ -151,7 +157,7 @@ function InlineInput({
 /* ─────────────────────── Tree helpers ─────────────────────────────── */
 
 function findNodeType(
-  nodes: TreeNode[],
+  nodes: EpsTreeNode[],
   id: string,
 ): "eps" | "node" | "project" | null {
   for (const node of nodes) {
@@ -162,54 +168,33 @@ function findNodeType(
   return null;
 }
 
-function findTreeNode(nodes: TreeNode[], id: string): TreeNode | null {
+function findEpsTreeNode(nodes: EpsTreeNode[], id: string): EpsTreeNode | null {
   for (const node of nodes) {
     if (node.id === id) return node;
-    const found = findTreeNode(node.children, id);
+    const found = findEpsTreeNode(node.children, id);
     if (found) return found;
   }
   return null;
 }
 
-function findEpsContaining(nodes: TreeNode[], id: string): string | null {
+function findEpsContaining(nodes: EpsTreeNode[], id: string): string | null {
   for (const eps of nodes) {
     if (eps.type === "eps") {
       if (eps.id === id) return eps.id;
-      if (findTreeNode(eps.children, id)) return eps.id;
+      if (findEpsTreeNode(eps.children, id)) return eps.id;
     }
   }
   return null;
 }
 
-function isDescendantOf(nodes: TreeNode[], parentId: string, childId: string): boolean {
-  const parent = findTreeNode(nodes, parentId);
-  if (!parent) return false;
-  return !!findTreeNode(parent.children, childId);
-}
-
-/** Collect sibling IDs at the same level as targetId */
-function getSiblingIds(nodes: TreeNode[], targetId: string): string[] {
-  // Check root level
-  for (const node of nodes) {
-    if (node.id === targetId) return nodes.map((n) => n.id);
-  }
-  // Check children recursively
-  for (const node of nodes) {
-    for (const child of node.children) {
-      if (child.id === targetId) return node.children.map((c) => c.id);
-    }
-    const result = getSiblingIds(node.children, targetId);
-    if (result.length > 0) return result;
-  }
-  return [];
-}
 
 /* ─────────────────────── Component ───────────────────────────────── */
 
-function EpsTreePanel({
+const EpsTreePanel = forwardRef<EpsTreePanelHandle, EpsTreePanelProps>(function EpsTreePanel({
   treeData,
   selectedId,
   onSelect,
+  onDoubleClick,
   stats,
   addingEps,
   onAddEpsSubmit,
@@ -223,13 +208,30 @@ function EpsTreePanel({
   onReorderEps,
   onMoveNode,
   onMoveProject,
-}: EpsTreePanelProps) {
-  const orgTreeData = treeData.map(mapToOrgTreeNode);
+  onAllCollapsedChange,
+}, ref) {
+  /* ── Expand/collapse state ── */
+  const { isExpanded, toggle, collapseAll, expandAll, allCollapsed } = useTreeExpand({
+    nodes: treeData,
+    getId: (n) => n.id,
+    getChildren: (n) => n.children,
+  });
 
-  /* ── Drag state ── */
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
-  const [dropPosition, setDropPosition] = useState<DropPosition>("inside");
-  const draggedIdRef = useRef<string | null>(null);
+  useImperativeHandle(ref, () => ({ collapseAll, expandAll, allCollapsed }), [collapseAll, expandAll, allCollapsed]);
+
+  // Notify parent when allCollapsed changes
+  useEffect(() => {
+    onAllCollapsedChange?.(allCollapsed);
+  }, [allCollapsed, onAllCollapsedChange]);
+
+  // Cleanup click debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    };
+  }, []);
+
+  const orgTreeData = treeData.map((node) => mapToTreeNode(node, isExpanded));
 
   const footerStats: StatItem[] = [
     { label: "Nodes", value: stats.nodes, color: "warning" },
@@ -237,110 +239,80 @@ function EpsTreePanel({
     { label: "Active", value: stats.active, color: "info" },
   ];
 
+  /* ── Debounced click / double-click for projects ── */
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleClick = useCallback(
     (id: string) => {
       const nodeType = findNodeType(treeData, id);
-      onSelect(id, nodeType ?? "eps");
+      if (nodeType === "project" && onDoubleClick) {
+        // Delay single-click for projects so double-click can cancel it
+        if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = setTimeout(() => {
+          clickTimerRef.current = null;
+          onSelect(id, nodeType);
+        }, 250);
+      } else {
+        onSelect(id, nodeType ?? "eps");
+      }
     },
-    [treeData, onSelect],
+    [treeData, onSelect, onDoubleClick],
   );
 
-  /* ── Drag handlers ── */
-  const handleDragStart = useCallback((e: DragEvent, id: string) => {
-    draggedIdRef.current = id;
-    e.dataTransfer.setData("text/plain", id);
-    e.dataTransfer.effectAllowed = "move";
-  }, []);
-
-  const handleDragOver = useCallback(
-    (e: DragEvent, id: string) => {
-      const draggedId = draggedIdRef.current;
-      if (!draggedId || draggedId === id) return;
-
-      // Prevent dropping onto own descendants
-      if (isDescendantOf(treeData, draggedId, id)) return;
-
-      const draggedType = findNodeType(treeData, draggedId);
-      const targetType = findNodeType(treeData, id);
-
-      // EPS can only reorder among other EPS (before/after), not nest inside
-      if (draggedType === "eps" && targetType !== "eps") return;
-
-      // Projects can't have children dropped inside them
-      if (targetType === "project" && draggedType !== "project") return;
-
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const height = rect.height;
-      const threshold = height * 0.25;
-
-      let pos: DropPosition;
-      if (y < threshold) {
-        pos = "before";
-      } else if (y > height - threshold) {
-        pos = "after";
-      } else {
-        pos = "inside";
+  const handleDoubleClick = useCallback(
+    (id: string) => {
+      // Cancel the pending single-click
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
       }
-
-      // Enforce constraints on drop position
-      if (draggedType === "eps") {
-        // EPS can only be before/after other EPS
-        if (pos === "inside") pos = "after";
+      const nodeType = findNodeType(treeData, id);
+      if (nodeType) {
+        onDoubleClick?.(id, nodeType);
       }
-      if (targetType === "project") {
-        // Can't drop inside a project, only before/after
-        if (pos === "inside") pos = y < height / 2 ? "before" : "after";
-      }
+    },
+    [treeData, onDoubleClick],
+  );
 
-      setDragOverId(id);
-      setDropPosition(pos);
+  /* ── Drag constraint: business rules for what can drop where ── */
+  const canDrop = useCallback(
+    (sourceId: string, targetId: string, position: DropPosition): boolean => {
+      const sourceType = findNodeType(treeData, sourceId);
+      const targetType = findNodeType(treeData, targetId);
+
+      // EPS can only reorder among other EPS (before/after), not nest inside non-EPS
+      if (sourceType === "eps" && targetType !== "eps") return false;
+      // EPS cannot be dropped "inside" another EPS — only before/after
+      if (sourceType === "eps" && targetType === "eps" && position === "inside") return false;
+
+      // Projects can't have non-project children dropped inside them
+      if (targetType === "project" && sourceType !== "project") return false;
+      // Can't drop inside a project, only before/after
+      if (targetType === "project" && position === "inside") return false;
+
+      return true;
     },
     [treeData],
   );
 
-  const handleDragLeave = useCallback(() => {
-    setDragOverId(null);
-    setDropPosition("inside");
-  }, []);
-
+  /* ── Drop handler: dispatch business actions ── */
   const handleDrop = useCallback(
-    (e: DragEvent, targetId: string) => {
-      e.preventDefault();
-
-      const el = (e.nativeEvent?.target ?? e.currentTarget ?? e.target) as HTMLElement;
-      const rect = el.getBoundingClientRect();
-      const y = e.clientY - rect.top;
-      const height = rect.height || 1;
-      const threshold = height * 0.25;
-      let currentDropPos: DropPosition = "inside";
-      if (y < threshold) currentDropPos = "before";
-      else if (y > height - threshold) currentDropPos = "after";
-
-      setDragOverId(null);
-      setDropPosition("inside");
-
-      const sourceId = e.dataTransfer.getData("text/plain") || draggedIdRef.current;
-      draggedIdRef.current = null;
-      if (!sourceId || sourceId === targetId) return;
-      if (isDescendantOf(treeData, sourceId, targetId)) return;
-
+    (sourceId: string, targetId: string, position: DropPosition) => {
       const sourceType = findNodeType(treeData, sourceId);
       const targetType = findNodeType(treeData, targetId);
       if (!sourceType || !targetType) return;
 
+      let effectivePos = position;
+
       // ── EPS reorder ──
       if (sourceType === "eps" && targetType === "eps") {
-        if (currentDropPos === "inside") currentDropPos = "after";
+        if (effectivePos === "inside") effectivePos = "after";
         const epsIds = treeData.filter((n) => n.type === "eps").map((n) => n.id);
         const fromIdx = epsIds.indexOf(sourceId);
         const toIdx = epsIds.indexOf(targetId);
         if (fromIdx === -1 || toIdx === -1) return;
         epsIds.splice(fromIdx, 1);
-        const insertIdx = currentDropPos === "before" ? epsIds.indexOf(targetId) : epsIds.indexOf(targetId) + 1;
+        const insertIdx = effectivePos === "before" ? epsIds.indexOf(targetId) : epsIds.indexOf(targetId) + 1;
         epsIds.splice(insertIdx, 0, sourceId);
         onReorderEps?.(epsIds);
         return;
@@ -348,31 +320,24 @@ function EpsTreePanel({
 
       // ── Node move ──
       if (sourceType === "node") {
-        if (currentDropPos === "inside") {
-          // Drop inside an EPS or Node → becomes child
+        if (effectivePos === "inside") {
           if (targetType === "eps") {
-            const targetChildren = findTreeNode(treeData, targetId)?.children ?? [];
-            const nextSort = targetChildren.length;
-            onMoveNode?.(sourceId, targetId, null, nextSort);
+            const targetChildren = findEpsTreeNode(treeData, targetId)?.children ?? [];
+            onMoveNode?.(sourceId, targetId, null, targetChildren.length);
           } else if (targetType === "node") {
             const targetEpsId = findEpsContaining(treeData, targetId);
             if (!targetEpsId) return;
-            const targetChildren = findTreeNode(treeData, targetId)?.children ?? [];
-            const nextSort = targetChildren.length;
-            onMoveNode?.(sourceId, targetEpsId, targetId, nextSort);
+            const targetChildren = findEpsTreeNode(treeData, targetId)?.children ?? [];
+            onMoveNode?.(sourceId, targetEpsId, targetId, targetChildren.length);
           }
         } else {
-          // Drop before/after a sibling → reorder at same level
           const targetEpsId = findEpsContaining(treeData, targetId);
           if (!targetEpsId) return;
-          const targetNode = findTreeNode(treeData, targetId);
+          const targetNode = findEpsTreeNode(treeData, targetId);
           if (!targetNode) return;
-          const sortOrder = currentDropPos === "before"
+          const sortOrder = effectivePos === "before"
             ? Math.max(0, targetNode.sortOrder)
             : targetNode.sortOrder + 1;
-
-          // Determine the parent: if target is a direct child of EPS, parentNodeId is null
-          // Otherwise, find the parent node
           const parentNodeId = findParentNodeId(treeData, targetId);
           onMoveNode?.(sourceId, targetEpsId, parentNodeId, sortOrder);
         }
@@ -381,29 +346,25 @@ function EpsTreePanel({
 
       // ── Project move ──
       if (sourceType === "project") {
-        if (currentDropPos === "inside") {
+        if (effectivePos === "inside") {
           if (targetType === "eps") {
-            const targetChildren = findTreeNode(treeData, targetId)?.children.filter((c) => c.type === "project") ?? [];
-            const nextSort = targetChildren.length;
-            onMoveProject?.(sourceId, targetId, null, nextSort);
+            const targetChildren = findEpsTreeNode(treeData, targetId)?.children.filter((c) => c.type === "project") ?? [];
+            onMoveProject?.(sourceId, targetId, null, targetChildren.length);
           } else if (targetType === "node") {
             const targetEpsId = findEpsContaining(treeData, targetId);
             if (!targetEpsId) return;
-            const targetChildren = findTreeNode(treeData, targetId)?.children.filter((c) => c.type === "project") ?? [];
-            const nextSort = targetChildren.length;
-            onMoveProject?.(sourceId, targetEpsId, targetId, nextSort);
+            const targetChildren = findEpsTreeNode(treeData, targetId)?.children.filter((c) => c.type === "project") ?? [];
+            onMoveProject?.(sourceId, targetEpsId, targetId, targetChildren.length);
           }
         } else {
-          // Before/after a sibling
           const targetEpsId = findEpsContaining(treeData, targetId);
           if (!targetEpsId) return;
-          const targetNode = findTreeNode(treeData, targetId);
+          const targetNode = findEpsTreeNode(treeData, targetId);
           if (!targetNode) return;
-          const sortOrder = currentDropPos === "before"
+          const sortOrder = effectivePos === "before"
             ? Math.max(0, targetNode.sortOrder)
             : targetNode.sortOrder + 1;
           const parentNodeId = findParentNodeId(treeData, targetId);
-          // For projects, parentNodeId maps to nodeId
           onMoveProject?.(sourceId, targetEpsId, parentNodeId, sortOrder);
         }
         return;
@@ -412,11 +373,20 @@ function EpsTreePanel({
     [treeData, onReorderEps, onMoveNode, onMoveProject],
   );
 
+  /* ── Drag & drop via shared hook ── */
+  const { dragOverId, dropPosition, handlers: dragHandlers } = useTreeDragDrop({
+    nodes: treeData,
+    getId: (n) => n.id,
+    getChildren: (n) => n.children,
+    canDrop,
+    onDrop: handleDrop,
+  });
+
   /* ── Render ── */
   const renderNodes = useCallback(
-    (nodes: OrgTreeNodeData[], level: number): ReactNode => {
+    (nodes: TreeNodeData[], level: number): ReactNode => {
       return nodes.map((node) => (
-        <OrgTreeNode
+        <TreeNode
           key={node.id}
           data-testid={`eps-tree-node-${node.id}`}
           node={node}
@@ -424,12 +394,14 @@ function EpsTreePanel({
           active={selectedId === node.id}
           draggable
           dragOver={dragOverId === node.id}
-          dropPosition={dragOverId === node.id ? dropPosition : "inside"}
+          dropPosition={dragOverId === node.id ? (dropPosition ?? "inside") : "inside"}
           onClick={handleClick}
-          onNodeDragStart={handleDragStart}
-          onNodeDragOver={handleDragOver}
-          onNodeDragLeave={handleDragLeave}
-          onNodeDrop={handleDrop}
+          onDoubleClick={handleDoubleClick}
+          onToggle={toggle}
+          onNodeDragStart={dragHandlers.onDragStart}
+          onNodeDragOver={dragHandlers.onDragOver}
+          onNodeDragLeave={dragHandlers.onDragLeave}
+          onNodeDrop={dragHandlers.onDrop}
         >
           {node.expanded && node.children
             ? renderNodes(node.children, level + 1)
@@ -454,18 +426,17 @@ function EpsTreePanel({
               onCancel={onAddProjectCancel}
             />
           )}
-        </OrgTreeNode>
+        </TreeNode>
       ));
     },
     [
       selectedId,
       handleClick,
+      handleDoubleClick,
+      toggle,
       dragOverId,
       dropPosition,
-      handleDragStart,
-      handleDragOver,
-      handleDragLeave,
-      handleDrop,
+      dragHandlers,
       addingNodeToId,
       onAddNodeSubmit,
       onAddNodeCancel,
@@ -476,12 +447,12 @@ function EpsTreePanel({
   );
 
   return (
-    <OrgTree
+    <Tree
       className="w-[300px] h-full shrink-0 bg-card border-r border-border"
       data-testid="eps-tree-panel"
     >
-      <OrgTreeHeader title="EPS Hierarchy" />
-      <OrgTreeContent>
+      <TreeHeader title="EPS Hierarchy" />
+      <TreeContent>
         {orgTreeData.length > 0
           ? renderNodes(orgTreeData, 0)
           : !addingEps && (
@@ -498,16 +469,16 @@ function EpsTreePanel({
             onCancel={onAddEpsCancel}
           />
         )}
-      </OrgTreeContent>
-      <OrgTreeFooter stats={footerStats} />
-    </OrgTree>
+      </TreeContent>
+      <TreeFooter stats={footerStats} />
+    </Tree>
   );
-}
+});
 
 /* ─────────────────────── Helpers ──────────────────────────────────── */
 
 /** Find the parent node ID for a given item. Returns null if it's a direct child of an EPS. */
-function findParentNodeId(treeData: TreeNode[], targetId: string): string | null {
+function findParentNodeId(treeData: EpsTreeNode[], targetId: string): string | null {
   for (const eps of treeData) {
     // Direct children of EPS
     for (const child of eps.children) {
@@ -520,7 +491,7 @@ function findParentNodeId(treeData: TreeNode[], targetId: string): string | null
   return null;
 }
 
-function findParentInChildren(nodes: TreeNode[], targetId: string): string | null | undefined {
+function findParentInChildren(nodes: EpsTreeNode[], targetId: string): string | null | undefined {
   for (const node of nodes) {
     for (const child of node.children) {
       if (child.id === targetId) return node.id;
@@ -531,4 +502,4 @@ function findParentInChildren(nodes: TreeNode[], targetId: string): string | nul
   return undefined;
 }
 
-export { EpsTreePanel, type EpsTreePanelProps, type DragDropCallbacks };
+export { EpsTreePanel, type EpsTreePanelProps, type EpsTreePanelHandle, type DragDropCallbacks };

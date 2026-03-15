@@ -3,6 +3,125 @@ import { prisma } from "@/lib/prisma";
 import { authenticateRequest, isAuthError } from "@/lib/api-auth";
 import { updateProjectSchema } from "@/lib/validations/eps";
 
+/* ─────────────────────── Breadcrumb helper ──────────────────────────── */
+
+async function buildBreadcrumb(
+  epsName: string,
+  nodeId: string | null,
+  tenantId: string,
+): Promise<string[]> {
+  const segments: string[] = [epsName];
+  let currentNodeId = nodeId;
+  const visited = new Set<string>();
+  while (currentNodeId && !visited.has(currentNodeId)) {
+    visited.add(currentNodeId);
+    const node = await prisma.node.findFirst({
+      where: { id: currentNodeId, tenantId, isDeleted: false },
+    });
+    if (!node) break;
+    segments.push(node.name);
+    currentNodeId = node.parentNodeId;
+  }
+  const [epsSegment, ...nodeSegments] = segments;
+  return [epsSegment, ...nodeSegments.reverse()];
+}
+
+/* ─────────────────────── GET ────────────────────────────────────────── */
+
+/**
+ * @swagger
+ * /api/projects/{id}:
+ *   get:
+ *     summary: Get a project by ID with breadcrumb path
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Project with breadcrumb
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 projectId:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 status:
+ *                   type: string
+ *                 percentDone:
+ *                   type: number
+ *                 startDate:
+ *                   type: string
+ *                   nullable: true
+ *                 finishDate:
+ *                   type: string
+ *                   nullable: true
+ *                 breadcrumb:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Project not found
+ *       500:
+ *         description: Internal server error
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const auth = await authenticateRequest(request);
+  if (isAuthError(auth)) return auth;
+
+  const { id } = await params;
+
+  try {
+    const project = await prisma.project.findFirst({
+      where: { id, tenantId: auth.tenantId, isDeleted: false },
+      include: { eps: true, node: true },
+    });
+
+    if (!project) {
+      return NextResponse.json(
+        { message: "Project not found" },
+        { status: 404 },
+      );
+    }
+
+    const breadcrumb = await buildBreadcrumb(
+      project.eps.name,
+      project.nodeId,
+      auth.tenantId,
+    );
+
+    return NextResponse.json({
+      id: project.id,
+      projectId: project.projectId,
+      name: project.name,
+      status: project.status,
+      percentDone: project.percentDone,
+      startDate: project.startDate?.toISOString() ?? null,
+      finishDate: project.finishDate?.toISOString() ?? null,
+      breadcrumb,
+    });
+  } catch {
+    return NextResponse.json(
+      { message: "Failed to fetch project" },
+      { status: 500 },
+    );
+  }
+}
+
+/* ─────────────────────── PATCH ──────────────────────────────────────── */
+
 /**
  * @swagger
  * /api/projects/{id}:

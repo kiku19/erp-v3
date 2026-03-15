@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   Plus,
@@ -8,30 +9,30 @@ import {
   Search,
   ChevronRight,
   Home,
-  Columns3,
   ChevronsDownUp,
 } from "lucide-react";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AutosaveIndicator } from "@/components/ui/stale-banner";
-import { useCanvas, type TreeNode } from "./_components/use-canvas";
+import { useCanvas, type EpsTreeNode } from "./_components/use-canvas";
 import { useKeyboardShortcuts } from "./_components/use-keyboard-shortcuts";
-import { EpsTreePanel } from "./_components/eps-tree-panel";
+import { EpsTreePanel, type EpsTreePanelHandle } from "./_components/eps-tree-panel";
 import { EpsTablePanel, type TableItem } from "./_components/eps-table-panel";
+
 import { AddNodeModal } from "./_components/add-node-modal";
 import { AddProjectModal } from "./_components/add-project-modal";
 import { SearchModal } from "./_components/search-modal";
 
 /* ─────────────────────── Helpers ─────────────────────────────────── */
 
-function getEpsList(treeData: TreeNode[]): { id: string; name: string }[] {
+function getEpsList(treeData: EpsTreeNode[]): { id: string; name: string }[] {
   return treeData
     .filter((node) => node.type === "eps")
     .map((node) => ({ id: node.id, name: node.name }));
 }
 
-function countStats(treeData: TreeNode[]): {
+function countStats(treeData: EpsTreeNode[]): {
   nodes: number;
   projects: number;
   active: number;
@@ -40,7 +41,7 @@ function countStats(treeData: TreeNode[]): {
   let projects = 0;
   let active = 0;
 
-  function traverse(items: TreeNode[]) {
+  function traverse(items: EpsTreeNode[]) {
     for (const item of items) {
       if (item.type === "node") nodes++;
       if (item.type === "project") {
@@ -55,7 +56,7 @@ function countStats(treeData: TreeNode[]): {
   return { nodes, projects, active };
 }
 
-function findNodeById(nodes: TreeNode[], id: string): TreeNode | null {
+function findNodeById(nodes: EpsTreeNode[], id: string): EpsTreeNode | null {
   for (const node of nodes) {
     if (node.id === id) return node;
     const found = findNodeById(node.children, id);
@@ -64,30 +65,34 @@ function findNodeById(nodes: TreeNode[], id: string): TreeNode | null {
   return null;
 }
 
-function flattenChildren(node: TreeNode): TableItem[] {
+
+function flattenChildren(node: EpsTreeNode): TableItem[] {
   const items: TableItem[] = [];
 
-  function collect(children: TreeNode[]) {
+  function collect(children: EpsTreeNode[], level: number) {
     for (const child of children) {
       items.push({
         id: child.id,
         name: child.name,
         type: child.type === "eps" ? "node" : child.type,
+        level,
         status: child.status,
       });
       if (child.children.length > 0) {
-        collect(child.children);
+        collect(child.children, level + 1);
       }
     }
   }
 
-  collect(node.children);
+  collect(node.children, 0);
   return items;
 }
 
 /* ─────────────────────── Inner page (needs toast context) ────────── */
 
 function ProjectManagementPageInner() {
+  const treePanelRef = useRef<EpsTreePanelHandle>(null);
+  const router = useRouter();
   const { toast } = useToast();
   const {
     treeData,
@@ -118,6 +123,7 @@ function ProjectManagementPageInner() {
   const [addingProjectToId, setAddingProjectToId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [reloading, setReloading] = useState(false);
+  const [allCollapsed, setAllCollapsed] = useState(false);
 
   const epsList = useMemo(() => getEpsList(treeData), [treeData]);
   const stats = useMemo(() => countStats(treeData), [treeData]);
@@ -252,6 +258,15 @@ function ProjectManagementPageInner() {
     [selectNode],
   );
 
+  const handleTreeDoubleClick = useCallback(
+    (id: string, type: "eps" | "node" | "project") => {
+      if (type === "project") {
+        router.push(`/project-management/${id}/planner`);
+      }
+    },
+    [router],
+  );
+
   // Drag-drop handlers (local-first, synchronous)
   const handleReorderEps = useCallback(
     (orderedIds: string[]) => {
@@ -343,13 +358,19 @@ function ProjectManagementPageInner() {
 
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
-        <Button variant="ghost" size="sm">
-          <Columns3 size={14} />
-          Columns
-        </Button>
-        <Button variant="ghost" size="sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (allCollapsed) {
+              treePanelRef.current?.expandAll();
+            } else {
+              treePanelRef.current?.collapseAll();
+            }
+          }}
+        >
           <ChevronsDownUp size={14} />
-          Collapse All
+          {allCollapsed ? "Expand All" : "Collapse All"}
         </Button>
         <div className="flex-1" />
         <div className="relative w-[240px]">
@@ -369,9 +390,11 @@ function ProjectManagementPageInner() {
       <div className="flex flex-1 min-h-0">
         {/* Left: Tree panel */}
         <EpsTreePanel
+          ref={treePanelRef}
           treeData={treeData}
           selectedId={selectedId}
           onSelect={handleTreeSelect}
+          onDoubleClick={handleTreeDoubleClick}
           stats={stats}
           addingEps={addingEps}
           onAddEpsSubmit={handleCreateEps}
@@ -385,6 +408,7 @@ function ProjectManagementPageInner() {
           onReorderEps={handleReorderEps}
           onMoveNode={handleMoveNode}
           onMoveProject={handleMoveProject}
+          onAllCollapsedChange={setAllCollapsed}
         />
 
         {/* Splitter */}

@@ -1,15 +1,15 @@
 import { prisma } from "@/lib/prisma";
 
-interface TreeNode {
+interface EpsTreeNode {
   id: string;
   name: string;
   type: "eps" | "node" | "project";
   status?: string;
   sortOrder: number;
-  children: TreeNode[];
+  children: EpsTreeNode[];
 }
 
-async function buildTree(tenantId: string): Promise<TreeNode[]> {
+async function buildTree(tenantId: string): Promise<EpsTreeNode[]> {
   const [epsList, nodes, projects] = await Promise.all([
     prisma.eps.findMany({
       where: { tenantId, isDeleted: false },
@@ -43,11 +43,11 @@ async function buildTree(tenantId: string): Promise<TreeNode[]> {
     projectsByParent.set(key, list);
   }
 
-  function buildNodeChildren(parentKey: string): TreeNode[] {
+  function buildNodeChildren(parentKey: string): EpsTreeNode[] {
     const childNodes = nodesByParent.get(parentKey) ?? [];
     const childProjects = projectsByParent.get(parentKey) ?? [];
 
-    const nodeItems: TreeNode[] = childNodes.map((n) => ({
+    const nodeItems: EpsTreeNode[] = childNodes.map((n) => ({
       id: n.id,
       name: n.name,
       type: "node" as const,
@@ -55,7 +55,7 @@ async function buildTree(tenantId: string): Promise<TreeNode[]> {
       children: buildNodeChildren(n.id),
     }));
 
-    const projectItems: TreeNode[] = childProjects.map((p) => ({
+    const projectItems: EpsTreeNode[] = childProjects.map((p) => ({
       id: p.id,
       name: p.name,
       type: "project" as const,
@@ -76,4 +76,4 @@ async function buildTree(tenantId: string): Promise<TreeNode[]> {
   }));
 }
 
-export { buildTree, type TreeNode };
+export { buildTree, type EpsTreeNode };

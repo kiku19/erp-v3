@@ -6,7 +6,6 @@ const mockTenant = {
   id: "tenant-123",
   tenantName: "Acme Corp",
   email: "admin@acme.com",
-  password: "",
   role: "admin",
   accessTokenExpiryMins: 15,
   refreshTokenExpiryDays: 7,
@@ -19,10 +18,24 @@ const mockTenant = {
   updatedAt: new Date(),
 };
 
+const mockUser = {
+  id: "user-456",
+  name: "Admin User",
+  email: "admin@acme.com",
+  password: "",
+  role: "admin",
+  tenantId: "tenant-123",
+  isDeleted: false,
+  tenant: mockTenant,
+};
+
 const mockPrisma = {
   tenant: {
     findFirst: vi.fn(),
     update: vi.fn(),
+  },
+  user: {
+    findFirst: vi.fn(),
   },
 };
 
@@ -44,8 +57,8 @@ async function makeRequest(body: unknown): Promise<Response> {
 describe("POST /api/auth/login", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockTenant.password = await hashPassword("securepass123");
-    mockPrisma.tenant.findFirst.mockResolvedValue(mockTenant);
+    mockUser.password = await hashPassword("securepass123");
+    mockPrisma.user.findFirst.mockResolvedValue(mockUser);
     mockPrisma.tenant.update.mockResolvedValue(mockTenant);
     vi.stubEnv("JWT_ACCESS_SECRET", "test-access-secret-must-be-at-least-32chars");
     vi.stubEnv("JWT_REFRESH_SECRET", "test-refresh-secret-must-be-at-least-32chars");
@@ -118,7 +131,7 @@ describe("POST /api/auth/login", () => {
   });
 
   it("returns 401 for non-existent email", async () => {
-    mockPrisma.tenant.findFirst.mockResolvedValue(null);
+    mockPrisma.user.findFirst.mockResolvedValue(null);
     const res = await makeRequest({
       email: "unknown@acme.com",
       password: "securepass123",
@@ -139,7 +152,7 @@ describe("POST /api/auth/login", () => {
   });
 
   it("returns 401 for soft-deleted tenant", async () => {
-    mockPrisma.tenant.findFirst.mockResolvedValue(null);
+    mockPrisma.user.findFirst.mockResolvedValue(null);
     const res = await makeRequest({
       email: "admin@acme.com",
       password: "securepass123",

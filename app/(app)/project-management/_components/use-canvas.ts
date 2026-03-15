@@ -5,13 +5,13 @@ import { useAuth } from "@/lib/auth-context";
 
 /* ─────────────────────── Types ───────────────────────────────────── */
 
-interface TreeNode {
+interface EpsTreeNode {
   id: string;
   name: string;
   type: "eps" | "node" | "project";
   status?: string;
   sortOrder: number;
-  children: TreeNode[];
+  children: EpsTreeNode[];
 }
 
 type SelectionType = "eps" | "node" | "project" | null;
@@ -26,7 +26,7 @@ interface CanvasEventInput {
 type SaveStatus = "idle" | "saving" | "saved" | "error" | "offline";
 
 interface UseCanvasReturn {
-  treeData: TreeNode[];
+  treeData: EpsTreeNode[];
   selectedId: string | null;
   selectedType: SelectionType;
   loading: boolean;
@@ -66,7 +66,7 @@ const STALE_POLL_INTERVAL_MS = 5000;
 
 /* ─────────────────────── Tree helpers ─────────────────────────────── */
 
-function findEpsContaining(nodes: TreeNode[], targetId: string): string | null {
+function findEpsContaining(nodes: EpsTreeNode[], targetId: string): string | null {
   for (const node of nodes) {
     if (node.type === "eps") {
       if (node.id === targetId) return node.id;
@@ -76,7 +76,7 @@ function findEpsContaining(nodes: TreeNode[], targetId: string): string | null {
   return null;
 }
 
-function findInChildren(children: TreeNode[], targetId: string): boolean {
+function findInChildren(children: EpsTreeNode[], targetId: string): boolean {
   for (const child of children) {
     if (child.id === targetId) return true;
     if (findInChildren(child.children, targetId)) return true;
@@ -84,7 +84,7 @@ function findInChildren(children: TreeNode[], targetId: string): boolean {
   return false;
 }
 
-function findNodeInTree(nodes: TreeNode[], id: string): TreeNode | null {
+function findNodeInTree(nodes: EpsTreeNode[], id: string): EpsTreeNode | null {
   for (const n of nodes) {
     if (n.id === id) return n;
     const found = findNodeInTree(n.children, id);
@@ -93,7 +93,7 @@ function findNodeInTree(nodes: TreeNode[], id: string): TreeNode | null {
   return null;
 }
 
-function appendChildToNode(nodes: TreeNode[], parentId: string, child: TreeNode): TreeNode[] {
+function appendChildToNode(nodes: EpsTreeNode[], parentId: string, child: EpsTreeNode): EpsTreeNode[] {
   return nodes.map((n) => {
     if (n.id === parentId) {
       return { ...n, children: [...n.children, child] };
@@ -105,7 +105,7 @@ function appendChildToNode(nodes: TreeNode[], parentId: string, child: TreeNode)
   });
 }
 
-function removeFromTree(nodes: TreeNode[], id: string): TreeNode[] {
+function removeFromTree(nodes: EpsTreeNode[], id: string): EpsTreeNode[] {
   return nodes
     .filter((n) => n.id !== id)
     .map((n) => ({
@@ -114,7 +114,7 @@ function removeFromTree(nodes: TreeNode[], id: string): TreeNode[] {
     }));
 }
 
-function updateNodeInTree(nodes: TreeNode[], id: string, updater: (n: TreeNode) => TreeNode): TreeNode[] {
+function updateNodeInTree(nodes: EpsTreeNode[], id: string, updater: (n: EpsTreeNode) => EpsTreeNode): EpsTreeNode[] {
   return nodes.map((n) => {
     if (n.id === id) return updater(n);
     if (n.children.length > 0) {
@@ -132,7 +132,7 @@ function generateTempId(): string {
 
 function useCanvas(): UseCanvasReturn {
   const { accessToken } = useAuth();
-  const [treeData, setTreeData] = useState<TreeNode[]>([]);
+  const [treeData, setTreeData] = useState<EpsTreeNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<SelectionType>(null);
   const [loading, setLoading] = useState(false);
@@ -369,7 +369,7 @@ function useCanvas(): UseCanvasReturn {
   const createEps = useCallback(
     (name: string) => {
       const tempId = generateTempId();
-      const newEps: TreeNode = {
+      const newEps: EpsTreeNode = {
         id: tempId,
         name,
         type: "eps",
@@ -394,7 +394,7 @@ function useCanvas(): UseCanvasReturn {
       const parent = findNodeInTree(treeData, parentId);
       const sortOrder = parent?.children.length ?? 0;
 
-      const newNode: TreeNode = {
+      const newNode: EpsTreeNode = {
         id: tempId,
         name,
         type: "node",
@@ -419,7 +419,7 @@ function useCanvas(): UseCanvasReturn {
       const parent = findNodeInTree(treeData, parentId);
       const sortOrder = parent?.children.filter((c) => c.type === "project").length ?? 0;
 
-      const newProject: TreeNode = {
+      const newProject: EpsTreeNode = {
         id: tempId,
         name: data.name,
         type: "project",
@@ -447,7 +447,7 @@ function useCanvas(): UseCanvasReturn {
             const node = epsMap.get(id);
             return node ? { ...node, sortOrder: i } : null;
           })
-          .filter(Boolean) as TreeNode[];
+          .filter(Boolean) as EpsTreeNode[];
       });
       orderedIds.forEach((id, i) => {
         queueEvent({
@@ -572,7 +572,7 @@ function resolvePayloadIds(
   return resolved;
 }
 
-function replaceIdInTree(nodes: TreeNode[], oldId: string, newId: string): TreeNode[] {
+function replaceIdInTree(nodes: EpsTreeNode[], oldId: string, newId: string): EpsTreeNode[] {
   return nodes.map((n) => {
     const updated = n.id === oldId ? { ...n, id: newId } : n;
     if (updated.children.length > 0) {
@@ -584,7 +584,7 @@ function replaceIdInTree(nodes: TreeNode[], oldId: string, newId: string): TreeN
 
 export {
   useCanvas,
-  type TreeNode,
+  type EpsTreeNode,
   type SelectionType,
   type CanvasEventInput,
   type UseCanvasReturn,

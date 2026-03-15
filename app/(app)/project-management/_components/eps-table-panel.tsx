@@ -16,6 +16,7 @@ interface TableItem {
   id: string;
   name: string;
   type: "node" | "project";
+  level: number;
   projectId?: string;
   status?: string;
   startDate?: string;
@@ -66,6 +67,32 @@ function getProfitLossVariant(variance: number): "success" | "error" | "warning"
   if (variance > 0) return "success";
   if (variance < -1000) return "error";
   return "warning";
+}
+
+/* ─────────────────────── Level colors ─────────────────────────────── */
+
+const LEVEL_BORDER_COLORS = [
+  "border-l-info",
+  "border-l-warning",
+  "border-l-success",
+  "border-l-accent",
+  "border-l-primary",
+] as const;
+
+const LEVEL_BG_COLORS = [
+  "bg-info-bg",
+  "bg-warning-bg",
+  "bg-success-bg",
+  "bg-accent/5",
+  "bg-primary/5",
+] as const;
+
+function getLevelBorderColor(level: number): string {
+  return LEVEL_BORDER_COLORS[level % LEVEL_BORDER_COLORS.length];
+}
+
+function getLevelBgColor(level: number): string {
+  return LEVEL_BG_COLORS[level % LEVEL_BG_COLORS.length];
 }
 
 /* ─────────────────────── Component ───────────────────────────────── */
@@ -125,15 +152,18 @@ function EpsTablePanel({ items, selectedName, loading }: EpsTablePanelProps) {
                 return (
                   <TableRow
                     key={item.id}
-                    className={item.type === "node" ? "bg-muted" : ""}
+                    className={`border-l-3 ${getLevelBorderColor(item.level)} ${
+                      item.type === "node" ? getLevelBgColor(item.level) : ""
+                    }`}
                   >
                     <TableCell>
                       <span
                         className={
                           item.type === "node"
                             ? "font-semibold text-foreground"
-                            : "pl-4 text-foreground"
+                            : "text-foreground"
                         }
+                        style={{ paddingLeft: item.level * 16 }}
                       >
                         {item.name}
                       </span>

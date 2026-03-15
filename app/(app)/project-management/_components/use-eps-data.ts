@@ -5,13 +5,13 @@ import { useAuth } from "@/lib/auth-context";
 
 /* ─────────────────────── Types ───────────────────────────────────── */
 
-interface TreeNode {
+interface EpsTreeNode {
   id: string;
   name: string;
   type: "eps" | "node" | "project";
   status?: string;
   sortOrder: number;
-  children: TreeNode[];
+  children: EpsTreeNode[];
 }
 
 type SelectionType = "eps" | "node" | "project" | null;
@@ -43,7 +43,7 @@ interface MoveProjectData {
 }
 
 interface UseEpsDataReturn {
-  treeData: TreeNode[];
+  treeData: EpsTreeNode[];
   selectedId: string | null;
   selectedType: SelectionType;
   loading: boolean;
@@ -61,7 +61,7 @@ interface UseEpsDataReturn {
 
 /* ─────────────────────── Helper ──────────────────────────────────── */
 
-function findEpsContaining(nodes: TreeNode[], targetId: string): string | null {
+function findEpsContaining(nodes: EpsTreeNode[], targetId: string): string | null {
   for (const node of nodes) {
     if (node.type === "eps") {
       if (node.id === targetId) return node.id;
@@ -71,7 +71,7 @@ function findEpsContaining(nodes: TreeNode[], targetId: string): string | null {
   return null;
 }
 
-function findInChildren(children: TreeNode[], targetId: string): boolean {
+function findInChildren(children: EpsTreeNode[], targetId: string): boolean {
   for (const child of children) {
     if (child.id === targetId) return true;
     if (findInChildren(child.children, targetId)) return true;
@@ -83,7 +83,7 @@ function findInChildren(children: TreeNode[], targetId: string): boolean {
 
 function useEpsData(): UseEpsDataReturn {
   const { accessToken } = useAuth();
-  const [treeData, setTreeData] = useState<TreeNode[]>([]);
+  const [treeData, setTreeData] = useState<EpsTreeNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<SelectionType>(null);
   const [loading, setLoading] = useState(false);
@@ -237,7 +237,7 @@ function useEpsData(): UseEpsDataReturn {
 
 export {
   useEpsData,
-  type TreeNode,
+  type EpsTreeNode,
   type SelectionType,
   type CreateProjectData,
   type MoveNodeData,

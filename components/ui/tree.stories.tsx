@@ -1,16 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import {
-  OrgTree,
-  OrgTreeHeader,
-  OrgTreeContent,
-  OrgTreeFooter,
-  InteractiveOrgTree,
-  type OrgTreeNodeData,
-} from "./org-tree";
+  Tree,
+  TreeHeader,
+  TreeContent,
+  TreeFooter,
+  InteractiveTree,
+  type TreeNodeData,
+} from "./tree";
 
-const meta: Meta<typeof OrgTree> = {
-  title: "UI/OrgTree",
-  component: OrgTree,
+const meta: Meta<typeof Tree> = {
+  title: "UI/Tree",
+  component: Tree,
   tags: ["autodocs"],
   parameters: {
     layout: "centered",
@@ -18,11 +18,11 @@ const meta: Meta<typeof OrgTree> = {
 };
 
 export default meta;
-type Story = StoryObj<typeof OrgTree>;
+type Story = StoryObj<typeof Tree>;
 
 /* ─── Sample data — users only, hierarchy = reporting lines ─── */
 
-const sampleTree: OrgTreeNodeData[] = [
+const sampleTree: TreeNodeData[] = [
   {
     id: "ceo",
     name: "Rajesh Kumar",
@@ -131,7 +131,7 @@ const stats = [
 
 export const Default: Story = {
   render: () => (
-    <InteractiveOrgTree
+    <InteractiveTree
       data={sampleTree}
       title="Organization Tree"
       shortcuts={shortcuts}
@@ -155,7 +155,7 @@ export const WithInteractions: Story = {
           <li>Drag a person onto another to make them a report</li>
         </ul>
       </div>
-      <InteractiveOrgTree
+      <InteractiveTree
         data={sampleTree}
         title="Organization Tree"
         shortcuts={shortcuts}
@@ -168,7 +168,7 @@ export const WithInteractions: Story = {
 
 export const FlatTeam: Story = {
   render: () => {
-    const flatTree: OrgTreeNodeData[] = [
+    const flatTree: TreeNodeData[] = [
       {
         id: "lead",
         name: "Ana Martinez",
@@ -185,7 +185,7 @@ export const FlatTeam: Story = {
       },
     ];
     return (
-      <InteractiveOrgTree
+      <InteractiveTree
         data={flatTree}
         title="Team Structure"
         shortcuts={shortcuts}
@@ -198,7 +198,7 @@ export const FlatTeam: Story = {
 
 export const EmptyState: Story = {
   render: () => (
-    <InteractiveOrgTree
+    <InteractiveTree
       data={[]}
       title="Organization Tree"
       stats={[{ label: "People", value: 0 }]}
@@ -209,11 +209,11 @@ export const EmptyState: Story = {
 
 export const HeaderOnly: Story = {
   render: () => (
-    <OrgTree className="w-80">
-      <OrgTreeHeader
+    <Tree className="w-80">
+      <TreeHeader
         title="Organization Tree"
         onAddPerson={() => {}}
       />
-    </OrgTree>
+    </Tree>
   ),
 };

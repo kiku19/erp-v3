@@ -16,10 +16,22 @@ const mockTenant = {
   isDeleted: false,
 };
 
+const mockUser = {
+  id: "user-456",
+  name: "Admin User",
+  email: "admin@acme.com",
+  role: "admin",
+  tenantId: "tenant-123",
+  isDeleted: false,
+};
+
 const mockPrisma = {
   tenant: {
     findFirst: vi.fn(),
     update: vi.fn(),
+  },
+  user: {
+    findFirst: vi.fn(),
   },
 };
 
@@ -49,6 +61,7 @@ describe("POST /api/auth/refresh", () => {
     mockTenant.refreshToken = token;
     mockPrisma.tenant.findFirst.mockResolvedValue(mockTenant);
     mockPrisma.tenant.update.mockResolvedValue(mockTenant);
+    mockPrisma.user.findFirst.mockResolvedValue(mockUser);
   });
 
   it("returns 200 with new access token for valid refresh cookie", async () => {

@@ -2,30 +2,30 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
-  OrgTree,
-  OrgTreeHeader,
-  OrgTreeContent,
-  OrgTreeNode,
-  OrgTreeShortcuts,
-  OrgTreeFooter,
-  InteractiveOrgTree,
+  Tree,
+  TreeHeader,
+  TreeContent,
+  TreeNode,
+  TreeShortcuts,
+  TreeFooter,
+  InteractiveTree,
   insertNodeNear,
   removeNodeById,
-  type OrgTreeNodeData,
-} from "./org-tree";
+  type TreeNodeData,
+} from "./tree";
 
 afterEach(() => {
   cleanup();
 });
 
-/* ─────────────────────── OrgTree (container) ─────────────────────── */
+/* ─────────────────────── Tree (container) ─────────────────────── */
 
-describe("OrgTree", () => {
+describe("Tree", () => {
   it("renders as a vertical flex container with card background", () => {
     render(
-      <OrgTree data-testid="org-tree">
+      <Tree data-testid="org-tree">
         <div>content</div>
-      </OrgTree>,
+      </Tree>,
     );
     const el = screen.getByTestId("org-tree");
     expect(el).toBeDefined();
@@ -36,9 +36,9 @@ describe("OrgTree", () => {
 
   it("applies right border", () => {
     render(
-      <OrgTree data-testid="org-tree">
+      <Tree data-testid="org-tree">
         <div>content</div>
-      </OrgTree>,
+      </Tree>,
     );
     const el = screen.getByTestId("org-tree");
     expect(el.className).toContain("border-r");
@@ -47,32 +47,32 @@ describe("OrgTree", () => {
 
   it("merges custom className", () => {
     render(
-      <OrgTree data-testid="org-tree" className="w-80">
+      <Tree data-testid="org-tree" className="w-80">
         <div>content</div>
-      </OrgTree>,
+      </Tree>,
     );
     const el = screen.getByTestId("org-tree");
     expect(el.className).toContain("w-80");
   });
 });
 
-/* ─────────────────────── OrgTreeHeader ───────────────────────────── */
+/* ─────────────────────── TreeHeader ───────────────────────────── */
 
-describe("OrgTreeHeader", () => {
+describe("TreeHeader", () => {
   it("renders the title text", () => {
-    render(<OrgTreeHeader title="Organization Tree" />);
+    render(<TreeHeader title="Organization Tree" />);
     expect(screen.getByText("Organization Tree")).toBeDefined();
   });
 
   it("renders action button when provided", () => {
     const onAddPerson = vi.fn();
     render(
-      <OrgTreeHeader
+      <TreeHeader
         title="Organization Tree"
         onAddPerson={onAddPerson}
       />,
     );
-    const personBtn = screen.getByTestId("org-tree-add-person");
+    const personBtn = screen.getByTestId("tree-add-person");
     expect(personBtn).toBeDefined();
   });
 
@@ -80,51 +80,51 @@ describe("OrgTreeHeader", () => {
     const user = userEvent.setup();
     const onAddPerson = vi.fn();
     render(
-      <OrgTreeHeader
+      <TreeHeader
         title="Organization Tree"
         onAddPerson={onAddPerson}
       />,
     );
-    await user.click(screen.getByTestId("org-tree-add-person"));
+    await user.click(screen.getByTestId("tree-add-person"));
     expect(onAddPerson).toHaveBeenCalledOnce();
   });
 
   it("has bottom border", () => {
-    render(<OrgTreeHeader title="Test" data-testid="org-tree-header" />);
-    const el = screen.getByTestId("org-tree-header");
+    render(<TreeHeader title="Test" data-testid="tree-header" />);
+    const el = screen.getByTestId("tree-header");
     expect(el.className).toContain("border-b");
   });
 });
 
-/* ─────────────────────── OrgTreeContent ──────────────────────────── */
+/* ─────────────────────── TreeContent ──────────────────────────── */
 
-describe("OrgTreeContent", () => {
+describe("TreeContent", () => {
   it("renders children in scrollable area", () => {
     render(
-      <OrgTreeContent data-testid="org-tree-content">
+      <TreeContent data-testid="tree-content">
         <div>tree nodes</div>
-      </OrgTreeContent>,
+      </TreeContent>,
     );
-    const el = screen.getByTestId("org-tree-content");
+    const el = screen.getByTestId("tree-content");
     expect(el.className).toContain("overflow-y-auto");
     expect(screen.getByText("tree nodes")).toBeDefined();
   });
 
   it("takes remaining vertical space with flex-1", () => {
     render(
-      <OrgTreeContent data-testid="org-tree-content">
+      <TreeContent data-testid="tree-content">
         <div>nodes</div>
-      </OrgTreeContent>,
+      </TreeContent>,
     );
-    const el = screen.getByTestId("org-tree-content");
+    const el = screen.getByTestId("tree-content");
     expect(el.className).toContain("flex-1");
   });
 });
 
-/* ─────────────────────── OrgTreeNode ─────────────────────────────── */
+/* ─────────────────────── TreeNode ─────────────────────────────── */
 
-describe("OrgTreeNode", () => {
-  const personNode: OrgTreeNodeData = {
+describe("TreeNode", () => {
+  const personNode: TreeNodeData = {
     id: "1",
     name: "Rajesh Kumar",
     initials: "RK",
@@ -132,7 +132,7 @@ describe("OrgTreeNode", () => {
     roleColor: "accent",
   };
 
-  const managerNode: OrgTreeNodeData = {
+  const managerNode: TreeNodeData = {
     id: "2",
     name: "Mike Torres",
     initials: "MT",
@@ -150,44 +150,44 @@ describe("OrgTreeNode", () => {
   };
 
   it("renders person node with name, initials, and role", () => {
-    render(<OrgTreeNode node={personNode} level={0} />);
+    render(<TreeNode node={personNode} level={0} />);
     expect(screen.getByText("Rajesh Kumar")).toBeDefined();
     expect(screen.getByText("RK")).toBeDefined();
     expect(screen.getByText("CEO")).toBeDefined();
   });
 
   it("applies indentation based on level", () => {
-    render(<OrgTreeNode node={personNode} level={2} data-testid="tree-node" />);
+    render(<TreeNode node={personNode} level={2} data-testid="tree-node" />);
     const el = screen.getByTestId("tree-node");
     expect(el.style.paddingLeft).toBeTruthy();
   });
 
   it("shows chevron when node has children", () => {
-    render(<OrgTreeNode node={managerNode} level={0} />);
-    const chevron = screen.getByTestId("org-tree-chevron-2");
+    render(<TreeNode node={managerNode} level={0} />);
+    const chevron = screen.getByTestId("tree-chevron-2");
     expect(chevron).toBeDefined();
   });
 
   it("does not show chevron for leaf nodes", () => {
-    render(<OrgTreeNode node={personNode} level={0} />);
-    expect(screen.queryByTestId("org-tree-chevron-1")).toBeNull();
+    render(<TreeNode node={personNode} level={0} />);
+    expect(screen.queryByTestId("tree-chevron-1")).toBeNull();
   });
 
   it("calls onToggle when chevron is clicked", async () => {
     const user = userEvent.setup();
     const onToggle = vi.fn();
-    render(<OrgTreeNode node={managerNode} level={0} onToggle={onToggle} />);
-    await user.click(screen.getByTestId("org-tree-chevron-2"));
+    render(<TreeNode node={managerNode} level={0} onToggle={onToggle} />);
+    await user.click(screen.getByTestId("tree-chevron-2"));
     expect(onToggle).toHaveBeenCalledWith("2");
   });
 
   it("renders drag handle when draggable", () => {
-    render(<OrgTreeNode node={personNode} level={0} draggable />);
-    expect(screen.getByTestId("org-tree-drag-1")).toBeDefined();
+    render(<TreeNode node={personNode} level={0} draggable />);
+    expect(screen.getByTestId("tree-drag-1")).toBeDefined();
   });
 
   it("highlights selected node with active state tokens", () => {
-    render(<OrgTreeNode node={personNode} level={0} active data-testid="tree-node" />);
+    render(<TreeNode node={personNode} level={0} active data-testid="tree-node" />);
     const el = screen.getByTestId("tree-node");
     expect(el.className).toContain("bg-primary-active");
     expect(el.className).toContain("text-primary-active-foreground");
@@ -195,16 +195,16 @@ describe("OrgTreeNode", () => {
 
   it("renders children when expanded", () => {
     render(
-      <OrgTreeNode node={managerNode} level={0}>
-        <OrgTreeNode node={managerNode.children![0]} level={1} />
-      </OrgTreeNode>,
+      <TreeNode node={managerNode} level={0}>
+        <TreeNode node={managerNode.children![0]} level={1} />
+      </TreeNode>,
     );
     expect(screen.getByText("Lisa Park")).toBeDefined();
   });
 
   it("shows rename input when renaming prop is true", () => {
-    render(<OrgTreeNode node={personNode} level={0} renaming />);
-    const input = screen.getByTestId("org-tree-rename-input");
+    render(<TreeNode node={personNode} level={0} renaming />);
+    const input = screen.getByTestId("tree-rename-input");
     expect(input).toBeDefined();
     expect((input as HTMLInputElement).value).toBe("Rajesh Kumar");
   });
@@ -213,14 +213,14 @@ describe("OrgTreeNode", () => {
     const user = userEvent.setup();
     const onRenameSubmit = vi.fn();
     render(
-      <OrgTreeNode
+      <TreeNode
         node={personNode}
         level={0}
         renaming
         onRenameSubmit={onRenameSubmit}
       />,
     );
-    const input = screen.getByTestId("org-tree-rename-input");
+    const input = screen.getByTestId("tree-rename-input");
     await user.clear(input);
     await user.type(input, "New Name{Enter}");
     expect(onRenameSubmit).toHaveBeenCalledWith("1", "New Name");
@@ -230,21 +230,21 @@ describe("OrgTreeNode", () => {
     const user = userEvent.setup();
     const onRenameCancel = vi.fn();
     render(
-      <OrgTreeNode
+      <TreeNode
         node={personNode}
         level={0}
         renaming
         onRenameCancel={onRenameCancel}
       />,
     );
-    const input = screen.getByTestId("org-tree-rename-input");
+    const input = screen.getByTestId("tree-rename-input");
     await user.type(input, "{Escape}");
     expect(onRenameCancel).toHaveBeenCalled();
   });
 
   it("shows add-child input when addingChild prop is true", () => {
-    render(<OrgTreeNode node={personNode} level={0} addingChild />);
-    const input = screen.getByTestId("org-tree-add-child-input");
+    render(<TreeNode node={personNode} level={0} addingChild />);
+    const input = screen.getByTestId("tree-add-child-input");
     expect(input).toBeDefined();
   });
 
@@ -252,14 +252,14 @@ describe("OrgTreeNode", () => {
     const user = userEvent.setup();
     const onAddChildSubmit = vi.fn();
     render(
-      <OrgTreeNode
+      <TreeNode
         node={personNode}
         level={0}
         addingChild
         onAddChildSubmit={onAddChildSubmit}
       />,
     );
-    const input = screen.getByTestId("org-tree-add-child-input");
+    const input = screen.getByTestId("tree-add-child-input");
     await user.type(input, "Jane Doe{Enter}");
     expect(onAddChildSubmit).toHaveBeenCalledWith("1", "Jane Doe");
   });
@@ -268,48 +268,48 @@ describe("OrgTreeNode", () => {
     const user = userEvent.setup();
     const onAddChildCancel = vi.fn();
     render(
-      <OrgTreeNode
+      <TreeNode
         node={personNode}
         level={0}
         addingChild
         onAddChildCancel={onAddChildCancel}
       />,
     );
-    const input = screen.getByTestId("org-tree-add-child-input");
+    const input = screen.getByTestId("tree-add-child-input");
     await user.type(input, "{Escape}");
     expect(onAddChildCancel).toHaveBeenCalled();
   });
 
   it("shows inside-drop indicator when dropPosition is inside", () => {
-    render(<OrgTreeNode node={personNode} level={0} dragOver dropPosition="inside" data-testid="tree-node" />);
+    render(<TreeNode node={personNode} level={0} dragOver dropPosition="inside" data-testid="tree-node" />);
     const el = screen.getByTestId("tree-node");
     expect(el.className).toContain("ring-2");
     expect(el.className).toContain("ring-ring");
   });
 
   it("shows before-drop indicator when dropPosition is before", () => {
-    render(<OrgTreeNode node={personNode} level={0} dragOver dropPosition="before" data-testid="tree-node" />);
+    render(<TreeNode node={personNode} level={0} dragOver dropPosition="before" data-testid="tree-node" />);
     const el = screen.getByTestId("tree-node");
     expect(el.querySelector("[data-testid='drop-line-before']")).toBeDefined();
   });
 
   it("shows after-drop indicator when dropPosition is after", () => {
-    render(<OrgTreeNode node={personNode} level={0} dragOver dropPosition="after" data-testid="tree-node" />);
+    render(<TreeNode node={personNode} level={0} dragOver dropPosition="after" data-testid="tree-node" />);
     const el = screen.getByTestId("tree-node");
     expect(el.querySelector("[data-testid='drop-line-after']")).toBeDefined();
   });
 });
 
-/* ─────────────────────── OrgTreeShortcuts ────────────────────────── */
+/* ─────────────────────── TreeShortcuts ────────────────────────── */
 
-describe("OrgTreeShortcuts", () => {
+describe("TreeShortcuts", () => {
   const shortcuts = [
     { key: "Ctrl+U", label: "User" },
     { key: "F2", label: "Rename" },
   ];
 
   it("renders all shortcut items", () => {
-    render(<OrgTreeShortcuts shortcuts={shortcuts} />);
+    render(<TreeShortcuts shortcuts={shortcuts} />);
     expect(screen.getByText("Ctrl+U")).toBeDefined();
     expect(screen.getByText("User")).toBeDefined();
     expect(screen.getByText("F2")).toBeDefined();
@@ -317,22 +317,22 @@ describe("OrgTreeShortcuts", () => {
   });
 
   it("has muted background", () => {
-    render(<OrgTreeShortcuts shortcuts={shortcuts} data-testid="org-tree-shortcuts" />);
-    const el = screen.getByTestId("org-tree-shortcuts");
+    render(<TreeShortcuts shortcuts={shortcuts} data-testid="tree-shortcuts" />);
+    const el = screen.getByTestId("tree-shortcuts");
     expect(el.className).toContain("bg-muted");
   });
 });
 
-/* ─────────────────────── OrgTreeFooter ───────────────────────────── */
+/* ─────────────────────── TreeFooter ───────────────────────────── */
 
-describe("OrgTreeFooter", () => {
+describe("TreeFooter", () => {
   const stats = [
     { label: "People", value: 30 },
     { label: "Managers", value: 5, color: "success" as const },
   ];
 
   it("renders all stat items", () => {
-    render(<OrgTreeFooter stats={stats} />);
+    render(<TreeFooter stats={stats} />);
     expect(screen.getByText("30")).toBeDefined();
     expect(screen.getByText("People")).toBeDefined();
     expect(screen.getByText("5")).toBeDefined();
@@ -340,21 +340,21 @@ describe("OrgTreeFooter", () => {
   });
 
   it("has top border", () => {
-    render(<OrgTreeFooter stats={stats} data-testid="org-tree-footer" />);
-    const el = screen.getByTestId("org-tree-footer");
+    render(<TreeFooter stats={stats} data-testid="tree-footer" />);
+    const el = screen.getByTestId("tree-footer");
     expect(el.className).toContain("border-t");
   });
 
   it("applies color to value when specified", () => {
-    render(<OrgTreeFooter stats={stats} />);
+    render(<TreeFooter stats={stats} />);
     const successValue = screen.getByText("5");
     expect(successValue.className).toContain("text-success");
   });
 });
 
-/* ─────────────────────── InteractiveOrgTree ──────────────────────── */
+/* ─────────────────────── InteractiveTree ──────────────────────── */
 
-const sampleTree: OrgTreeNodeData[] = [
+const sampleTree: TreeNodeData[] = [
   {
     id: "ceo",
     name: "Rajesh Kumar",
@@ -389,9 +389,9 @@ const sampleTree: OrgTreeNodeData[] = [
   },
 ];
 
-describe("InteractiveOrgTree", () => {
+describe("InteractiveTree", () => {
   it("renders the full tree", () => {
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     expect(screen.getByText("Rajesh Kumar")).toBeDefined();
     expect(screen.getByText("Sarah Chen")).toBeDefined();
     expect(screen.getByText("Lisa Park")).toBeDefined();
@@ -400,7 +400,7 @@ describe("InteractiveOrgTree", () => {
 
   it("toggles a node with children on click", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     // Sarah Chen is expanded, Lisa Park visible
     expect(screen.getByText("Lisa Park")).toBeDefined();
     // Click Sarah Chen to collapse
@@ -413,75 +413,75 @@ describe("InteractiveOrgTree", () => {
 
   it("selects a node on click with active state tokens", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     await user.click(screen.getByText("Alex Rivera"));
-    const row = screen.getByTestId("org-tree-row-p2");
+    const row = screen.getByTestId("tree-row-p2");
     expect(row.className).toContain("bg-primary-active");
     expect(row.className).toContain("text-primary-active-foreground");
   });
 
   it("enters rename mode on F2 after selecting a node", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     await user.click(screen.getByText("Alex Rivera"));
     await user.keyboard("{F2}");
-    const input = screen.getByTestId("org-tree-rename-input");
+    const input = screen.getByTestId("tree-rename-input");
     expect(input).toBeDefined();
     expect((input as HTMLInputElement).value).toBe("Alex Rivera");
   });
 
   it("renames a node on Enter after F2", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     await user.click(screen.getByText("Alex Rivera"));
     await user.keyboard("{F2}");
-    const input = screen.getByTestId("org-tree-rename-input");
+    const input = screen.getByTestId("tree-rename-input");
     await user.clear(input);
     await user.type(input, "Alex R. Updated{Enter}");
     expect(screen.getByText("Alex R. Updated")).toBeDefined();
-    expect(screen.queryByTestId("org-tree-rename-input")).toBeNull();
+    expect(screen.queryByTestId("tree-rename-input")).toBeNull();
   });
 
   it("cancels rename on Escape", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     await user.click(screen.getByText("Alex Rivera"));
     await user.keyboard("{F2}");
-    await user.type(screen.getByTestId("org-tree-rename-input"), "{Escape}");
+    await user.type(screen.getByTestId("tree-rename-input"), "{Escape}");
     expect(screen.getByText("Alex Rivera")).toBeDefined();
-    expect(screen.queryByTestId("org-tree-rename-input")).toBeNull();
+    expect(screen.queryByTestId("tree-rename-input")).toBeNull();
   });
 
   it("adds a person child with Ctrl+U on any selected node", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     // Select Alex Rivera (a leaf node — should still allow adding a report)
     await user.click(screen.getByText("Alex Rivera"));
     await user.keyboard("{Control>}u{/Control}");
-    const input = screen.getByTestId("org-tree-add-child-input");
+    const input = screen.getByTestId("tree-add-child-input");
     expect(input).toBeDefined();
     await user.type(input, "New Report{Enter}");
     // New person should appear as child of Alex Rivera
     expect(screen.getByText("New Report")).toBeDefined();
-    expect(screen.queryByTestId("org-tree-add-child-input")).toBeNull();
+    expect(screen.queryByTestId("tree-add-child-input")).toBeNull();
   });
 
   it("cancels add-child on Escape", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     await user.click(screen.getByText("Alex Rivera"));
     await user.keyboard("{Control>}u{/Control}");
-    await user.type(screen.getByTestId("org-tree-add-child-input"), "{Escape}");
-    expect(screen.queryByTestId("org-tree-add-child-input")).toBeNull();
+    await user.type(screen.getByTestId("tree-add-child-input"), "{Escape}");
+    expect(screen.queryByTestId("tree-add-child-input")).toBeNull();
   });
 
   it("drops a user onto another user, making the target a manager", () => {
     const onTreeChange = vi.fn();
-    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    render(<InteractiveTree data={sampleTree} onTreeChange={onTreeChange} />);
 
     // Drag p1 (Lisa Park) onto p2 (Alex Rivera)
-    const dragSource = screen.getByTestId("org-tree-row-p1");
-    const dropTarget = screen.getByTestId("org-tree-row-p2");
+    const dragSource = screen.getByTestId("tree-row-p1");
+    const dropTarget = screen.getByTestId("tree-row-p2");
 
     fireEvent.dragStart(dragSource, {
       dataTransfer: { setData: vi.fn(), effectAllowed: "" },
@@ -494,9 +494,9 @@ describe("InteractiveOrgTree", () => {
     });
 
     expect(onTreeChange).toHaveBeenCalled();
-    const newTree = onTreeChange.mock.calls[0][0] as OrgTreeNodeData[];
+    const newTree = onTreeChange.mock.calls[0][0] as TreeNodeData[];
     // Alex Rivera should now have Lisa Park as a child
-    const findNode = (nodes: OrgTreeNodeData[], id: string): OrgTreeNodeData | null => {
+    const findNode = (nodes: TreeNodeData[], id: string): TreeNodeData | null => {
       for (const n of nodes) {
         if (n.id === id) return n;
         if (n.children) {
@@ -515,9 +515,9 @@ describe("InteractiveOrgTree", () => {
 
   it("does not allow dropping a node onto itself", () => {
     const onTreeChange = vi.fn();
-    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    render(<InteractiveTree data={sampleTree} onTreeChange={onTreeChange} />);
 
-    const row = screen.getByTestId("org-tree-row-p2");
+    const row = screen.getByTestId("tree-row-p2");
     fireEvent.dragStart(row, {
       dataTransfer: { setData: vi.fn(), effectAllowed: "" },
     });
@@ -529,10 +529,10 @@ describe("InteractiveOrgTree", () => {
 
   it("does not allow dropping a parent into its own descendant", () => {
     const onTreeChange = vi.fn();
-    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    render(<InteractiveTree data={sampleTree} onTreeChange={onTreeChange} />);
 
-    const dragSource = screen.getByTestId("org-tree-row-cto");
-    const dropTarget = screen.getByTestId("org-tree-row-p1");
+    const dragSource = screen.getByTestId("tree-row-cto");
+    const dropTarget = screen.getByTestId("tree-row-p1");
     fireEvent.dragStart(dragSource, {
       dataTransfer: { setData: vi.fn(), effectAllowed: "" },
     });
@@ -545,10 +545,10 @@ describe("InteractiveOrgTree", () => {
   it("calls onTreeChange callback on rename", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn();
-    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    render(<InteractiveTree data={sampleTree} onTreeChange={onTreeChange} />);
     await user.click(screen.getByText("Alex Rivera"));
     await user.keyboard("{F2}");
-    const input = screen.getByTestId("org-tree-rename-input");
+    const input = screen.getByTestId("tree-rename-input");
     await user.clear(input);
     await user.type(input, "Renamed{Enter}");
     expect(onTreeChange).toHaveBeenCalled();
@@ -589,34 +589,34 @@ describe("InteractiveOrgTree", () => {
   it("adds a root-level person when nothing is selected", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn();
-    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    render(<InteractiveTree data={sampleTree} onTreeChange={onTreeChange} />);
     // No selection — click header add button
-    await user.click(screen.getByTestId("org-tree-add-person"));
-    const input = screen.getByTestId("org-tree-add-child-input");
+    await user.click(screen.getByTestId("tree-add-person"));
+    const input = screen.getByTestId("tree-add-child-input");
     expect(input).toBeDefined();
     await user.type(input, "New Root User{Enter}");
     expect(screen.getByText("New Root User")).toBeDefined();
     // Should be at root level
     expect(onTreeChange).toHaveBeenCalled();
-    const newTree = onTreeChange.mock.calls[0][0] as OrgTreeNodeData[];
+    const newTree = onTreeChange.mock.calls[0][0] as TreeNodeData[];
     expect(newTree[newTree.length - 1].name).toBe("New Root User");
   });
 
   it("adds a person after the selected user as a sibling", async () => {
     const user = userEvent.setup();
     const onTreeChange = vi.fn();
-    render(<InteractiveOrgTree data={sampleTree} onTreeChange={onTreeChange} />);
+    render(<InteractiveTree data={sampleTree} onTreeChange={onTreeChange} />);
     // Select Lisa Park (child of CTO)
     await user.click(screen.getByText("Lisa Park"));
     // Click header add button — should add after Lisa Park at same level
-    await user.click(screen.getByTestId("org-tree-add-person"));
-    const input = screen.getByTestId("org-tree-add-child-input");
+    await user.click(screen.getByTestId("tree-add-person"));
+    const input = screen.getByTestId("tree-add-child-input");
     await user.type(input, "New Colleague{Enter}");
     expect(screen.getByText("New Colleague")).toBeDefined();
     // Should be a sibling of Lisa Park under CTO
     expect(onTreeChange).toHaveBeenCalled();
-    const newTree = onTreeChange.mock.calls[0][0] as OrgTreeNodeData[];
-    const findNode = (nodes: OrgTreeNodeData[], id: string): OrgTreeNodeData | null => {
+    const newTree = onTreeChange.mock.calls[0][0] as TreeNodeData[];
+    const findNode = (nodes: TreeNodeData[], id: string): TreeNodeData | null => {
       for (const n of nodes) {
         if (n.id === id) return n;
         if (n.children) { const f = findNode(n.children, id); if (f) return f; }
@@ -631,77 +631,77 @@ describe("InteractiveOrgTree", () => {
 
   it("cancels add-person on Escape", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
-    await user.click(screen.getByTestId("org-tree-add-person"));
-    const input = screen.getByTestId("org-tree-add-child-input");
+    render(<InteractiveTree data={sampleTree} />);
+    await user.click(screen.getByTestId("tree-add-person"));
+    const input = screen.getByTestId("tree-add-child-input");
     await user.type(input, "{Escape}");
-    expect(screen.queryByTestId("org-tree-add-child-input")).toBeNull();
+    expect(screen.queryByTestId("tree-add-child-input")).toBeNull();
   });
 
   it("newly created child becomes visible (parent auto-expanded)", async () => {
     const user = userEvent.setup();
-    render(<InteractiveOrgTree data={sampleTree} />);
+    render(<InteractiveTree data={sampleTree} />);
     // Alex Rivera has no children (leaf)
     await user.click(screen.getByText("Alex Rivera"));
     await user.keyboard("{Control>}u{/Control}");
-    await user.type(screen.getByTestId("org-tree-add-child-input"), "First Report{Enter}");
+    await user.type(screen.getByTestId("tree-add-child-input"), "First Report{Enter}");
     // Should be visible — parent auto-expanded
     expect(screen.getByText("First Report")).toBeDefined();
     // Alex Rivera should now show a chevron (has children)
-    expect(screen.getByTestId("org-tree-chevron-p2")).toBeDefined();
+    expect(screen.getByTestId("tree-chevron-p2")).toBeDefined();
   });
 });
 
 /* ─────────────────────── Icon prop support ────────────────────────── */
 
-describe("OrgTreeNode with icon prop", () => {
+describe("TreeNode with icon prop", () => {
   it("renders icon instead of avatar when icon prop is provided", () => {
-    const node: OrgTreeNodeData = {
+    const node: TreeNodeData = {
       id: "eps-1",
       name: "Energy Division",
       icon: <span data-testid="custom-icon">IC</span>,
     };
     render(
-      <OrgTree>
-        <OrgTreeContent>
-          <OrgTreeNode node={node} level={0} data-testid="node-eps-1" />
-        </OrgTreeContent>
-      </OrgTree>,
+      <Tree>
+        <TreeContent>
+          <TreeNode node={node} level={0} data-testid="node-eps-1" />
+        </TreeContent>
+      </Tree>,
     );
     expect(screen.getByTestId("custom-icon")).toBeDefined();
     expect(screen.getByText("Energy Division")).toBeDefined();
   });
 
   it("does not render avatar circle when icon is provided", () => {
-    const node: OrgTreeNodeData = {
+    const node: TreeNodeData = {
       id: "eps-1",
       name: "Test",
       initials: "TE",
       icon: <span data-testid="icon">IC</span>,
     };
     render(
-      <OrgTree>
-        <OrgTreeContent>
-          <OrgTreeNode node={node} level={0} data-testid="node-eps-1" />
-        </OrgTreeContent>
-      </OrgTree>,
+      <Tree>
+        <TreeContent>
+          <TreeNode node={node} level={0} data-testid="node-eps-1" />
+        </TreeContent>
+      </Tree>,
     );
     // Icon should be rendered, not the initials avatar
     expect(screen.getByTestId("icon")).toBeDefined();
   });
 
   it("still renders initials avatar when no icon is provided", () => {
-    const node: OrgTreeNodeData = {
+    const node: TreeNodeData = {
       id: "p1",
       name: "Sarah Chen",
       initials: "SC",
     };
     render(
-      <OrgTree>
-        <OrgTreeContent>
-          <OrgTreeNode node={node} level={0} data-testid="node-p1" />
-        </OrgTreeContent>
-      </OrgTree>,
+      <Tree>
+        <TreeContent>
+          <TreeNode node={node} level={0} data-testid="node-p1" />
+        </TreeContent>
+      </Tree>,
     );
     expect(screen.getByText("SC")).toBeDefined();
   });
@@ -709,20 +709,20 @@ describe("OrgTreeNode with icon prop", () => {
 
 /* ─────────────────────── Badge prop support ──────────────────────── */
 
-describe("OrgTreeNode with badge prop", () => {
+describe("TreeNode with badge prop", () => {
   it("renders badge when badge prop is provided", () => {
-    const node: OrgTreeNodeData = {
+    const node: TreeNodeData = {
       id: "proj-1",
       name: "Horizon LNG",
       icon: <span>F</span>,
       badge: { label: "Active", color: "success" },
     };
     render(
-      <OrgTree>
-        <OrgTreeContent>
-          <OrgTreeNode node={node} level={0} data-testid="node-proj-1" />
-        </OrgTreeContent>
-      </OrgTree>,
+      <Tree>
+        <TreeContent>
+          <TreeNode node={node} level={0} data-testid="node-proj-1" />
+        </TreeContent>
+      </Tree>,
     );
     const badge = screen.getByText("Active");
     expect(badge).toBeDefined();
@@ -730,17 +730,17 @@ describe("OrgTreeNode with badge prop", () => {
   });
 
   it("does not render badge when badge prop is absent", () => {
-    const node: OrgTreeNodeData = {
+    const node: TreeNodeData = {
       id: "n1",
       name: "No Badge",
       icon: <span>N</span>,
     };
     render(
-      <OrgTree>
-        <OrgTreeContent>
-          <OrgTreeNode node={node} level={0} data-testid="node-n1" />
-        </OrgTreeContent>
-      </OrgTree>,
+      <Tree>
+        <TreeContent>
+          <TreeNode node={node} level={0} data-testid="node-n1" />
+        </TreeContent>
+      </Tree>,
     );
     expect(screen.queryByText("Active")).toBeNull();
   });
