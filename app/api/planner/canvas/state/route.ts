@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest, isAuthError } from "@/lib/api-auth";
+import { buildPlannerState } from "@/lib/planner/build-planner-state";
 
 /**
  * @swagger
@@ -88,10 +89,11 @@ export async function GET(request: NextRequest) {
       auth.tenantId,
     );
 
-    // Get version
-    const snapshot = await prisma.plannerSnapshot.findUnique({
-      where: { projectId },
-    });
+    // Get version + WBS state in parallel
+    const [snapshot, plannerState] = await Promise.all([
+      prisma.plannerSnapshot.findUnique({ where: { projectId } }),
+      buildPlannerState(prisma, auth.tenantId, projectId),
+    ]);
 
     return NextResponse.json({
       project: {
@@ -105,10 +107,13 @@ export async function GET(request: NextRequest) {
         breadcrumb,
       },
       version: snapshot?.version ?? 0,
+      wbsNodes: plannerState.wbsNodes,
+      activities: plannerState.activities,
     });
-  } catch {
+  } catch (error) {
+    console.error("Planner state error:", error);
     return NextResponse.json(
-      { message: "Failed to load planner state" },
+      { message: "Failed to load planner state", debug: error instanceof Error ? error.message + " | " + error.stack?.split("\n")[1] : String(error) },
       { status: 500 },
     );
   }

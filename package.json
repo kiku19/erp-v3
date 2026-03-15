@@ -13,6 +13,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
+    "@tanstack/react-virtual": "^3.13.22",
     "@types/swagger-ui-react": "^5.18.0",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

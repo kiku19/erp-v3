@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateRequest, isAuthError } from "@/lib/api-auth";
 import { z } from "zod";
+import { applyPlannerEvent } from "@/lib/planner/apply-event";
 
 const plannerSaveSchema = z.object({
   projectId: z.string().min(1),
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
 
       const nextVersion = currentVersion + 1;
 
-      // Write events to the planner event log
+      // Write events to the planner event log and apply to relational models
       for (const e of events) {
         await tx.plannerEvent.create({
           data: {
@@ -126,6 +127,9 @@ export async function POST(request: NextRequest) {
             payload: e.payload as object,
           },
         });
+
+        // Apply event to WbsNode/Activity models
+        await applyPlannerEvent(tx, auth.tenantId, e);
       }
 
       // Bump version

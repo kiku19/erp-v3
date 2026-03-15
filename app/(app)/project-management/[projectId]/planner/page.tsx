@@ -5,9 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlannerCanvas } from "./_components/use-planner-canvas";
+import { useWbsTree } from "./_components/use-wbs-tree";
 import { BreadcrumbBar } from "./_components/breadcrumb-bar";
 import { TopBar } from "./_components/top-bar";
 import { Toolbar } from "./_components/toolbar";
+import { WbsSidebarTree } from "./_components/wbs-sidebar-tree";
+import { ActivitySpreadsheet } from "./_components/activity-spreadsheet";
+import { SplitterHandle } from "./_components/splitter-handle";
 import type { ViewMode } from "./_components/types";
 
 export default function ProjectPlannerPage() {
@@ -21,9 +25,29 @@ export default function ProjectPlannerPage() {
     lastSavedAt,
     pendingCount,
     isStale,
+    initialWbsNodes,
+    initialActivities,
+    queueEvent,
     reload,
   } = usePlannerCanvas(projectId);
   const [viewMode, setViewMode] = useState<ViewMode>("gantt");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const wbsTree = useWbsTree({
+    initialWbsNodes,
+    initialActivities,
+    projectId,
+    queueEvent,
+  });
+
+  // Derive selected WBS id for the sidebar
+  const selectedWbsId = (() => {
+    if (!wbsTree.selectedRowId) return null;
+    const wbs = wbsTree.wbsNodes.find((n) => n.id === wbsTree.selectedRowId);
+    if (wbs) return wbs.id;
+    const act = wbsTree.activities.find((a) => a.id === wbsTree.selectedRowId);
+    return act?.wbsNodeId ?? null;
+  })();
 
   /* ── Loading state ── */
   if (loading) {
@@ -86,15 +110,43 @@ export default function ProjectPlannerPage() {
         onReload={reload}
       />
 
-      {/* Toolbar */}
-      <Toolbar />
+      {/* Toolbar — wired to WBS tree actions */}
+      <Toolbar
+        onAddActivity={wbsTree.addActivity}
+        onAddMilestone={wbsTree.addMilestone}
+        onAddWbs={wbsTree.addWbs}
+      />
 
       {/* Body */}
       {viewMode === "gantt" ? (
-        <div className="flex-1 flex items-center justify-center border-t border-border">
-          <p className="text-sm text-muted-foreground">
-            Gantt chart and activity spreadsheet will be implemented here
-          </p>
+        <div className="flex flex-1 overflow-hidden border-t border-border">
+          {/* Left: WBS sidebar */}
+          <WbsSidebarTree
+            wbsNodes={wbsTree.wbsNodes}
+            selectedWbsId={selectedWbsId}
+            onSelectWbs={wbsTree.selectRow}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+          />
+
+          {/* Center: Spreadsheet */}
+          <ActivitySpreadsheet
+            flatRows={wbsTree.flatRows}
+            selectedRowId={wbsTree.selectedRowId}
+            onToggleExpand={wbsTree.toggleExpand}
+            onSelect={wbsTree.selectRow}
+            onUpdate={wbsTree.updateRow}
+          />
+
+          {/* Splitter */}
+          <SplitterHandle />
+
+          {/* Right: Gantt (future) */}
+          <div className="flex-1 flex items-center justify-center bg-card">
+            <p className="text-sm text-muted-foreground">
+              Gantt chart coming soon
+            </p>
+          </div>
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">

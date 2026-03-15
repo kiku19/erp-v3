@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import ProjectPlannerPage from "./page";
 import type { UsePlannerCanvasReturn } from "./_components/use-planner-canvas";
 
@@ -29,6 +29,8 @@ const defaultCanvasReturn: UsePlannerCanvasReturn = {
   saveStatus: "idle",
   lastSavedAt: null,
   pendingCount: 0,
+  initialWbsNodes: [],
+  initialActivities: [],
   queueEvent: vi.fn(),
   reload: vi.fn(),
 };
@@ -40,6 +42,8 @@ vi.mock("./_components/use-planner-canvas", () => ({
 }));
 
 describe("ProjectPlannerPage", () => {
+  afterEach(() => cleanup());
+
   beforeEach(() => {
     mockPush.mockClear();
     mockCanvasReturn = { ...defaultCanvasReturn, queueEvent: vi.fn(), reload: vi.fn() };
@@ -91,9 +95,12 @@ describe("ProjectPlannerPage", () => {
     expect(screen.getAllByText("Milestone").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows gantt placeholder by default", () => {
+  it("shows gantt view by default with spreadsheet and WBS sidebar", () => {
     render(<ProjectPlannerPage />);
-    expect(screen.getAllByText(/Gantt chart and activity spreadsheet/).length).toBeGreaterThanOrEqual(1);
+    // The gantt view now shows WBS sidebar, spreadsheet, and gantt placeholder
+    expect(screen.getAllByText("WBS Structure").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Activity Name").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Gantt chart coming soon/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows coming soon for non-gantt views", () => {
