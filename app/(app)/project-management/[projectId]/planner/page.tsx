@@ -13,8 +13,13 @@ import { WbsSidebarTree } from "./_components/wbs-sidebar-tree";
 import { ActivitySpreadsheet } from "./_components/activity-spreadsheet";
 import { SplitterHandle } from "./_components/splitter-handle";
 import { WbsIconSettingsModal } from "./_components/wbs-icon-settings-modal";
+import { ActivityDetailPanel } from "./_components/activity-detail-panel";
+import { ActivityDetailModal } from "./_components/activity-detail-modal";
+import { CalendarSettingsModal } from "./_components/calendar-settings-modal";
+import { ObsModal } from "./_components/obs-modal";
+import { GanttChart } from "./_components/gantt-chart";
 import { useWbsIconSettings } from "./_components/use-wbs-icon-settings";
-import type { ViewMode } from "./_components/types";
+import type { ViewMode, DetailTab, GanttTimeScale } from "./_components/types";
 
 export default function ProjectPlannerPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -36,6 +41,11 @@ export default function ProjectPlannerPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("gantt");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [iconSettingsOpen, setIconSettingsOpen] = useState(false);
+  const [isDetailExpanded, setIsDetailExpanded] = useState(false);
+  const [detailTab, setDetailTab] = useState<DetailTab>("general");
+  const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
+  const [obsOpen, setObsOpen] = useState(false);
+  const [timeScale, setTimeScale] = useState<GanttTimeScale>("week");
   const iconSettings = useWbsIconSettings();
 
   const [localProjectStartDate, setLocalProjectStartDate] = useState<string | null>(null);
@@ -86,7 +96,7 @@ export default function ProjectPlannerPage() {
           wbsTree.exitLinkMode();
           return;
         }
-        if (!iconSettingsOpen) {
+        if (!iconSettingsOpen && !isDetailExpanded && !calendarSettingsOpen && !obsOpen) {
           wbsTree.selectRow(null);
         }
         return;
@@ -107,7 +117,7 @@ export default function ProjectPlannerPage() {
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [wbsTree, iconSettingsOpen]);
+  }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen]);
 
   /* ── Deselect on click outside rows ── */
   const handlePageClick = useCallback(
@@ -116,6 +126,8 @@ export default function ProjectPlannerPage() {
       // Don't deselect if clicking on a row, button, input, or modal
       if (
         target.closest("[data-testid^='spreadsheet-row-']") ||
+        target.closest("[data-testid='activity-detail-panel']") ||
+        target.closest("[data-testid='gantt-canvas']") ||
         target.closest("[data-wbs-id]") ||
         target.closest("button") ||
         target.closest("input") ||
@@ -136,6 +148,11 @@ export default function ProjectPlannerPage() {
     const act = wbsTree.activities.find((a) => a.id === wbsTree.selectedRowId);
     return act?.wbsNodeId ?? null;
   })();
+
+  // Derive selected activity for the detail panel (only activity/milestone, not WBS)
+  const selectedActivity = wbsTree.flatRows.find(
+    (r) => r.id === wbsTree.selectedRowId && (r.type === "activity" || r.type === "milestone"),
+  ) ?? null;
 
   /* ── Loading state ── */
   if (loading) {
@@ -222,50 +239,79 @@ export default function ProjectPlannerPage() {
         onConfirmLink={wbsTree.commitLinkChain}
         onCancelLink={wbsTree.exitLinkMode}
         linkChainLength={wbsTree.linkChain.length}
+        onZoomIn={() => setTimeScale((s) => s === "month" ? "week" : "day")}
+        onZoomOut={() => setTimeScale((s) => s === "day" ? "week" : "month")}
+        onZoomFit={() => setTimeScale("week")}
       />
 
       {/* Body */}
       {viewMode === "gantt" ? (
-        <div className="flex flex-1 overflow-hidden border-t border-border">
-          {/* Left: WBS sidebar */}
-          <WbsSidebarTree
-            wbsNodes={wbsTree.wbsNodes}
-            selectedWbsId={selectedWbsId}
-            onSelectWbs={wbsTree.selectRow}
-            onRenameWbs={(id, newName) => wbsTree.updateRow(id, { name: newName })}
-            onMoveWbs={wbsTree.moveWbs}
-            isCollapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
-            iconOrder={iconSettings.settings.icons}
-            onUpdateIcon={(id, icon) => wbsTree.updateRow(id, { icon })}
-            onUpdateIconColor={(id, iconColor) => wbsTree.updateRow(id, { iconColor })}
-            onOpenIconSettings={() => setIconSettingsOpen(true)}
-          />
+        <div className="flex flex-col flex-1 overflow-hidden border-t border-border">
+          {/* Gantt area — shrinks when detail panel is open */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Left: WBS sidebar */}
+            <WbsSidebarTree
+              wbsNodes={wbsTree.wbsNodes}
+              selectedWbsId={selectedWbsId}
+              onSelectWbs={wbsTree.selectRow}
+              onRenameWbs={(id, newName) => wbsTree.updateRow(id, { name: newName })}
+              onMoveWbs={wbsTree.moveWbs}
+              isCollapsed={sidebarCollapsed}
+              onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+              iconOrder={iconSettings.settings.icons}
+              onUpdateIcon={(id, icon) => wbsTree.updateRow(id, { icon })}
+              onUpdateIconColor={(id, iconColor) => wbsTree.updateRow(id, { iconColor })}
+              onOpenIconSettings={() => setIconSettingsOpen(true)}
+            />
 
-          {/* Center: Spreadsheet */}
-          <ActivitySpreadsheet
-            flatRows={wbsTree.flatRows}
-            selectedRowId={wbsTree.selectedRowId}
-            onToggleExpand={wbsTree.toggleExpand}
-            onSelect={wbsTree.selectRow}
-            onUpdate={wbsTree.updateRow}
-            onCommitAdd={wbsTree.commitAdd}
-            onCancelAdd={wbsTree.cancelAdd}
-            onMoveRow={wbsTree.moveRow}
-            linkMode={wbsTree.linkMode}
-            linkChain={wbsTree.linkChain}
-            onLinkClick={handleLinkClick}
-          />
+            {/* Center: Spreadsheet */}
+            <ActivitySpreadsheet
+              flatRows={wbsTree.flatRows}
+              selectedRowId={wbsTree.selectedRowId}
+              onToggleExpand={wbsTree.toggleExpand}
+              onSelect={wbsTree.selectRow}
+              onUpdate={wbsTree.updateRow}
+              onCommitAdd={wbsTree.commitAdd}
+              onCancelAdd={wbsTree.cancelAdd}
+              onMoveRow={wbsTree.moveRow}
+              linkMode={wbsTree.linkMode}
+              linkChain={wbsTree.linkChain}
+              onLinkClick={handleLinkClick}
+            />
 
-          {/* Splitter */}
-          <SplitterHandle />
+            {/* Splitter */}
+            <SplitterHandle />
 
-          {/* Right: Gantt (future) */}
-          <div className="flex-1 flex items-center justify-center bg-card">
-            <p className="text-sm text-muted-foreground">
-              Gantt chart coming soon
-            </p>
+            {/* Right: Gantt Chart */}
+            <GanttChart
+              flatRows={wbsTree.flatRows}
+              activities={wbsTree.activities}
+              relationships={wbsTree.relationships}
+              wbsNodes={wbsTree.wbsNodes}
+              selectedRowId={wbsTree.selectedRowId}
+              onSelectRow={wbsTree.selectRow}
+              projectStartDate={effectiveStartDate}
+              projectFinishDate={effectiveFinishDate}
+              timeScale={timeScale}
+            />
           </div>
+
+          {/* Activity Detail Panel — bottom, 280px when an activity is selected */}
+          {selectedActivity && !isDetailExpanded && (
+            <ActivityDetailPanel
+              activity={selectedActivity}
+              activities={wbsTree.activities}
+              wbsNodes={wbsTree.wbsNodes}
+              relationships={wbsTree.relationships}
+              onClose={() => wbsTree.selectRow(null)}
+              onUpdate={wbsTree.updateRow}
+              onExpandToggle={() => setIsDetailExpanded(true)}
+              onOpenCalendarSettings={() => setCalendarSettingsOpen(true)}
+              onOpenObs={() => setObsOpen(true)}
+              activeTab={detailTab}
+              onTabChange={setDetailTab}
+            />
+          )}
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
@@ -274,6 +320,33 @@ export default function ProjectPlannerPage() {
           </p>
         </div>
       )}
+
+      {/* Expanded activity detail modal */}
+      <ActivityDetailModal
+        open={isDetailExpanded && !!selectedActivity}
+        activity={selectedActivity}
+        activities={wbsTree.activities}
+        wbsNodes={wbsTree.wbsNodes}
+        relationships={wbsTree.relationships}
+        onClose={() => setIsDetailExpanded(false)}
+        onUpdate={wbsTree.updateRow}
+        onOpenCalendarSettings={() => setCalendarSettingsOpen(true)}
+        onOpenObs={() => setObsOpen(true)}
+        activeTab={detailTab}
+        onTabChange={setDetailTab}
+      />
+
+      {/* Calendar Settings modal */}
+      <CalendarSettingsModal
+        open={calendarSettingsOpen}
+        onClose={() => setCalendarSettingsOpen(false)}
+      />
+
+      {/* OBS modal */}
+      <ObsModal
+        open={obsOpen}
+        onClose={() => setObsOpen(false)}
+      />
 
       {/* Icon settings modal */}
       <WbsIconSettingsModal

@@ -98,10 +98,10 @@ describe("ProjectPlannerPage", () => {
 
   it("shows gantt view by default with spreadsheet and WBS sidebar", () => {
     render(<ProjectPlannerPage />);
-    // The gantt view now shows WBS sidebar, spreadsheet, and gantt placeholder
+    // The gantt view now shows WBS sidebar, spreadsheet, and gantt chart
     expect(screen.getAllByText("WBS Structure").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Activity Name").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Gantt chart coming soon/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("gantt-chart")).toBeDefined();
   });
 
   it("shows coming soon for non-gantt views", () => {

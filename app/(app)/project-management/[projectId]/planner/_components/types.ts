@@ -54,6 +54,10 @@ export interface ActivityRelationshipData {
   lag: number;
 }
 
+export type DetailTab = "general" | "predecessors" | "successors" | "resources" | "codes" | "notebook" | "steps";
+
+export type GanttTimeScale = "day" | "week" | "month";
+
 export type LinkModeStatus = "idle" | "linking";
 
 export interface LinkChainEntry {
