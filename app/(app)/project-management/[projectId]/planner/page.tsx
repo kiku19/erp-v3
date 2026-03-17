@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,12 @@ export default function ProjectPlannerPage() {
     reload,
   } = usePlannerCanvas(projectId);
   const [viewMode, setViewMode] = useState<ViewMode>("gantt");
+  // Track which views have been visited so we can lazy-mount then keep alive via CSS
+  const visitedViewsRef = useRef<Set<ViewMode>>(new Set(["gantt"]));
+  if (!visitedViewsRef.current.has(viewMode)) {
+    visitedViewsRef.current.add(viewMode);
+  }
+  const visited = visitedViewsRef.current;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [iconSettingsOpen, setIconSettingsOpen] = useState(false);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
@@ -257,81 +263,81 @@ export default function ProjectPlannerPage() {
         onOpenSettings={() => setGanttSettingsOpen(true)}
       />
 
-      {/* Body */}
-      {viewMode === "gantt" ? (
-        <div className="flex flex-col flex-1 overflow-hidden border-t border-border">
-          {/* Gantt area — shrinks when detail panel is open */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left: WBS sidebar */}
-            <WbsSidebarTree
-              wbsNodes={wbsTree.wbsNodes}
-              selectedWbsId={selectedWbsId}
-              onSelectWbs={wbsTree.selectRow}
-              onRenameWbs={(id, newName) => wbsTree.updateRow(id, { name: newName })}
-              onMoveWbs={wbsTree.moveWbs}
-              isCollapsed={sidebarCollapsed}
-              onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
-              iconOrder={iconSettings.settings.icons}
-              onUpdateIcon={(id, icon) => wbsTree.updateRow(id, { icon })}
-              onUpdateIconColor={(id, iconColor) => wbsTree.updateRow(id, { iconColor })}
-              onOpenIconSettings={() => setIconSettingsOpen(true)}
-            />
+      {/* Body — all views stay mounted, hidden via CSS to avoid remount cost */}
+      <div className="flex flex-col flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "gantt" ? "flex" : "none" }}>
+        {/* Gantt area — shrinks when detail panel is open */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: WBS sidebar */}
+          <WbsSidebarTree
+            wbsNodes={wbsTree.wbsNodes}
+            selectedWbsId={selectedWbsId}
+            onSelectWbs={wbsTree.selectRow}
+            onRenameWbs={(id, newName) => wbsTree.updateRow(id, { name: newName })}
+            onMoveWbs={wbsTree.moveWbs}
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+            iconOrder={iconSettings.settings.icons}
+            onUpdateIcon={(id, icon) => wbsTree.updateRow(id, { icon })}
+            onUpdateIconColor={(id, iconColor) => wbsTree.updateRow(id, { iconColor })}
+            onOpenIconSettings={() => setIconSettingsOpen(true)}
+          />
 
-            {/* Center: Spreadsheet */}
-            <ActivitySpreadsheet
-              flatRows={wbsTree.flatRows}
-              selectedRowId={wbsTree.selectedRowId}
-              onToggleExpand={wbsTree.toggleExpand}
-              onSelect={wbsTree.selectRow}
-              onUpdate={wbsTree.updateRow}
-              onCommitAdd={wbsTree.commitAdd}
-              onCancelAdd={wbsTree.cancelAdd}
-              onMoveRow={wbsTree.moveRow}
-              linkMode={wbsTree.linkMode}
-              linkChain={wbsTree.linkChain}
-              onLinkClick={handleLinkClick}
-              scrollTop={sharedScrollTop}
-              onVerticalScroll={setSharedScrollTop}
-            />
+          {/* Center: Spreadsheet */}
+          <ActivitySpreadsheet
+            flatRows={wbsTree.flatRows}
+            selectedRowId={wbsTree.selectedRowId}
+            onToggleExpand={wbsTree.toggleExpand}
+            onSelect={wbsTree.selectRow}
+            onUpdate={wbsTree.updateRow}
+            onCommitAdd={wbsTree.commitAdd}
+            onCancelAdd={wbsTree.cancelAdd}
+            onMoveRow={wbsTree.moveRow}
+            linkMode={wbsTree.linkMode}
+            linkChain={wbsTree.linkChain}
+            onLinkClick={handleLinkClick}
+            scrollTop={sharedScrollTop}
+            onVerticalScroll={setSharedScrollTop}
+          />
 
-            {/* Splitter */}
-            <SplitterHandle />
+          {/* Splitter */}
+          <SplitterHandle />
 
-            {/* Right: Gantt Chart */}
-            <GanttChart
-              flatRows={wbsTree.flatRows}
-              activities={wbsTree.activities}
-              relationships={wbsTree.relationships}
-              wbsNodes={wbsTree.wbsNodes}
-              selectedRowId={wbsTree.selectedRowId}
-              onSelectRow={wbsTree.selectRow}
-              projectStartDate={effectiveStartDate}
-              projectFinishDate={effectiveFinishDate}
-              settings={ganttSettings}
-              scrollTop={sharedScrollTop}
-              onVerticalScroll={setSharedScrollTop}
-            />
-          </div>
-
-          {/* Activity Detail Panel — bottom, 280px when an activity is selected */}
-          {selectedActivity && !isDetailExpanded && (
-            <ActivityDetailPanel
-              activity={selectedActivity}
-              activities={wbsTree.activities}
-              wbsNodes={wbsTree.wbsNodes}
-              relationships={wbsTree.relationships}
-              onClose={() => wbsTree.selectRow(null)}
-              onUpdate={wbsTree.updateRow}
-              onExpandToggle={() => setIsDetailExpanded(true)}
-              onOpenCalendarSettings={() => setCalendarSettingsOpen(true)}
-              onOpenObs={() => setObsOpen(true)}
-              activeTab={detailTab}
-              onTabChange={setDetailTab}
-            />
-          )}
+          {/* Right: Gantt Chart */}
+          <GanttChart
+            flatRows={wbsTree.flatRows}
+            activities={wbsTree.activities}
+            relationships={wbsTree.relationships}
+            wbsNodes={wbsTree.wbsNodes}
+            selectedRowId={wbsTree.selectedRowId}
+            onSelectRow={wbsTree.selectRow}
+            projectStartDate={effectiveStartDate}
+            projectFinishDate={effectiveFinishDate}
+            settings={ganttSettings}
+            scrollTop={sharedScrollTop}
+            onVerticalScroll={setSharedScrollTop}
+          />
         </div>
-      ) : viewMode === "network" ? (
-        <div className="flex-1 overflow-hidden border-t border-border">
+
+        {/* Activity Detail Panel — bottom, 280px when an activity is selected */}
+        {selectedActivity && !isDetailExpanded && (
+          <ActivityDetailPanel
+            activity={selectedActivity}
+            activities={wbsTree.activities}
+            wbsNodes={wbsTree.wbsNodes}
+            relationships={wbsTree.relationships}
+            onClose={() => wbsTree.selectRow(null)}
+            onUpdate={wbsTree.updateRow}
+            onExpandToggle={() => setIsDetailExpanded(true)}
+            onOpenCalendarSettings={() => setCalendarSettingsOpen(true)}
+            onOpenObs={() => setObsOpen(true)}
+            activeTab={detailTab}
+            onTabChange={setDetailTab}
+          />
+        )}
+      </div>
+
+      {visited.has("network") && (
+        <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "network" ? "block" : "none" }}>
           <NetworkChart
             activities={wbsTree.activities}
             relationships={wbsTree.relationships}
@@ -341,8 +347,10 @@ export default function ProjectPlannerPage() {
             projectStartDate={effectiveStartDate}
           />
         </div>
-      ) : viewMode === "resource" ? (
-        <div className="flex-1 overflow-hidden border-t border-border">
+      )}
+
+      {visited.has("resource") && (
+        <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "resource" ? "block" : "none" }}>
           <ResourceChart
             activities={wbsTree.activities}
             resources={wbsTree.resources}
@@ -352,8 +360,10 @@ export default function ProjectPlannerPage() {
             timeScale="week"
           />
         </div>
-      ) : viewMode === "progress" ? (
-        <div className="flex-1 overflow-hidden border-t border-border">
+      )}
+
+      {visited.has("progress") && (
+        <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "progress" ? "block" : "none" }}>
           <ProgressChart
             activities={wbsTree.activities}
             wbsNodes={wbsTree.wbsNodes}
@@ -364,7 +374,7 @@ export default function ProjectPlannerPage() {
             timeScale="week"
           />
         </div>
-      ) : null}
+      )}
 
       {/* Expanded activity detail modal */}
       <ActivityDetailModal
