@@ -45,18 +45,31 @@ interface ActivitySpreadsheetProps {
   onVerticalScroll?: (scrollTop: number) => void;
 }
 
-/* ─────────────────────── Drop position calc ──────────────────────── */
+/* ─────────────────────── Drop position from container Y ───────────── */
 
-function calcDropPosition(e: DragEvent, targetIsWbs: boolean): SpreadsheetDropPosition {
-  const el = e.currentTarget as HTMLElement;
-  const rect = el.getBoundingClientRect();
-  const y = e.clientY - rect.top;
-  const height = rect.height || 1;
-  const threshold = height * 0.25;
+function calcDropFromContainerY(
+  clientY: number,
+  container: HTMLElement,
+  rows: SpreadsheetRow[],
+  draggedId: string | null,
+): { targetRow: SpreadsheetRow; position: SpreadsheetDropPosition } | null {
+  if (rows.length === 0) return null;
 
-  if (y < threshold) return "before";
-  if (y > height - threshold) return "after";
-  return targetIsWbs ? "inside" : "after";
+  const rect = container.getBoundingClientRect();
+  const logicalY = clientY - rect.top + container.scrollTop;
+  const rowIndex = Math.max(0, Math.min(Math.floor(logicalY / ROW_HEIGHT), rows.length - 1));
+  const targetRow = rows[rowIndex];
+  if (!targetRow || targetRow.id === draggedId) return null;
+
+  const yInRow = logicalY - rowIndex * ROW_HEIGHT;
+  const threshold = ROW_HEIGHT * 0.25;
+
+  let position: SpreadsheetDropPosition;
+  if (yInRow < threshold) position = "before";
+  else if (yInRow > ROW_HEIGHT - threshold) position = "after";
+  else position = targetRow.type === "wbs" ? "inside" : "after";
+
+  return { targetRow, position };
 }
 
 /* ─────────────────────── Resize handle ───────────────────────────── */
@@ -116,6 +129,7 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
   const parentRef = useRef<HTMLDivElement>(null);
   const isExternalScrollRef = useRef(false);
   const draggedIdRef = useRef<string | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<SpreadsheetDropPosition | null>(null);
   const [colWidths, setColWidths] = useState<ColumnWidths>({ ...DEFAULT_COL_WIDTHS });
@@ -203,48 +217,94 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
 
   const handleDragStart = useCallback((e: DragEvent, id: string) => {
     draggedIdRef.current = id;
+    setDraggedId(id);
     e.dataTransfer.setData("text/plain", id);
     e.dataTransfer.effectAllowed = "move";
   }, []);
 
-  const handleDragOver = useCallback(
+  // Per-row dragOver: only prevents default (required for drop to work). No state updates.
+  const handleRowDragOver = useCallback(
     (e: DragEvent, id: string) => {
-      const draggedId = draggedIdRef.current;
-      if (!draggedId || draggedId === id) return;
+      if (!draggedIdRef.current || draggedIdRef.current === id) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    },
+    [],
+  );
 
+  // Container-level dragOver: computes position from cursor Y against the logical grid.
+  // Stable because it doesn't depend on which DOM element is under the cursor.
+  const handleContainerDragOver = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      if (!draggedIdRef.current) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
 
-      const targetRow = flatRows.find((r) => r.id === id);
-      const pos = calcDropPosition(e, targetRow?.type === "wbs");
-      setDragOverId(id);
-      setDropPosition(pos);
+      const container = parentRef.current;
+      if (!container) return;
+
+      const result = calcDropFromContainerY(e.clientY, container, flatRows, draggedIdRef.current);
+      if (result) {
+        setDragOverId(result.targetRow.id);
+        setDropPosition(result.position);
+      } else {
+        setDragOverId(null);
+        setDropPosition(null);
+      }
     },
     [flatRows],
   );
 
-  const handleDragLeave = useCallback(() => {
+  // Container-level drop: uses the same logical-Y math for final position.
+  const handleContainerDrop = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+
+      const sourceId = e.dataTransfer.getData("text/plain") || draggedIdRef.current;
+      draggedIdRef.current = null;
+      setDragOverId(null);
+      setDropPosition(null);
+      setDraggedId(null);
+
+      if (!sourceId) return;
+
+      const container = parentRef.current;
+      if (!container) return;
+
+      const result = calcDropFromContainerY(e.clientY, container, flatRows, sourceId);
+      if (result) {
+        onMoveRow?.(sourceId, result.targetRow.id, result.position);
+      }
+    },
+    [flatRows, onMoveRow],
+  );
+
+  const handleContainerDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
+    // Only clear if leaving the container (not entering a child)
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setDragOverId(null);
     setDropPosition(null);
   }, []);
 
-  const handleDrop = useCallback(
-    (e: DragEvent, targetId: string) => {
-      e.preventDefault();
-      setDragOverId(null);
-      setDropPosition(null);
+  const handleDragEnd = useCallback(() => {
+    draggedIdRef.current = null;
+    setDraggedId(null);
+    setDragOverId(null);
+    setDropPosition(null);
+  }, []);
 
-      const sourceId = e.dataTransfer.getData("text/plain") || draggedIdRef.current;
-      draggedIdRef.current = null;
-
-      if (!sourceId || sourceId === targetId) return;
-
-      const targetRow = flatRows.find((r) => r.id === targetId);
-      const pos = calcDropPosition(e, targetRow?.type === "wbs");
-      onMoveRow?.(sourceId, targetId, pos);
-    },
-    [flatRows, onMoveRow],
+  // Compute gap index for drag preview (the row index where the gap should open)
+  const draggedRow = useMemo(
+    () => (draggedId ? flatRows.find((r) => r.id === draggedId) ?? null : null),
+    [draggedId, flatRows],
   );
+
+  const gapIndex = useMemo(() => {
+    if (!dragOverId || !dropPosition || dropPosition === "inside") return -1;
+    const targetIdx = flatRows.findIndex((r) => r.id === dragOverId);
+    if (targetIdx < 0) return -1;
+    return dropPosition === "before" ? targetIdx : targetIdx + 1;
+  }, [dragOverId, dropPosition, flatRows]);
 
   // Pre-compute link chain lookup map: activityId → { index (1-based), isParallel }
   const linkChainMap = useMemo(() => {
@@ -287,18 +347,46 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
           ref={parentRef}
           className="flex-1 overflow-auto"
           onScroll={handleScrollSync}
+          onDragOver={handleContainerDragOver}
+          onDrop={handleContainerDrop}
+          onDragLeave={handleContainerDragLeave}
         >
           <div
             style={{
-              height: `${virtualizer.getTotalSize()}px`,
+              height: `${virtualizer.getTotalSize() + (gapIndex >= 0 ? ROW_HEIGHT : 0)}px`,
               width: "100%",
               position: "relative",
             }}
           >
+            {/* Shadow placeholder at the gap position */}
+            {gapIndex >= 0 && draggedRow && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: `${ROW_HEIGHT}px`,
+                  transform: `translateY(${gapIndex * ROW_HEIGHT}px)`,
+                  transition: "transform 150ms ease",
+                }}
+                className="z-10 pointer-events-none"
+              >
+                <div className="flex items-center h-full mx-1 rounded-[4px] border border-dashed border-primary/50 bg-primary/5 text-[12px] text-primary/70 px-2 gap-1.5">
+                  <span style={{ paddingLeft: `${draggedRow.depth * 20}px` }} className="truncate">
+                    {draggedRow.name}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const row = flatRows[virtualRow.index];
               const chainEntry = linkChainMap.get(row.id);
               const chainIdx = chainEntry ? chainEntry.index : null;
+              const isDragged = row.id === draggedId;
+              // Shift rows at/after the gap index down by ROW_HEIGHT
+              const gapOffset = gapIndex >= 0 && virtualRow.index >= gapIndex ? ROW_HEIGHT : 0;
               return (
                 <div
                   key={row.id}
@@ -308,7 +396,9 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
                     left: 0,
                     width: "100%",
                     height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
+                    transform: `translateY(${virtualRow.start + gapOffset}px)`,
+                    transition: gapIndex >= 0 ? "transform 150ms ease" : undefined,
+                    opacity: isDragged ? 0.3 : 1,
                   }}
                 >
                   <SpreadsheetRowComponent
@@ -322,9 +412,8 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
                     isDragOver={dragOverId === row.id}
                     dropPosition={dragOverId === row.id ? dropPosition : null}
                     onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
+                    onDragOver={handleRowDragOver}
+                    onDragEnd={handleDragEnd}
                     columnWidths={colWidths}
                     linkMode={linkMode}
                     linkChainIndex={chainIdx}

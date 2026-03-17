@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo, useCallback, useState } from "react";
+import { memo, useRef, useMemo, useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { computeTopologicalLayout } from "@/lib/planner/topological-layout";
 import { forwardPass } from "@/lib/planner/forward-pass";
@@ -23,7 +23,7 @@ interface NetworkChartProps {
 
 /* ─────────────────────── Component ──────────────────────────── */
 
-function NetworkChart({
+const NetworkChart = memo(function NetworkChart({
   activities,
   relationships,
   wbsNodes,
@@ -150,6 +150,6 @@ function NetworkChart({
       </div>
     </div>
   );
-}
+});
 
 export { NetworkChart, type NetworkChartProps };

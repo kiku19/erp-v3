@@ -70,6 +70,7 @@ interface SpreadsheetRowProps {
   onDragOver?: (e: DragEvent, id: string) => void;
   onDragLeave?: () => void;
   onDrop?: (e: DragEvent, id: string) => void;
+  onDragEnd?: () => void;
   columnWidths?: ColumnWidths;
   linkMode?: LinkModeStatus;
   linkChainIndex?: number | null;
@@ -91,6 +92,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
   onDragOver,
   onDragLeave,
   onDrop,
+  onDragEnd,
   columnWidths: cw = DEFAULT_COL_WIDTHS,
   linkMode = "idle",
   linkChainIndex = null,
@@ -187,6 +189,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
       onDragOver={(e) => onDragOver?.(e, row.id)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop?.(e, row.id)}
+      onDragEnd={onDragEnd}
     >
       {/* Drop indicators */}
       {isDragOver && dropPosition === "before" && (

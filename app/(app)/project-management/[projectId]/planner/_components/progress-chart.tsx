@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { ProgressSummary } from "./progress-summary";
 import { ProgressSCurve } from "./progress-s-curve";
 import type { ActivityData, WbsNodeData, ResourceData, ResourceAssignmentData } from "./types";
@@ -18,7 +19,7 @@ interface ProgressChartProps {
 
 /* ─────────────────────── Component ─────────────────────────── */
 
-function ProgressChart({
+const ProgressChart = memo(function ProgressChart({
   activities,
   wbsNodes: _wbsNodes,
   resources: _resources,
@@ -47,6 +48,6 @@ function ProgressChart({
       </div>
     </div>
   );
-}
+});
 
 export { ProgressChart, type ProgressChartProps };

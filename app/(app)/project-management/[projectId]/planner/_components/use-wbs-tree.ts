@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, startTransition } from "react";
 import type {
   WbsNodeData,
   ActivityData,
@@ -276,6 +276,7 @@ function useWbsTree({
   const [addingState, setAddingState] = useState<AddingState | null>(null);
   const [linkMode, setLinkMode] = useState<LinkModeStatus>("idle");
   const [linkChain, setLinkChain] = useState<LinkChainEntry[]>([]);
+  const moveDropTimestampRef = useRef<number>(0);
 
   /* ── Undo/Redo history (delta-based) ── */
 
@@ -364,10 +365,12 @@ function useWbsTree({
     const prev = prevStateRef.current;
     if (prev.wbsNodes === wbsNodes && prev.activities === activities) return;
 
+    const tPatch = performance.now();
     const patch: Patch = {
       wbs: computePatch(prev.wbsNodes, wbsNodes),
       act: computePatch(prev.activities, activities),
     };
+    console.log(`[DnD:perf] computePatch: ${(performance.now() - tPatch).toFixed(1)}ms`);
 
     // Skip empty patches (no actual data change)
     if (
@@ -388,7 +391,9 @@ function useWbsTree({
 
   /* ── Memoized flattened rows (with optional adding placeholder) ── */
   const flatRows = useMemo(() => {
+    const tFlat = performance.now();
     const rows = flattenTree(wbsNodes, activities, expandedIds, relationships);
+    console.log(`[DnD:perf] flattenTree: ${(performance.now() - tFlat).toFixed(1)}ms (${wbsNodes.length} wbs, ${activities.length} activities → ${rows.length} rows)`);
 
     if (addingState) {
       const addingRow: SpreadsheetRow = {
@@ -407,6 +412,15 @@ function useWbsTree({
 
     return rows;
   }, [wbsNodes, activities, expandedIds, addingState, relationships]);
+
+  // Measure total drop→DOM-update time
+  useEffect(() => {
+    if (moveDropTimestampRef.current > 0) {
+      const elapsed = performance.now() - moveDropTimestampRef.current;
+      console.log(`[DnD:perf] drop→render (total): ${elapsed.toFixed(1)}ms`);
+      moveDropTimestampRef.current = 0;
+    }
+  }, [flatRows]);
 
   /* ── Expand/Collapse ── */
   const toggleExpand = useCallback((id: string) => {
@@ -590,24 +604,36 @@ function useWbsTree({
         const target = prev.find((n) => n.id === targetId);
         if (!source || !target) return prev;
 
-        let newParentId: string | null;
+        const newParentId = position === "inside" ? targetId : target.parentId;
 
-        if (position === "inside") {
-          newParentId = targetId;
-        } else {
-          newParentId = target.parentId;
+        // Step 0: Normalize sort orders for affected parent groups
+        const affectedParents = new Set<string | null>();
+        affectedParents.add(source.parentId);
+        affectedParents.add(newParentId);
+
+        let normalized = [...prev];
+        for (const parentId of affectedParents) {
+          const groupIndices: number[] = [];
+          normalized.forEach((n, i) => { if (n.parentId === parentId) groupIndices.push(i); });
+          groupIndices.sort((i, j) => normalized[i].sortOrder - normalized[j].sortOrder);
+          groupIndices.forEach((idx, seq) => {
+            if (normalized[idx].sortOrder !== seq) {
+              normalized[idx] = { ...normalized[idx], sortOrder: seq };
+            }
+          });
         }
 
+        const src = normalized.find((n) => n.id === sourceId)!;
+
         // Step 1: Remove source from old parent and compact old siblings
-        let updated = prev.map((n) => {
-          if (n.parentId === source.parentId && n.id !== sourceId && n.sortOrder > source.sortOrder) {
+        let updated = normalized.map((n) => {
+          if (n.parentId === src.parentId && n.id !== sourceId && n.sortOrder > src.sortOrder) {
             return { ...n, sortOrder: n.sortOrder - 1 };
           }
           return n;
         });
 
-        // Step 2: Calculate insertion index in the new parent
-        // Need to recalculate target's sortOrder after compaction (if same parent)
+        // Step 2: Calculate insertion index
         const targetAfterCompact = updated.find((n) => n.id === targetId)!;
         let insertSortOrder: number;
 
@@ -631,7 +657,7 @@ function useWbsTree({
           return n;
         });
 
-        // Step 4: Recalculate ALL wbsCodes (moved node + affected siblings)
+        // Step 4: Recalculate ALL wbsCodes
         return recalculateAllWbsCodes(updated);
       });
 
@@ -760,11 +786,14 @@ function useWbsTree({
 
   const moveRow = useCallback(
     (sourceId: string, targetId: string, position: DropPosition) => {
+      moveDropTimestampRef.current = performance.now();
+      const t0 = moveDropTimestampRef.current;
       const sourceIsWbs = wbsNodes.some((n) => n.id === sourceId);
       const targetIsWbs = wbsNodes.some((n) => n.id === targetId);
 
       if (sourceIsWbs && targetIsWbs) {
         moveWbs(sourceId, targetId, position);
+        console.log(`[DnD:perf] moveRow (WBS→WBS) setState: ${(performance.now() - t0).toFixed(1)}ms`);
         return;
       }
 
@@ -772,97 +801,112 @@ function useWbsTree({
       if (sourceIsWbs && !targetIsWbs) {
         const targetAct = activities.find((a) => a.id === targetId);
         if (!targetAct) return;
-        const targetParentWbs = targetAct.wbsNodeId;
-        // Place the WBS after the activity's parent WBS
-        moveWbs(sourceId, targetParentWbs, position === "before" ? "before" : "after");
+        moveWbs(sourceId, targetAct.wbsNodeId, position === "before" ? "before" : "after");
+        console.log(`[DnD:perf] moveRow (WBS→activity) setState: ${(performance.now() - t0).toFixed(1)}ms`);
         return;
       }
 
       // Activity movement
       if (!sourceIsWbs) {
-        const sourceAct = activities.find((a) => a.id === sourceId);
-        if (!sourceAct) return;
-
-        let newWbsNodeId: string;
-        let insertSortOrder: number;
-
+        // Pre-compute destination WBS (needs wbsNodes + activities from closure for routing)
+        let effectiveWbsId: string;
         if (targetIsWbs) {
-          // Dropping activity on/near a WBS row
           if (position === "inside" || position === "after") {
-            newWbsNodeId = targetId;
-            const siblings = activities.filter(
-              (a) => a.wbsNodeId === targetId && a.id !== sourceId,
-            );
-            insertSortOrder = position === "inside" ? siblings.length : 0;
+            effectiveWbsId = targetId;
           } else {
-            // "before" a WBS — insert at end of that WBS's parent's activities
             const targetNode = wbsNodes.find((n) => n.id === targetId);
             if (!targetNode || !targetNode.parentId) return;
-            newWbsNodeId = targetNode.parentId;
-            const siblings = activities.filter(
-              (a) => a.wbsNodeId === newWbsNodeId && a.id !== sourceId,
-            );
-            insertSortOrder = siblings.length;
+            effectiveWbsId = targetNode.parentId;
           }
         } else {
-          // Dropping activity on another activity
           const targetAct = activities.find((a) => a.id === targetId);
           if (!targetAct) return;
-          newWbsNodeId = targetAct.wbsNodeId;
-          insertSortOrder = position === "before"
-            ? targetAct.sortOrder
-            : targetAct.sortOrder + 1;
+          effectiveWbsId = targetAct.wbsNodeId;
         }
 
         setActivities((prev) => {
-          // Step 1: Compact old siblings
-          let updated = prev.map((a) => {
-            if (
-              a.wbsNodeId === sourceAct.wbsNodeId &&
-              a.id !== sourceId &&
-              a.sortOrder > sourceAct.sortOrder
-            ) {
+          const tSetAct = performance.now();
+          // Look up source & target from prev (not stale closure)
+          const sourceAct = prev.find((a) => a.id === sourceId);
+          if (!sourceAct) return prev;
+
+          // Step 0: Normalize sort orders for affected WBS groups to ensure sequential 0,1,2,...
+          const affectedWbsIds = new Set<string>();
+          affectedWbsIds.add(sourceAct.wbsNodeId);
+
+          const destWbsNodeId = effectiveWbsId;
+          let insertIndex: number;
+          affectedWbsIds.add(destWbsNodeId);
+
+          // Normalize: assign sequential sortOrders per WBS group
+          let normalized = [...prev];
+          for (const wbsId of affectedWbsIds) {
+            const groupIndices: number[] = [];
+            normalized.forEach((a, i) => { if (a.wbsNodeId === wbsId) groupIndices.push(i); });
+            groupIndices.sort((i, j) => normalized[i].sortOrder - normalized[j].sortOrder);
+            groupIndices.forEach((idx, seq) => {
+              if (normalized[idx].sortOrder !== seq) {
+                normalized[idx] = { ...normalized[idx], sortOrder: seq };
+              }
+            });
+          }
+
+          // Re-lookup after normalization
+          const src = normalized.find((a) => a.id === sourceId)!;
+
+          if (targetIsWbs) {
+            if (position === "inside" || position === "after") {
+              const siblings = normalized.filter((a) => a.wbsNodeId === destWbsNodeId && a.id !== sourceId);
+              insertIndex = position === "inside" ? siblings.length : 0;
+            } else {
+              const siblings = normalized.filter((a) => a.wbsNodeId === destWbsNodeId && a.id !== sourceId);
+              insertIndex = siblings.length;
+            }
+          } else {
+            const tgt = normalized.find((a) => a.id === targetId)!;
+            insertIndex = position === "before" ? tgt.sortOrder : tgt.sortOrder + 1;
+          }
+
+          // Step 1: Remove source from old group — compact old siblings
+          let updated = normalized.map((a) => {
+            if (a.wbsNodeId === src.wbsNodeId && a.id !== sourceId && a.sortOrder > src.sortOrder) {
               return { ...a, sortOrder: a.sortOrder - 1 };
             }
             return a;
           });
 
-          // Recalculate insertSortOrder if same WBS (compaction may have shifted target)
-          if (newWbsNodeId === sourceAct.wbsNodeId && !targetIsWbs) {
-            const targetAfter = updated.find((a) => a.id === targetId);
-            if (targetAfter) {
-              insertSortOrder = position === "before"
-                ? targetAfter.sortOrder
-                : targetAfter.sortOrder + 1;
+          // Step 1b: If same WBS, recalculate insert index after compaction
+          if (destWbsNodeId === src.wbsNodeId && !targetIsWbs) {
+            const tgtAfter = updated.find((a) => a.id === targetId);
+            if (tgtAfter) {
+              insertIndex = position === "before" ? tgtAfter.sortOrder : tgtAfter.sortOrder + 1;
             }
           }
 
           // Step 2: Shift new siblings and place source
           updated = updated.map((a) => {
             if (a.id === sourceId) {
-              return { ...a, wbsNodeId: newWbsNodeId, sortOrder: insertSortOrder };
+              return { ...a, wbsNodeId: destWbsNodeId, sortOrder: insertIndex };
             }
-            if (
-              a.wbsNodeId === newWbsNodeId &&
-              a.id !== sourceId &&
-              a.sortOrder >= insertSortOrder
-            ) {
+            if (a.wbsNodeId === destWbsNodeId && a.id !== sourceId && a.sortOrder >= insertIndex) {
               return { ...a, sortOrder: a.sortOrder + 1 };
             }
             return a;
           });
 
+          console.log(`[DnD:perf] setActivities updater: ${(performance.now() - tSetAct).toFixed(1)}ms (${prev.length} activities)`);
           return updated;
         });
+        console.log(`[DnD:perf] moveRow (activity) setState call: ${(performance.now() - t0).toFixed(1)}ms`);
 
         // Expand target WBS so the activity is visible
-        setExpandedIds((prev) => new Set([...prev, newWbsNodeId]));
+        setExpandedIds((prev) => new Set([...prev, effectiveWbsId]));
 
         queueEvent({
           eventType: "activity.moved",
           entityType: "activity",
           entityId: sourceId,
-          payload: { targetId, position, wbsNodeId: newWbsNodeId },
+          payload: { targetId, position, wbsNodeId: effectiveWbsId },
         });
       }
     },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { memo, useState, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { ResourceSidebar } from "./resource-sidebar";
@@ -82,7 +82,7 @@ function TimelineHeader({ timelineStart, timelineEnd, pxPerDay, totalWidth, scro
 
 /* ─────────────────────── Component ──────────────────────────── */
 
-function ResourceChart({
+const ResourceChart = memo(function ResourceChart({
   activities,
   resources,
   assignments,
@@ -210,6 +210,6 @@ function ResourceChart({
       </div>
     </div>
   );
-}
+});
 
 export { ResourceChart, type ResourceChartProps };

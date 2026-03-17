@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo, startTransition } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, startTransition, useDeferredValue } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,6 +87,13 @@ export default function ProjectPlannerPage() {
     projectStartDate: effectiveStartDate,
     queueEvent,
   });
+
+  // Defer heavy chart data so drag-drop updates the spreadsheet immediately
+  // while charts re-render in the background
+  const deferredActivities = useDeferredValue(wbsTree.activities);
+  const deferredFlatRows = useDeferredValue(wbsTree.flatRows);
+  const deferredWbsNodes = useDeferredValue(wbsTree.wbsNodes);
+  const deferredRelationships = useDeferredValue(wbsTree.relationships);
 
   const handleUpdateProjectDates = useCallback(
     (startDate: string, finishDate: string) => {
@@ -368,10 +375,10 @@ export default function ProjectPlannerPage() {
 
           {/* Right: Gantt Chart */}
           <GanttChart
-            flatRows={wbsTree.flatRows}
-            activities={wbsTree.activities}
-            relationships={wbsTree.relationships}
-            wbsNodes={wbsTree.wbsNodes}
+            flatRows={deferredFlatRows}
+            activities={deferredActivities}
+            relationships={deferredRelationships}
+            wbsNodes={deferredWbsNodes}
             selectedRowId={wbsTree.selectedRowId}
             onSelectRow={wbsTree.selectRow}
             projectStartDate={effectiveStartDate}
@@ -394,9 +401,9 @@ export default function ProjectPlannerPage() {
           >
             <ActivityDetailPanel
               activity={panelActivity}
-              activities={wbsTree.activities}
-              wbsNodes={wbsTree.wbsNodes}
-              relationships={wbsTree.relationships}
+              activities={deferredActivities}
+              wbsNodes={deferredWbsNodes}
+              relationships={deferredRelationships}
               onClose={handleDetailClose}
               onUpdate={wbsTree.updateRow}
               onExpandToggle={handleExpandToggle}
@@ -412,9 +419,9 @@ export default function ProjectPlannerPage() {
       {visited.has("network") && (
         <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "network" ? "block" : "none" }}>
           <NetworkChart
-            activities={wbsTree.activities}
-            relationships={wbsTree.relationships}
-            wbsNodes={wbsTree.wbsNodes}
+            activities={deferredActivities}
+            relationships={deferredRelationships}
+            wbsNodes={deferredWbsNodes}
             selectedRowId={wbsTree.selectedRowId}
             onSelectRow={wbsTree.selectRow}
             projectStartDate={effectiveStartDate}
@@ -425,7 +432,7 @@ export default function ProjectPlannerPage() {
       {visited.has("resource") && (
         <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "resource" ? "block" : "none" }}>
           <ResourceChart
-            activities={wbsTree.activities}
+            activities={deferredActivities}
             resources={wbsTree.resources}
             assignments={wbsTree.resourceAssignments}
             projectStartDate={effectiveStartDate}
@@ -438,8 +445,8 @@ export default function ProjectPlannerPage() {
       {visited.has("progress") && (
         <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "progress" ? "block" : "none" }}>
           <ProgressChart
-            activities={wbsTree.activities}
-            wbsNodes={wbsTree.wbsNodes}
+            activities={deferredActivities}
+            wbsNodes={deferredWbsNodes}
             resources={wbsTree.resources}
             assignments={wbsTree.resourceAssignments}
             projectStartDate={effectiveStartDate}
@@ -453,9 +460,9 @@ export default function ProjectPlannerPage() {
       <ActivityDetailModal
         open={isDetailExpanded && !!selectedActivity}
         activity={panelActivity}
-        activities={wbsTree.activities}
-        wbsNodes={wbsTree.wbsNodes}
-        relationships={wbsTree.relationships}
+        activities={deferredActivities}
+        wbsNodes={deferredWbsNodes}
+        relationships={deferredRelationships}
         onClose={handleCollapseDetail}
         onUpdate={wbsTree.updateRow}
         onOpenCalendarSettings={handleOpenCalendarSettings}
