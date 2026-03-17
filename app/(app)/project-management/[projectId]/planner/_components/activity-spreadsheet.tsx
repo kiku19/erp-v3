@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect, memo, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo, memo, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SpreadsheetRowComponent, DEFAULT_COL_WIDTHS } from "./spreadsheet-row";
 import type { SpreadsheetDropPosition, ColumnWidths } from "./spreadsheet-row";
@@ -246,6 +246,15 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
     [flatRows, onMoveRow],
   );
 
+  // Pre-compute link chain lookup map: activityId → { index (1-based), isParallel }
+  const linkChainMap = useMemo(() => {
+    const map = new Map<string, { index: number; isParallel: boolean }>();
+    for (let i = 0; i < linkChain.length; i++) {
+      map.set(linkChain[i].activityId, { index: i + 1, isParallel: linkChain[i].isParallel });
+    }
+    return map;
+  }, [linkChain]);
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Column Headers */}
@@ -288,8 +297,8 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const row = flatRows[virtualRow.index];
-              const chainEntry = linkChain.find((e) => e.activityId === row.id);
-              const chainIdx = chainEntry ? linkChain.indexOf(chainEntry) + 1 : null;
+              const chainEntry = linkChainMap.get(row.id);
+              const chainIdx = chainEntry ? chainEntry.index : null;
               return (
                 <div
                   key={row.id}

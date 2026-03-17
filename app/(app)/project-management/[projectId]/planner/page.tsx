@@ -227,6 +227,17 @@ export default function ProjectPlannerPage() {
   );
   const handleOpenIconSettings = useCallback(() => setIconSettingsOpen(true), []);
 
+  // Wrap expand/collapse in startTransition so the heavy GanttCanvas repaint
+  // doesn't block the UI — the chevron flips immediately, canvas updates in background.
+  const handleToggleExpand = useCallback(
+    (id: string) => {
+      startTransition(() => {
+        wbsTree.toggleExpand(id);
+      });
+    },
+    [wbsTree.toggleExpand],
+  );
+
   /* ── Loading state ── */
   if (loading) {
     return (
@@ -339,7 +350,7 @@ export default function ProjectPlannerPage() {
           <ActivitySpreadsheet
             flatRows={wbsTree.flatRows}
             selectedRowId={wbsTree.selectedRowId}
-            onToggleExpand={wbsTree.toggleExpand}
+            onToggleExpand={handleToggleExpand}
             onSelect={wbsTree.selectRow}
             onUpdate={wbsTree.updateRow}
             onCommitAdd={wbsTree.commitAdd}

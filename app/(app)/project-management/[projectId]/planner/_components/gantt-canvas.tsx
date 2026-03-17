@@ -100,8 +100,9 @@ function GanttCanvas({
 
   const totalHeight = flatRows.length * rowHeight;
 
-  /* ── Paint ── */
+  /* ── Paint (deferred to rAF so expand/collapse doesn't block the main thread) ── */
   useEffect(() => {
+    const rafId = requestAnimationFrame(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -424,6 +425,8 @@ function GanttCanvas({
         ctx.fillText("Milestone", lx, ly);
       }
     }
+    }); // end rAF
+    return () => cancelAnimationFrame(rafId);
   }, [flatRows, activities, relationships, timelineStart, pxPerDay, totalWidth, scrollLeft, rowHeight, totalHeight, settings]);
 
   /* ── Selection highlight — lightweight CSS div instead of a second canvas ── */
