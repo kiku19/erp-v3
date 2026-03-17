@@ -112,6 +112,16 @@ export interface LinkChainEntry {
   isParallel: boolean;
 }
 
+/* ─── Column sorting ─── */
+
+export type SortableColumn = "id" | "name" | "duration" | "start" | "finish" | "float" | "pct" | "pred";
+export type SortDirection = "asc" | "desc";
+
+export interface SortConfig {
+  column: SortableColumn;
+  direction: SortDirection;
+}
+
 /* ─── Flattened spreadsheet row ─── */
 
 export type WbsRowType = "wbs" | "activity" | "milestone";

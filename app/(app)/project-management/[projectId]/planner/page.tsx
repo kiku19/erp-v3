@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo, startTransition, useDeferredValue } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, startTransition, useDeferredValue, useTransition } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,8 @@ import { ResourceChart } from "./_components/resource-chart";
 import { ProgressChart } from "./_components/progress-chart";
 import { useWbsIconSettings } from "./_components/use-wbs-icon-settings";
 import { DEFAULT_GANTT_SETTINGS, zoomIn, zoomOut } from "./_components/gantt-utils";
-import type { ViewMode, DetailTab, GanttSettings } from "./_components/types";
+import { useSortedRows } from "./_components/use-sorted-rows";
+import type { ViewMode, DetailTab, GanttSettings, SortConfig, SortableColumn } from "./_components/types";
 
 export default function ProjectPlannerPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -62,6 +63,8 @@ export default function ProjectPlannerPage() {
   const [ganttSettings, setGanttSettings] = useState<GanttSettings>({ ...DEFAULT_GANTT_SETTINGS });
   const [ganttSettingsOpen, setGanttSettingsOpen] = useState(false);
   const [sharedScrollTop, setSharedScrollTop] = useState(0);
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+  const [isSortTransitionPending, startSortTransition] = useTransition();
   const iconSettings = useWbsIconSettings();
 
   const [localProjectStartDate, setLocalProjectStartDate] = useState<string | null>(null);
@@ -95,6 +98,24 @@ export default function ProjectPlannerPage() {
   const deferredFlatRows = useDeferredValue(wbsTree.flatRows);
   const deferredWbsNodes = useDeferredValue(wbsTree.wbsNodes);
   const deferredRelationships = useDeferredValue(wbsTree.relationships);
+
+  // Apply column sort to flat rows — both spreadsheet and gantt see the same order
+  const sortedFlatRows = useSortedRows(wbsTree.flatRows, sortConfig);
+  const deferredSortedFlatRows = useDeferredValue(sortedFlatRows);
+
+  // Toggle sort: click same column → cycle asc → desc → off; click different → asc
+  const handleSort = useCallback((column: SortableColumn) => {
+    startSortTransition(() => {
+      setSortConfig((prev) => {
+        if (prev?.column === column) {
+          if (prev.direction === "asc") return { column, direction: "desc" };
+          // Was desc → clear sort
+          return null;
+        }
+        return { column, direction: "asc" };
+      });
+    });
+  }, []);
 
   const handleUpdateProjectDates = useCallback(
     (startDate: string, finishDate: string) => {
@@ -388,7 +409,7 @@ export default function ProjectPlannerPage() {
           {/* Center: Spreadsheet */}
           <div ref={spreadsheetContainerRef} className="flex flex-col overflow-hidden" style={spreadsheetWidth ? { width: `${spreadsheetWidth}px`, flexShrink: 0 } : { flex: 1 }}>
             <ActivitySpreadsheet
-              flatRows={wbsTree.flatRows}
+              flatRows={sortedFlatRows}
               selectedRowId={wbsTree.selectedRowId}
               onToggleExpand={handleToggleExpand}
               onSelect={wbsTree.selectRow}
@@ -399,7 +420,10 @@ export default function ProjectPlannerPage() {
               linkMode={wbsTree.linkMode}
               linkChain={wbsTree.linkChain}
               onLinkClick={handleLinkClick}
-              scrollTop={sharedScrollTop}
+              sortConfig={sortConfig}
+            onSort={handleSort}
+            isSorting={isSortTransitionPending}
+            scrollTop={sharedScrollTop}
               onVerticalScroll={setSharedScrollTop}
             />
           </div>
@@ -413,7 +437,7 @@ export default function ProjectPlannerPage() {
 
           {/* Right: Gantt Chart */}
           <GanttChart
-            flatRows={deferredFlatRows}
+            flatRows={deferredSortedFlatRows}
             activities={deferredActivities}
             relationships={deferredRelationships}
             wbsNodes={deferredWbsNodes}
