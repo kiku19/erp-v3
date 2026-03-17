@@ -19,9 +19,10 @@ function getSortValue(row: SpreadsheetRow, column: SortConfig["column"]): number
     case "duration":
       return row.duration ?? null;
     case "start":
-      return row.startDate ?? null;
+      // Convert ISO date strings to timestamps for correct numeric comparison
+      return row.startDate ? new Date(row.startDate).getTime() : null;
     case "finish":
-      return row.finishDate ?? null;
+      return row.finishDate ? new Date(row.finishDate).getTime() : null;
     case "float":
       return row.totalFloat ?? null;
     case "pct":
