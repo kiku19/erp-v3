@@ -415,4 +415,58 @@ describe("WbsSidebarTree", () => {
     const iconBtn = screen.getByTestId("wbs-icon-w1");
     expect(iconBtn.className).toContain("text-success");
   });
+
+  /* ─── Delete key tests ─── */
+
+  it("calls onDeleteWbs with selected WBS id when Delete key is pressed", () => {
+    const onDeleteWbs = vi.fn();
+    render(
+      <WbsSidebarTree {...defaultProps} selectedWbsId="w1" onDeleteWbs={onDeleteWbs} />,
+    );
+
+    const sidebar = screen.getByTestId("wbs-sidebar");
+    fireEvent.keyDown(sidebar, { key: "Delete" });
+
+    expect(onDeleteWbs).toHaveBeenCalledWith("w1");
+  });
+
+  it("calls onDeleteWbs when Backspace key is pressed", () => {
+    const onDeleteWbs = vi.fn();
+    render(
+      <WbsSidebarTree {...defaultProps} selectedWbsId="w3" onDeleteWbs={onDeleteWbs} />,
+    );
+
+    const sidebar = screen.getByTestId("wbs-sidebar");
+    fireEvent.keyDown(sidebar, { key: "Backspace" });
+
+    expect(onDeleteWbs).toHaveBeenCalledWith("w3");
+  });
+
+  it("does not call onDeleteWbs when no WBS is selected", () => {
+    const onDeleteWbs = vi.fn();
+    render(
+      <WbsSidebarTree {...defaultProps} selectedWbsId={null} onDeleteWbs={onDeleteWbs} />,
+    );
+
+    const sidebar = screen.getByTestId("wbs-sidebar");
+    fireEvent.keyDown(sidebar, { key: "Delete" });
+
+    expect(onDeleteWbs).not.toHaveBeenCalled();
+  });
+
+  it("does not call onDeleteWbs when in edit mode", () => {
+    const onDeleteWbs = vi.fn();
+    render(
+      <WbsSidebarTree {...defaultProps} selectedWbsId="w3" onDeleteWbs={onDeleteWbs} />,
+    );
+
+    // Enter edit mode by double-clicking
+    fireEvent.doubleClick(screen.getAllByText("Construction")[0].closest("[data-wbs-id]")!);
+
+    // Now press Delete — should NOT trigger delete since we're editing
+    const sidebar = screen.getByTestId("wbs-sidebar");
+    fireEvent.keyDown(sidebar, { key: "Delete" });
+
+    expect(onDeleteWbs).not.toHaveBeenCalled();
+  });
 });
