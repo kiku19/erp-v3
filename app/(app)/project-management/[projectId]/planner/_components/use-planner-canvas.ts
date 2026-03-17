@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
-import type { ProjectData, PlannerEventInput, WbsNodeData, ActivityData, ActivityRelationshipData } from "./types";
+import type { ProjectData, PlannerEventInput, WbsNodeData, ActivityData, ActivityRelationshipData, ResourceData, ResourceAssignmentData } from "./types";
 import type { SaveStatus } from "@/components/ui/stale-banner";
 
 /* ─────────────────────── Constants ────────────────────────────────────── */
@@ -25,6 +25,8 @@ interface UsePlannerCanvasReturn {
   initialWbsNodes: WbsNodeData[];
   initialActivities: ActivityData[];
   initialRelationships: ActivityRelationshipData[];
+  initialResources: ResourceData[];
+  initialResourceAssignments: ResourceAssignmentData[];
   queueEvent: (event: PlannerEventInput) => void;
   reload: () => Promise<void>;
 }
@@ -37,6 +39,8 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
   const [initialWbsNodes, setInitialWbsNodes] = useState<WbsNodeData[]>([]);
   const [initialActivities, setInitialActivities] = useState<ActivityData[]>([]);
   const [initialRelationships, setInitialRelationships] = useState<ActivityRelationshipData[]>([]);
+  const [initialResources, setInitialResources] = useState<ResourceData[]>([]);
+  const [initialResourceAssignments, setInitialResourceAssignments] = useState<ResourceAssignmentData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
@@ -75,6 +79,8 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
         setInitialWbsNodes(data.wbsNodes ?? []);
         setInitialActivities(data.activities ?? []);
         setInitialRelationships(data.relationships ?? []);
+        setInitialResources(data.resources ?? []);
+        setInitialResourceAssignments(data.resourceAssignments ?? []);
         localVersionRef.current = data.version ?? 0;
         setIsStale(false);
         pendingEventsRef.current = [];
@@ -267,6 +273,8 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
     initialWbsNodes,
     initialActivities,
     initialRelationships,
+    initialResources,
+    initialResourceAssignments,
     queueEvent,
     reload,
   };

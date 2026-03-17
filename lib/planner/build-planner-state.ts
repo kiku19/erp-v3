@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@/app/generated/prisma/client";
 
-type PrismaLike = Pick<PrismaClient, "wbsNode" | "activity" | "activityRelationship">;
+type PrismaLike = Pick<PrismaClient, "wbsNode" | "activity" | "activityRelationship" | "resource" | "resourceAssignment">;
 
 interface WbsNodeData {
   id: string;
@@ -32,10 +32,30 @@ interface RelationshipData {
   lag: number;
 }
 
+interface ResourceData {
+  id: string;
+  name: string;
+  resourceType: string;
+  maxUnitsPerDay: number;
+  costPerUnit: number;
+  sortOrder: number;
+}
+
+interface ResourceAssignmentData {
+  id: string;
+  activityId: string;
+  resourceId: string;
+  unitsPerDay: number;
+  budgetedCost: number;
+  actualCost: number;
+}
+
 interface PlannerState {
   wbsNodes: WbsNodeData[];
   activities: ActivityData[];
   relationships: RelationshipData[];
+  resources: ResourceData[];
+  resourceAssignments: ResourceAssignmentData[];
 }
 
 /**
@@ -88,6 +108,36 @@ async function buildPlannerState(
     }),
   ]);
 
+  // Resource queries — guarded for environments where models may not yet exist
+  const rawResources = prisma.resource
+    ? await prisma.resource.findMany({
+        where: { tenantId, projectId, isDeleted: false },
+        orderBy: { sortOrder: "asc" },
+        select: {
+          id: true,
+          name: true,
+          resourceType: true,
+          maxUnitsPerDay: true,
+          costPerUnit: true,
+          sortOrder: true,
+        },
+      })
+    : [];
+
+  const rawAssignments = prisma.resourceAssignment
+    ? await prisma.resourceAssignment.findMany({
+        where: { tenantId, projectId, isDeleted: false },
+        select: {
+          id: true,
+          activityId: true,
+          resourceId: true,
+          unitsPerDay: true,
+          budgetedCost: true,
+          actualCost: true,
+        },
+      })
+    : [];
+
   // Serialize dates to ISO strings for the frontend
   const activities: ActivityData[] = rawActivities.map((a: {
     id: string;
@@ -121,7 +171,39 @@ async function buildPlannerState(
     lag: r.lag,
   }));
 
-  return { wbsNodes, activities, relationships };
+  const resources: ResourceData[] = rawResources.map((r: {
+    id: string;
+    name: string;
+    resourceType: string;
+    maxUnitsPerDay: number;
+    costPerUnit: number;
+    sortOrder: number;
+  }) => ({
+    id: r.id,
+    name: r.name,
+    resourceType: r.resourceType,
+    maxUnitsPerDay: r.maxUnitsPerDay,
+    costPerUnit: r.costPerUnit,
+    sortOrder: r.sortOrder,
+  }));
+
+  const resourceAssignments: ResourceAssignmentData[] = rawAssignments.map((ra: {
+    id: string;
+    activityId: string;
+    resourceId: string;
+    unitsPerDay: number;
+    budgetedCost: number;
+    actualCost: number;
+  }) => ({
+    id: ra.id,
+    activityId: ra.activityId,
+    resourceId: ra.resourceId,
+    unitsPerDay: ra.unitsPerDay,
+    budgetedCost: ra.budgetedCost,
+    actualCost: ra.actualCost,
+  }));
+
+  return { wbsNodes, activities, relationships, resources, resourceAssignments };
 }
 
-export { buildPlannerState, type WbsNodeData, type ActivityData, type RelationshipData, type PlannerState };
+export { buildPlannerState, type WbsNodeData, type ActivityData, type RelationshipData, type ResourceData, type ResourceAssignmentData, type PlannerState };

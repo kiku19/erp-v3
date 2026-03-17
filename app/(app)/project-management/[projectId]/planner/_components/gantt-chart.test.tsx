@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { GanttChart } from "./gantt-chart";
+import { DEFAULT_GANTT_SETTINGS } from "./gantt-utils";
 import type { SpreadsheetRow, ActivityData, ActivityRelationshipData, WbsNodeData } from "./types";
 
 const mockRows: SpreadsheetRow[] = [
@@ -20,7 +21,7 @@ const defaultProps = {
   onSelectRow: vi.fn(),
   projectStartDate: "2024-06-01",
   projectFinishDate: "2024-08-01",
-  timeScale: "week" as const,
+  settings: { ...DEFAULT_GANTT_SETTINGS },
 };
 
 describe("GanttChart", () => {
@@ -38,6 +39,11 @@ describe("GanttChart", () => {
 
   it("has the correct test id", () => {
     render(<GanttChart {...defaultProps} />);
+    expect(screen.getByTestId("gantt-chart")).toBeDefined();
+  });
+
+  it("accepts settings prop with different zoom levels", () => {
+    render(<GanttChart {...defaultProps} settings={{ ...DEFAULT_GANTT_SETTINGS, zoomLevel: "week-day" }} />);
     expect(screen.getByTestId("gantt-chart")).toBeDefined();
   });
 });

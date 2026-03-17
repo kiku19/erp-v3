@@ -32,6 +32,8 @@ const defaultCanvasReturn: UsePlannerCanvasReturn = {
   initialWbsNodes: [],
   initialActivities: [],
   initialRelationships: [],
+  initialResources: [],
+  initialResourceAssignments: [],
   queueEvent: vi.fn(),
   reload: vi.fn(),
 };
@@ -104,11 +106,11 @@ describe("ProjectPlannerPage", () => {
     expect(screen.getByTestId("gantt-chart")).toBeDefined();
   });
 
-  it("shows coming soon for non-gantt views", () => {
+  it("shows network view when network tab is clicked", () => {
     render(<ProjectPlannerPage />);
     const networkToggles = screen.getAllByTestId("view-toggle-network");
     fireEvent.click(networkToggles[0]);
-    expect(screen.getAllByText("Network view coming soon").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByTestId("network-chart")).toBeDefined();
   });
 
   it("renders autosave indicator", () => {

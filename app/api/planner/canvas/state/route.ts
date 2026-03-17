@@ -110,6 +110,8 @@ export async function GET(request: NextRequest) {
       wbsNodes: plannerState.wbsNodes,
       activities: plannerState.activities,
       relationships: plannerState.relationships,
+      resources: plannerState.resources,
+      resourceAssignments: plannerState.resourceAssignments,
     });
   } catch (error) {
     console.error("Planner state error:", error);

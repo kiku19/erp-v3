@@ -7,14 +7,17 @@ import {
   computeMilestoneGeometry,
   computeArrowPath,
   isCritical,
-  generateWeekHeaders,
+  formatBarLabel,
+  getHeadersForZoomLevel,
   MS_PER_DAY,
 } from "./gantt-utils";
+import { readColors, type CachedColors } from "./canvas-colors";
 import type {
   SpreadsheetRow,
   ActivityData,
   ActivityRelationshipData,
   WbsNodeData,
+  GanttSettings,
 } from "./types";
 
 /* ─────────────────────── Props ─────────────────────────────────── */
@@ -31,43 +34,47 @@ interface GanttCanvasProps {
   totalWidth: number;
   scrollLeft: number;
   rowHeight: number;
+  settings: GanttSettings;
 }
 
-/* ─────────────────────── Color Cache ───────────────────────────── */
+/* ─────────────────────── WBS Color Palette ─────────────────────── */
 
-interface CachedColors {
-  error: string;
-  info: string;
-  primary: string;
-  warning: string;
-  foreground: string;
-  mutedFg: string;
-  border: string;
-  card: string;
-  muted: string;
-}
+const WBS_PALETTE = [
+  "#3b82f6", "#8b5cf6", "#06b6d4", "#f97316", "#ec4899",
+  "#14b8a6", "#eab308", "#6366f1", "#84cc16", "#f43f5e",
+];
 
-function readColors(): CachedColors {
-  if (typeof window === "undefined") {
-    return {
-      error: "#ef4444", info: "#3b82f6", primary: "#171717",
-      warning: "#f59e0b", foreground: "#171717", mutedFg: "#737373",
-      border: "#e5e5e5", card: "#ffffff", muted: "#f5f5f5",
-    };
+function wbsColorForId(wbsNodeId: string): string {
+  let hash = 0;
+  for (let i = 0; i < wbsNodeId.length; i++) {
+    hash = ((hash << 5) - hash + wbsNodeId.charCodeAt(i)) | 0;
   }
-  const s = getComputedStyle(document.documentElement);
-  const get = (v: string) => s.getPropertyValue(v).trim() || "#888";
-  return {
-    error: get("--color-error"),
-    info: get("--color-info"),
-    primary: get("--primary"),
-    warning: get("--color-warning"),
-    foreground: get("--foreground"),
-    mutedFg: get("--muted-foreground"),
-    border: get("--border"),
-    card: get("--card"),
-    muted: get("--muted"),
-  };
+  return WBS_PALETTE[Math.abs(hash) % WBS_PALETTE.length];
+}
+
+/* ─────────────────────── Bar Color Resolver ─────────────────────── */
+
+function getBarColor(
+  act: ActivityData,
+  settings: GanttSettings,
+  c: CachedColors,
+): string {
+  switch (settings.barColorScheme) {
+    case "criticality":
+      if (!settings.showCriticalPath) return c.info;
+      return isCritical(act) ? c.error : c.info;
+    case "float":
+      if (act.totalFloat <= 0) return c.error;
+      if (act.totalFloat <= 5) return c.warning;
+      return c.info;
+    case "status":
+      if (act.percentComplete === 0) return c.muted;
+      if (act.percentComplete < 50) return c.warning;
+      if (act.percentComplete < 100) return c.info;
+      return c.success;
+    case "wbs":
+      return wbsColorForId(act.wbsNodeId);
+  }
 }
 
 /* ─────────────────────── Component ─────────────────────────────── */
@@ -84,6 +91,7 @@ function GanttCanvas({
   totalWidth,
   scrollLeft,
   rowHeight,
+  settings,
 }: GanttCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -114,56 +122,59 @@ function GanttCanvas({
 
     const offsetX = -scrollLeft;
 
-    // ── Grid lines (week boundaries) ──
-    const timelineEnd = new Date(timelineStart.getTime() + (totalWidth / pxPerDay) * MS_PER_DAY);
-    const weeks = generateWeekHeaders(timelineStart, timelineEnd, pxPerDay);
-    ctx.strokeStyle = c.border;
-    ctx.globalAlpha = 0.4;
-    ctx.lineWidth = 1;
-    for (const wk of weeks) {
-      const x = wk.x + offsetX;
-      if (x < -10 || x > w + 10) continue;
-      ctx.beginPath();
-      ctx.moveTo(Math.round(x) + 0.5, 0);
-      ctx.lineTo(Math.round(x) + 0.5, h);
-      ctx.stroke();
+    // ── Grid lines ──
+    if (settings.showGridLines) {
+      const timelineEnd = new Date(timelineStart.getTime() + (totalWidth / pxPerDay) * MS_PER_DAY);
+      const { bottomHeaders } = getHeadersForZoomLevel(settings.zoomLevel, timelineStart, timelineEnd, pxPerDay);
+      ctx.strokeStyle = c.border;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 1;
+      for (const hdr of bottomHeaders) {
+        const x = hdr.x + offsetX;
+        if (x < -10 || x > w + 10) continue;
+        ctx.beginPath();
+        ctx.moveTo(Math.round(x) + 0.5, 0);
+        ctx.lineTo(Math.round(x) + 0.5, h);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
     }
-    ctx.globalAlpha = 1;
 
     // ── Today line ──
-    const today = new Date();
-    const todayX = dateToX(today, timelineStart, pxPerDay) + offsetX;
-    if (todayX > -10 && todayX < w + 10) {
-      ctx.strokeStyle = c.info;
-      ctx.globalAlpha = 0.6;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(Math.round(todayX) + 0.5, 0);
-      ctx.lineTo(Math.round(todayX) + 0.5, h);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+    if (settings.showTodayLine) {
+      const today = new Date();
+      const todayX = dateToX(today, timelineStart, pxPerDay) + offsetX;
+      if (todayX > -10 && todayX < w + 10) {
+        ctx.strokeStyle = c.info;
+        ctx.globalAlpha = 0.6;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(Math.round(todayX) + 0.5, 0);
+        ctx.lineTo(Math.round(todayX) + 0.5, h);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
 
-      // Today label
-      ctx.fillStyle = c.info;
-      ctx.font = "600 8px Inter, sans-serif";
-      const labelW = ctx.measureText("Today").width + 8;
-      const rx = todayX - labelW / 2;
-      const ry = 4;
-      ctx.beginPath();
-      ctx.roundRect(rx, ry, labelW, 14, 4);
-      ctx.fill();
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("Today", todayX, ry + 7);
+        // Today label
+        ctx.fillStyle = c.info;
+        ctx.font = "600 8px Inter, sans-serif";
+        const labelW = ctx.measureText("Today").width + 8;
+        const rx = todayX - labelW / 2;
+        const ry = 4;
+        ctx.beginPath();
+        ctx.roundRect(rx, ry, labelW, 14, 4);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Today", todayX, ry + 7);
+      }
     }
 
     // ── Build activity lookup by id ──
     const actMap = new Map<string, ActivityData>();
     for (const a of activities) actMap.set(a.id, a);
 
-    // ── Bars area (per row index) ──
-    // Build a map from row id to its bar geometry for arrow drawing
+    // ── Bar geometry map for arrow drawing ──
     const barGeoMap = new Map<string, { x: number; y: number; width: number; height: number }>();
 
     for (let i = 0; i < flatRows.length; i++) {
@@ -175,7 +186,6 @@ function GanttCanvas({
 
       if (row.type === "wbs") {
         // ── Summary bar ──
-        // Compute span from child activities
         const childActs = activities.filter((a) => a.wbsNodeId === row.id);
         if (childActs.length === 0) continue;
         let minStart: Date | null = null;
@@ -198,7 +208,6 @@ function GanttCanvas({
         const barY = rowY + rowHeight / 2 - 5;
         const barH = 10;
 
-        // Summary bar color based on depth
         ctx.fillStyle = row.depth === 0 ? c.primary : c.info;
         ctx.beginPath();
         ctx.roundRect(sx, barY, barW, barH, 2);
@@ -207,12 +216,10 @@ function GanttCanvas({
         // Diamond end caps
         const diamondSize = row.depth === 0 ? 6 : 5;
         ctx.save();
-        // Left diamond
         ctx.translate(sx, barY + barH / 2);
         ctx.rotate(Math.PI / 4);
         ctx.fillRect(-diamondSize / 2, -diamondSize / 2, diamondSize, diamondSize);
         ctx.restore();
-        // Right diamond
         ctx.save();
         ctx.translate(sx + barW, barY + barH / 2);
         ctx.rotate(Math.PI / 4);
@@ -258,8 +265,7 @@ function GanttCanvas({
 
         barGeoMap.set(row.id, { x: geo.x, y: geo.y, width: geo.width, height: geo.height });
 
-        const critical = isCritical(act);
-        const barColor = critical ? c.error : c.info;
+        const barColor = getBarColor(act, settings, c);
 
         // Selected outline
         if (selectedRowId === row.id) {
@@ -287,141 +293,145 @@ function GanttCanvas({
           ctx.globalAlpha = 1;
         }
 
-        // Baseline bar (slightly below, 4px tall)
-        ctx.fillStyle = "#999";
-        ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.roundRect(bx + 2, by + geo.height + 2, geo.width - 4, 4, 1);
-        ctx.fill();
-        ctx.globalAlpha = 1;
+        // Baseline bar
+        if (settings.showBaselines) {
+          ctx.fillStyle = "#999";
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath();
+          ctx.roundRect(bx + 2, by + geo.height + 2, geo.width - 4, 4, 1);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
 
         // Label
-        const label = `${act.activityId} - ${act.name}`;
-        ctx.font = "500 9px Inter, sans-serif";
-        const labelWidth = ctx.measureText(label).width;
-        if (labelWidth < geo.width - 8) {
-          // Inside bar
-          ctx.fillStyle = "#fff";
-          ctx.textAlign = "left";
-          ctx.textBaseline = "middle";
-          ctx.fillText(label, bx + 4, by + geo.height / 2);
-        } else {
-          // Outside bar (to the right)
-          ctx.fillStyle = c.foreground;
-          ctx.textAlign = "left";
-          ctx.textBaseline = "middle";
-          ctx.fillText(label, bx + geo.width + 6, by + geo.height / 2);
+        const label = formatBarLabel(act, settings.barLabelFormat);
+        if (label) {
+          ctx.font = "500 9px Inter, sans-serif";
+          const labelWidth = ctx.measureText(label).width;
+          if (labelWidth < geo.width - 8) {
+            ctx.fillStyle = "#fff";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(label, bx + 4, by + geo.height / 2);
+          } else {
+            ctx.fillStyle = c.foreground;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(label, bx + geo.width + 6, by + geo.height / 2);
+          }
         }
       }
     }
 
     // ── Dependency arrows ──
-    ctx.strokeStyle = c.error;
-    ctx.fillStyle = c.error;
-    ctx.lineWidth = 1.5;
-    ctx.lineCap = "round";
+    if (settings.showRelationshipArrows) {
+      ctx.strokeStyle = c.error;
+      ctx.fillStyle = c.error;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = "round";
 
-    for (const rel of relationships) {
-      const fromGeo = barGeoMap.get(rel.predecessorId);
-      const toGeo = barGeoMap.get(rel.successorId);
-      if (!fromGeo || !toGeo) continue;
+      for (const rel of relationships) {
+        const fromGeo = barGeoMap.get(rel.predecessorId);
+        const toGeo = barGeoMap.get(rel.successorId);
+        if (!fromGeo || !toGeo) continue;
 
-      // Offset for canvas scroll
-      const from = { ...fromGeo, x: fromGeo.x + offsetX };
-      const to = { ...toGeo, x: toGeo.x + offsetX };
+        const from = { ...fromGeo, x: fromGeo.x + offsetX };
+        const to = { ...toGeo, x: toGeo.x + offsetX };
 
-      const pts = computeArrowPath(from, to);
-      if (pts.length < 2) continue;
+        const pts = computeArrowPath(from, to);
+        if (pts.length < 2) continue;
 
-      // Draw path
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let p = 1; p < pts.length; p++) {
-        ctx.lineTo(pts[p].x, pts[p].y);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let p = 1; p < pts.length; p++) {
+          ctx.lineTo(pts[p].x, pts[p].y);
+        }
+        ctx.stroke();
+
+        // Arrowhead
+        const last = pts[pts.length - 1];
+        const prev = pts[pts.length - 2];
+        const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
+        const arrowSize = 6;
+        ctx.beginPath();
+        ctx.moveTo(last.x, last.y);
+        ctx.lineTo(
+          last.x - arrowSize * Math.cos(angle - Math.PI / 6),
+          last.y - arrowSize * Math.sin(angle - Math.PI / 6),
+        );
+        ctx.lineTo(
+          last.x - arrowSize * Math.cos(angle + Math.PI / 6),
+          last.y - arrowSize * Math.sin(angle + Math.PI / 6),
+        );
+        ctx.closePath();
+        ctx.fill();
       }
-      ctx.stroke();
-
-      // Arrowhead at the last point
-      const last = pts[pts.length - 1];
-      const prev = pts[pts.length - 2];
-      const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
-      const arrowSize = 6;
-      ctx.beginPath();
-      ctx.moveTo(last.x, last.y);
-      ctx.lineTo(
-        last.x - arrowSize * Math.cos(angle - Math.PI / 6),
-        last.y - arrowSize * Math.sin(angle - Math.PI / 6),
-      );
-      ctx.lineTo(
-        last.x - arrowSize * Math.cos(angle + Math.PI / 6),
-        last.y - arrowSize * Math.sin(angle + Math.PI / 6),
-      );
-      ctx.closePath();
-      ctx.fill();
     }
 
     // ── Legend ──
-    const legendY = Math.min(totalHeight - 10, h - 30);
-    if (legendY > 50) {
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = c.muted;
-      ctx.beginPath();
-      ctx.roundRect(8, legendY, 260, 20, 4);
-      ctx.fill();
+    if (settings.showLegend) {
+      const legendY = Math.min(totalHeight - 10, h - 30);
+      if (legendY > 50) {
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = c.muted;
+        ctx.beginPath();
+        ctx.roundRect(8, legendY, 260, 20, 4);
+        ctx.fill();
 
-      ctx.font = "500 8px Inter, sans-serif";
-      ctx.textBaseline = "middle";
-      let lx = 16;
-      const ly = legendY + 10;
+        ctx.font = "500 8px Inter, sans-serif";
+        ctx.textBaseline = "middle";
+        let lx = 16;
+        const ly = legendY + 10;
 
-      // FS arrow
-      ctx.strokeStyle = c.error;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(lx, ly);
-      ctx.lineTo(lx + 14, ly);
-      ctx.stroke();
-      ctx.fillStyle = c.error;
-      ctx.beginPath();
-      ctx.moveTo(lx + 14, ly - 3);
-      ctx.lineTo(lx + 18, ly);
-      ctx.lineTo(lx + 14, ly + 3);
-      ctx.closePath();
-      ctx.fill();
-      lx += 22;
-      ctx.fillStyle = c.mutedFg;
-      ctx.textAlign = "left";
-      ctx.fillText("Finish-to-Start", lx, ly);
-      lx += 74;
+        // FS arrow
+        ctx.strokeStyle = c.error;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(lx, ly);
+        ctx.lineTo(lx + 14, ly);
+        ctx.stroke();
+        ctx.fillStyle = c.error;
+        ctx.beginPath();
+        ctx.moveTo(lx + 14, ly - 3);
+        ctx.lineTo(lx + 18, ly);
+        ctx.lineTo(lx + 14, ly + 3);
+        ctx.closePath();
+        ctx.fill();
+        lx += 22;
+        ctx.fillStyle = c.mutedFg;
+        ctx.textAlign = "left";
+        ctx.fillText("Finish-to-Start", lx, ly);
+        lx += 74;
 
-      // Critical box
-      ctx.fillStyle = c.error;
-      ctx.fillRect(lx, ly - 5, 10, 10);
-      lx += 14;
-      ctx.fillStyle = c.mutedFg;
-      ctx.fillText("Critical", lx, ly);
-      lx += 42;
+        // Critical box
+        ctx.fillStyle = c.error;
+        ctx.fillRect(lx, ly - 5, 10, 10);
+        lx += 14;
+        ctx.fillStyle = c.mutedFg;
+        ctx.fillText("Critical", lx, ly);
+        lx += 42;
 
-      // Non-critical box
-      ctx.fillStyle = c.info;
-      ctx.fillRect(lx, ly - 5, 10, 10);
-      lx += 14;
-      ctx.fillStyle = c.mutedFg;
-      ctx.fillText("Non-Critical", lx, ly);
-      lx += 56;
+        // Non-critical box
+        ctx.fillStyle = c.info;
+        ctx.fillRect(lx, ly - 5, 10, 10);
+        lx += 14;
+        ctx.fillStyle = c.mutedFg;
+        ctx.fillText("Non-Critical", lx, ly);
+        lx += 56;
 
-      // Milestone diamond
-      ctx.fillStyle = c.error;
-      ctx.save();
-      ctx.translate(lx + 5, ly);
-      ctx.rotate(Math.PI / 4);
-      ctx.fillRect(-4, -4, 8, 8);
-      ctx.restore();
-      lx += 14;
-      ctx.fillStyle = c.mutedFg;
-      ctx.fillText("Milestone", lx, ly);
+        // Milestone diamond
+        ctx.fillStyle = c.error;
+        ctx.save();
+        ctx.translate(lx + 5, ly);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillRect(-4, -4, 8, 8);
+        ctx.restore();
+        lx += 14;
+        ctx.fillStyle = c.mutedFg;
+        ctx.fillText("Milestone", lx, ly);
+      }
     }
-  }, [flatRows, activities, relationships, selectedRowId, timelineStart, pxPerDay, totalWidth, scrollLeft, rowHeight, totalHeight]);
+  }, [flatRows, activities, relationships, selectedRowId, timelineStart, pxPerDay, totalWidth, scrollLeft, rowHeight, totalHeight, settings]);
 
   /* ── Click hit test ── */
   const handleClick = useCallback(

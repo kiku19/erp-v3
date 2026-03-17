@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { useRef, useState, useCallback, useEffect, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SpreadsheetRowComponent, DEFAULT_COL_WIDTHS } from "./spreadsheet-row";
 import type { SpreadsheetDropPosition, ColumnWidths } from "./spreadsheet-row";
@@ -39,6 +39,10 @@ interface ActivitySpreadsheetProps {
   linkMode?: LinkModeStatus;
   linkChain?: LinkChainEntry[];
   onLinkClick?: (id: string, isShift: boolean) => void;
+  /** Shared vertical scroll position for sync with gantt */
+  scrollTop?: number;
+  /** Called when this panel scrolls vertically */
+  onVerticalScroll?: (scrollTop: number) => void;
 }
 
 /* ─────────────────────── Drop position calc ──────────────────────── */
@@ -106,8 +110,11 @@ function ActivitySpreadsheet({
   linkMode = "idle",
   linkChain = [],
   onLinkClick,
+  scrollTop,
+  onVerticalScroll,
 }: ActivitySpreadsheetProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const isExternalScrollRef = useRef(false);
   const draggedIdRef = useRef<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<SpreadsheetDropPosition | null>(null);
@@ -174,6 +181,25 @@ function ActivitySpreadsheet({
     estimateSize: () => ROW_HEIGHT,
     overscan: OVERSCAN,
   });
+
+  // Scroll sync: notify parent when this panel scrolls
+  const handleScrollSync = useCallback(() => {
+    if (parentRef.current && !isExternalScrollRef.current && onVerticalScroll) {
+      onVerticalScroll(parentRef.current.scrollTop);
+    }
+    isExternalScrollRef.current = false;
+  }, [onVerticalScroll]);
+
+  // Scroll sync: apply external scroll position
+  useEffect(() => {
+    if (scrollTop !== undefined && parentRef.current) {
+      const container = parentRef.current;
+      if (Math.abs(container.scrollTop - scrollTop) > 1) {
+        isExternalScrollRef.current = true;
+        container.scrollTop = scrollTop;
+      }
+    }
+  }, [scrollTop]);
 
   const handleDragStart = useCallback((e: DragEvent, id: string) => {
     draggedIdRef.current = id;
@@ -251,6 +277,7 @@ function ActivitySpreadsheet({
         <div
           ref={parentRef}
           className="flex-1 overflow-auto"
+          onScroll={handleScrollSync}
         >
           <div
             style={{

@@ -126,6 +126,70 @@ async function applyPlannerEvent(
       });
       break;
 
+    /* ── Resource ── */
+    case "resource.created":
+      await tx.resource.create({
+        data: {
+          id: entityId,
+          tenantId,
+          projectId: payload.projectId as string,
+          name: payload.name as string,
+          resourceType: (payload.resourceType as string) ?? "labor",
+          maxUnitsPerDay: (payload.maxUnitsPerDay as number) ?? 8,
+          costPerUnit: (payload.costPerUnit as number) ?? 0,
+          sortOrder: (payload.sortOrder as number) ?? 0,
+        },
+      });
+      break;
+
+    case "resource.updated":
+      await tx.resource.update({
+        where: { id: entityId },
+        data: extractUpdateFields(payload, [
+          "name", "resourceType", "maxUnitsPerDay", "costPerUnit", "sortOrder",
+        ]),
+      });
+      break;
+
+    case "resource.deleted":
+      await tx.resource.update({
+        where: { id: entityId },
+        data: { isDeleted: true },
+      });
+      break;
+
+    /* ── Resource Assignment ── */
+    case "resourceAssignment.created":
+      await tx.resourceAssignment.create({
+        data: {
+          id: entityId,
+          tenantId,
+          projectId: payload.projectId as string,
+          activityId: payload.activityId as string,
+          resourceId: payload.resourceId as string,
+          unitsPerDay: (payload.unitsPerDay as number) ?? 1,
+          budgetedCost: (payload.budgetedCost as number) ?? 0,
+          actualCost: (payload.actualCost as number) ?? 0,
+        },
+      });
+      break;
+
+    case "resourceAssignment.updated":
+      await tx.resourceAssignment.update({
+        where: { id: entityId },
+        data: extractUpdateFields(payload, [
+          "unitsPerDay", "budgetedCost", "actualCost",
+        ]),
+      });
+      break;
+
+    case "resourceAssignment.deleted":
+      await tx.resourceAssignment.update({
+        where: { id: entityId },
+        data: { isDeleted: true },
+      });
+      break;
+
     /* ── Project ── */
     case "project.updated":
       await tx.project.update({

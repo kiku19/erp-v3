@@ -18,8 +18,13 @@ import { ActivityDetailModal } from "./_components/activity-detail-modal";
 import { CalendarSettingsModal } from "./_components/calendar-settings-modal";
 import { ObsModal } from "./_components/obs-modal";
 import { GanttChart } from "./_components/gantt-chart";
+import { GanttSettingsModal } from "./_components/gantt-settings-modal";
+import { NetworkChart } from "./_components/network-chart";
+import { ResourceChart } from "./_components/resource-chart";
+import { ProgressChart } from "./_components/progress-chart";
 import { useWbsIconSettings } from "./_components/use-wbs-icon-settings";
-import type { ViewMode, DetailTab, GanttTimeScale } from "./_components/types";
+import { DEFAULT_GANTT_SETTINGS, zoomIn, zoomOut } from "./_components/gantt-utils";
+import type { ViewMode, DetailTab, GanttSettings } from "./_components/types";
 
 export default function ProjectPlannerPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -35,6 +40,8 @@ export default function ProjectPlannerPage() {
     initialWbsNodes,
     initialActivities,
     initialRelationships,
+    initialResources,
+    initialResourceAssignments,
     queueEvent,
     reload,
   } = usePlannerCanvas(projectId);
@@ -45,7 +52,9 @@ export default function ProjectPlannerPage() {
   const [detailTab, setDetailTab] = useState<DetailTab>("general");
   const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
-  const [timeScale, setTimeScale] = useState<GanttTimeScale>("week");
+  const [ganttSettings, setGanttSettings] = useState<GanttSettings>({ ...DEFAULT_GANTT_SETTINGS });
+  const [ganttSettingsOpen, setGanttSettingsOpen] = useState(false);
+  const [sharedScrollTop, setSharedScrollTop] = useState(0);
   const iconSettings = useWbsIconSettings();
 
   const [localProjectStartDate, setLocalProjectStartDate] = useState<string | null>(null);
@@ -66,6 +75,8 @@ export default function ProjectPlannerPage() {
     initialWbsNodes,
     initialActivities,
     initialRelationships,
+    initialResources,
+    initialResourceAssignments,
     projectId,
     projectStartDate: effectiveStartDate,
     queueEvent,
@@ -96,7 +107,7 @@ export default function ProjectPlannerPage() {
           wbsTree.exitLinkMode();
           return;
         }
-        if (!iconSettingsOpen && !isDetailExpanded && !calendarSettingsOpen && !obsOpen) {
+        if (!iconSettingsOpen && !isDetailExpanded && !calendarSettingsOpen && !obsOpen && !ganttSettingsOpen) {
           wbsTree.selectRow(null);
         }
         return;
@@ -117,7 +128,7 @@ export default function ProjectPlannerPage() {
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen]);
+  }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen, ganttSettingsOpen]);
 
   /* ── Deselect on click outside rows ── */
   const handlePageClick = useCallback(
@@ -220,6 +231,7 @@ export default function ProjectPlannerPage() {
 
       {/* Toolbar — wired to WBS tree actions */}
       <Toolbar
+        viewMode={viewMode}
         onAddActivity={wbsTree.addActivity}
         onAddMilestone={wbsTree.addMilestone}
         onAddWbs={wbsTree.addWbs}
@@ -239,9 +251,10 @@ export default function ProjectPlannerPage() {
         onConfirmLink={wbsTree.commitLinkChain}
         onCancelLink={wbsTree.exitLinkMode}
         linkChainLength={wbsTree.linkChain.length}
-        onZoomIn={() => setTimeScale((s) => s === "month" ? "week" : "day")}
-        onZoomOut={() => setTimeScale((s) => s === "day" ? "week" : "month")}
-        onZoomFit={() => setTimeScale("week")}
+        onZoomIn={() => setGanttSettings((s) => ({ ...s, zoomLevel: zoomIn(s.zoomLevel) }))}
+        onZoomOut={() => setGanttSettings((s) => ({ ...s, zoomLevel: zoomOut(s.zoomLevel) }))}
+        onZoomFit={() => setGanttSettings((s) => ({ ...s, zoomLevel: "month-week" }))}
+        onOpenSettings={() => setGanttSettingsOpen(true)}
       />
 
       {/* Body */}
@@ -277,6 +290,8 @@ export default function ProjectPlannerPage() {
               linkMode={wbsTree.linkMode}
               linkChain={wbsTree.linkChain}
               onLinkClick={handleLinkClick}
+              scrollTop={sharedScrollTop}
+              onVerticalScroll={setSharedScrollTop}
             />
 
             {/* Splitter */}
@@ -292,7 +307,9 @@ export default function ProjectPlannerPage() {
               onSelectRow={wbsTree.selectRow}
               projectStartDate={effectiveStartDate}
               projectFinishDate={effectiveFinishDate}
-              timeScale={timeScale}
+              settings={ganttSettings}
+              scrollTop={sharedScrollTop}
+              onVerticalScroll={setSharedScrollTop}
             />
           </div>
 
@@ -313,13 +330,41 @@ export default function ProjectPlannerPage() {
             />
           )}
         </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-muted-foreground">
-            {viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} view coming soon
-          </p>
+      ) : viewMode === "network" ? (
+        <div className="flex-1 overflow-hidden border-t border-border">
+          <NetworkChart
+            activities={wbsTree.activities}
+            relationships={wbsTree.relationships}
+            wbsNodes={wbsTree.wbsNodes}
+            selectedRowId={wbsTree.selectedRowId}
+            onSelectRow={wbsTree.selectRow}
+            projectStartDate={effectiveStartDate}
+          />
         </div>
-      )}
+      ) : viewMode === "resource" ? (
+        <div className="flex-1 overflow-hidden border-t border-border">
+          <ResourceChart
+            activities={wbsTree.activities}
+            resources={wbsTree.resources}
+            assignments={wbsTree.resourceAssignments}
+            projectStartDate={effectiveStartDate}
+            projectFinishDate={effectiveFinishDate}
+            timeScale="week"
+          />
+        </div>
+      ) : viewMode === "progress" ? (
+        <div className="flex-1 overflow-hidden border-t border-border">
+          <ProgressChart
+            activities={wbsTree.activities}
+            wbsNodes={wbsTree.wbsNodes}
+            resources={wbsTree.resources}
+            assignments={wbsTree.resourceAssignments}
+            projectStartDate={effectiveStartDate}
+            projectFinishDate={effectiveFinishDate}
+            timeScale="week"
+          />
+        </div>
+      ) : null}
 
       {/* Expanded activity detail modal */}
       <ActivityDetailModal
@@ -354,6 +399,14 @@ export default function ProjectPlannerPage() {
         onClose={() => setIconSettingsOpen(false)}
         icons={iconSettings.settings.icons}
         onSave={iconSettings.updateSettings}
+      />
+
+      {/* Gantt settings modal */}
+      <GanttSettingsModal
+        open={ganttSettingsOpen}
+        onClose={() => setGanttSettingsOpen(false)}
+        settings={ganttSettings}
+        onApply={setGanttSettings}
       />
     </div>
   );

@@ -5,6 +5,8 @@ import type {
   WbsNodeData,
   ActivityData,
   ActivityRelationshipData,
+  ResourceData,
+  ResourceAssignmentData,
   SpreadsheetRow,
   PlannerEventInput,
   LinkModeStatus,
@@ -18,6 +20,8 @@ interface UseWbsTreeOptions {
   initialWbsNodes: WbsNodeData[];
   initialActivities: ActivityData[];
   initialRelationships?: ActivityRelationshipData[];
+  initialResources?: ResourceData[];
+  initialResourceAssignments?: ResourceAssignmentData[];
   projectId: string;
   projectStartDate: string | null;
   queueEvent: (event: PlannerEventInput) => void;
@@ -43,6 +47,8 @@ interface UseWbsTreeReturn {
   wbsNodes: WbsNodeData[];
   activities: ActivityData[];
   relationships: ActivityRelationshipData[];
+  resources: ResourceData[];
+  resourceAssignments: ResourceAssignmentData[];
   linkMode: LinkModeStatus;
   linkChain: LinkChainEntry[];
   canIndent: boolean;
@@ -245,11 +251,15 @@ function recalculateAllWbsCodes(nodes: WbsNodeData[]): WbsNodeData[] {
 /* ─────────────────────── Hook ───────────────────────────────────── */
 
 const EMPTY_RELATIONSHIPS: ActivityRelationshipData[] = [];
+const EMPTY_RESOURCES: ResourceData[] = [];
+const EMPTY_ASSIGNMENTS: ResourceAssignmentData[] = [];
 
 function useWbsTree({
   initialWbsNodes,
   initialActivities,
   initialRelationships = EMPTY_RELATIONSHIPS,
+  initialResources = EMPTY_RESOURCES,
+  initialResourceAssignments = EMPTY_ASSIGNMENTS,
   projectId,
   projectStartDate,
   queueEvent,
@@ -257,6 +267,8 @@ function useWbsTree({
   const [wbsNodes, setWbsNodes] = useState<WbsNodeData[]>(initialWbsNodes);
   const [activities, setActivities] = useState<ActivityData[]>(initialActivities);
   const [relationships, setRelationships] = useState<ActivityRelationshipData[]>(initialRelationships);
+  const [resources, setResources] = useState<ResourceData[]>(initialResources);
+  const [resourceAssignments, setResourceAssignments] = useState<ResourceAssignmentData[]>(initialResourceAssignments);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(initialWbsNodes.map((n) => n.id)),
   );
@@ -332,13 +344,15 @@ function useWbsTree({
     setWbsNodes(initialWbsNodes);
     setActivities(initialActivities);
     setRelationships(initialRelationships);
+    setResources(initialResources);
+    setResourceAssignments(initialResourceAssignments);
     setExpandedIds(new Set(initialWbsNodes.map((n) => n.id)));
     baseStateRef.current = { wbsNodes: initialWbsNodes, activities: initialActivities };
     prevStateRef.current = { wbsNodes: initialWbsNodes, activities: initialActivities };
     patchesRef.current = [];
     historyIndexRef.current = 0;
     setHistoryTick((t) => t + 1);
-  }, [initialWbsNodes, initialActivities, initialRelationships]);
+  }, [initialWbsNodes, initialActivities, initialRelationships, initialResources, initialResourceAssignments]);
 
   /* ── Auto-push delta on data changes ── */
   useEffect(() => {
@@ -1157,6 +1171,8 @@ function useWbsTree({
     wbsNodes,
     activities,
     relationships,
+    resources,
+    resourceAssignments,
     linkMode,
     linkChain,
     canIndent,

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { GanttCanvas } from "./gantt-canvas";
-import type { SpreadsheetRow, ActivityData, ActivityRelationshipData, WbsNodeData } from "./types";
+import { DEFAULT_GANTT_SETTINGS } from "./gantt-utils";
+import type { SpreadsheetRow, ActivityData, ActivityRelationshipData, WbsNodeData, GanttSettings } from "./types";
 
 const mockRows: SpreadsheetRow[] = [
   { id: "w1", type: "wbs", depth: 0, name: "Engineering", isExpanded: true, hasChildren: true, wbsCode: "1.0" },
@@ -36,6 +37,7 @@ const defaultProps = {
   totalWidth: 800,
   scrollLeft: 0,
   rowHeight: 32,
+  settings: { ...DEFAULT_GANTT_SETTINGS },
 };
 
 describe("GanttCanvas", () => {
@@ -50,7 +52,6 @@ describe("GanttCanvas", () => {
     const onSelectRow = vi.fn();
     render(<GanttCanvas {...defaultProps} onSelectRow={onSelectRow} />);
     const canvas = screen.getByTestId("gantt-canvas");
-    // Click at row index 1 (y = 32 + 16 = 48, middle of row 1)
     fireEvent.click(canvas, { clientX: 50, clientY: 48 });
     expect(onSelectRow).toHaveBeenCalled();
   });
@@ -58,7 +59,21 @@ describe("GanttCanvas", () => {
   it("has correct dimensions", () => {
     render(<GanttCanvas {...defaultProps} />);
     const canvas = screen.getByTestId("gantt-canvas");
-    // Canvas should be present — dimensions are set via style
     expect(canvas.tagName.toLowerCase()).toBe("canvas");
+  });
+
+  it("renders with different settings", () => {
+    const customSettings: GanttSettings = {
+      ...DEFAULT_GANTT_SETTINGS,
+      showGridLines: false,
+      showTodayLine: false,
+      showLegend: false,
+      showBaselines: false,
+      showRelationshipArrows: false,
+      barLabelFormat: "name",
+      barColorScheme: "float",
+    };
+    render(<GanttCanvas {...defaultProps} settings={customSettings} />);
+    expect(screen.getByTestId("gantt-canvas")).toBeDefined();
   });
 });

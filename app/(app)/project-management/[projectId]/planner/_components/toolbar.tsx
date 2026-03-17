@@ -19,12 +19,14 @@ import {
   ZoomIn,
   Maximize2,
   Search,
+  Settings2,
 } from "lucide-react";
-import type { LinkModeStatus } from "./types";
+import type { LinkModeStatus, ViewMode } from "./types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface ToolbarProps {
+  viewMode?: ViewMode;
   onAddActivity?: () => void;
   onAddMilestone?: () => void;
   onAddWbs?: () => void;
@@ -39,14 +41,17 @@ interface ToolbarProps {
   onZoomIn?: () => void;
   onZoomOut?: () => void;
   onZoomFit?: () => void;
+  onOpenSettings?: () => void;
   linkMode?: LinkModeStatus;
   onToggleLinkMode?: () => void;
   onConfirmLink?: () => void;
   onCancelLink?: () => void;
   linkChainLength?: number;
+  onAddResource?: () => void;
 }
 
 export function Toolbar({
+  viewMode = "gantt",
   onAddActivity,
   onAddMilestone,
   onAddWbs,
@@ -61,120 +66,159 @@ export function Toolbar({
   onZoomIn,
   onZoomOut,
   onZoomFit,
+  onOpenSettings,
   linkMode = "idle",
   onToggleLinkMode,
   onConfirmLink,
   onCancelLink,
   linkChainLength = 0,
+  onAddResource,
 }: ToolbarProps) {
+  const isGantt = viewMode === "gantt";
+  const isNetwork = viewMode === "network";
+  const isResource = viewMode === "resource";
+
   return (
     <div className="flex items-center justify-between px-4 h-11 border-b border-border bg-card shrink-0">
       {/* Left */}
       <div className="flex items-center gap-2">
-        {/* Add Group */}
-        <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddActivity} title="Add a new activity to the schedule">
-            <Plus size={14} />
-            Activity
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddMilestone} title="Add a zero-duration milestone marker">
-            <Diamond size={14} />
-            Milestone
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddWbs} title="Add a new WBS summary level">
-            <FolderPlus size={14} />
-            WBS
-          </Button>
-        </div>
-
-        <div className="w-px h-6 bg-border" />
-
-        {/* Indent Group */}
-        <div className="flex items-center gap-0.5">
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onOutdent} disabled={outdentDisabled} title="Outdent selected item (move it up a level)">
-            <IndentDecrease size={16} />
-          </Button>
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onIndent} disabled={indentDisabled} title="Indent selected item (make it a child)">
-            <IndentIncrease size={16} />
-          </Button>
-        </div>
-
-        <div className="w-px h-6 bg-border" />
-
-        {/* Undo Redo */}
-        <div className="flex items-center gap-0.5">
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onUndo} disabled={undoDisabled} title="Undo last action (Ctrl+Z)">
-            <Undo2 size={16} />
-          </Button>
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onRedo} disabled={redoDisabled} title="Redo last undone action (Ctrl+Y)">
-            <Redo2 size={16} />
-          </Button>
-        </div>
-
-        <div className="w-px h-6 bg-border" />
-
-        {/* Link Group */}
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant={linkMode === "linking" ? "default" : "ghost"}
-            size="sm"
-            className="h-7 px-2.5 text-[12px]"
-            onClick={onToggleLinkMode}
-            title="Link activities: click in sequence to build dependency chains (Shift+click for parallel)"
-          >
-            <Link2 size={14} />
-            Link
-          </Button>
-          {linkMode === "linking" && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-success"
-                onClick={onConfirmLink}
-                disabled={linkChainLength < 2}
-                title="Confirm link chain"
-              >
-                <Check size={16} />
+        {/* Add Group — gantt only */}
+        {isGantt && (
+          <>
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddActivity} title="Add a new activity to the schedule">
+                <Plus size={14} />
+                Activity
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive"
-                onClick={onCancelLink}
-                title="Cancel link chain"
-              >
-                <X size={16} />
+              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddMilestone} title="Add a zero-duration milestone marker">
+                <Diamond size={14} />
+                Milestone
               </Button>
-            </>
-          )}
-        </div>
+              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddWbs} title="Add a new WBS summary level">
+                <FolderPlus size={14} />
+                WBS
+              </Button>
+            </div>
 
-        <div className="w-px h-6 bg-border" />
+            <div className="w-px h-6 bg-border" />
 
-        {/* View Group */}
-        <div className="flex items-center gap-0.5">
-          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Filter activities by criteria">
-            <Filter size={14} />
-            Filter
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Group activities by WBS, status, or resource">
-            <ListTree size={14} />
-            Group
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Show or hide spreadsheet columns">
-            <Columns3 size={14} />
-            Columns
-          </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Run schedule quality checks">
-            <ShieldCheck size={14} />
-            Quality
-          </Button>
-        </div>
+            {/* Indent Group — gantt only */}
+            <div className="flex items-center gap-0.5">
+              <Button variant="icon" size="icon" className="h-7 w-7" onClick={onOutdent} disabled={outdentDisabled} title="Outdent selected item (move it up a level)">
+                <IndentDecrease size={16} />
+              </Button>
+              <Button variant="icon" size="icon" className="h-7 w-7" onClick={onIndent} disabled={indentDisabled} title="Indent selected item (make it a child)">
+                <IndentIncrease size={16} />
+              </Button>
+            </div>
 
-        <div className="w-px h-6 bg-border" />
+            <div className="w-px h-6 bg-border" />
+          </>
+        )}
 
-        {/* Zoom Group */}
+        {/* Resource Add — resource view only */}
+        {isResource && onAddResource && (
+          <>
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddResource} title="Add a new resource">
+                <Plus size={14} />
+                Resource
+              </Button>
+            </div>
+            <div className="w-px h-6 bg-border" />
+          </>
+        )}
+
+        {/* Undo Redo — gantt + resource */}
+        {(isGantt || isResource) && (
+          <>
+            <div className="flex items-center gap-0.5">
+              <Button variant="icon" size="icon" className="h-7 w-7" onClick={onUndo} disabled={undoDisabled} title="Undo last action (Ctrl+Z)">
+                <Undo2 size={16} />
+              </Button>
+              <Button variant="icon" size="icon" className="h-7 w-7" onClick={onRedo} disabled={redoDisabled} title="Redo last undone action (Ctrl+Y)">
+                <Redo2 size={16} />
+              </Button>
+            </div>
+
+            <div className="w-px h-6 bg-border" />
+          </>
+        )}
+
+        {/* Link Group — gantt only */}
+        {isGantt && (
+          <>
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant={linkMode === "linking" ? "default" : "ghost"}
+                size="sm"
+                className="h-7 px-2.5 text-[12px]"
+                onClick={onToggleLinkMode}
+                title="Link activities: click in sequence to build dependency chains (Shift+click for parallel)"
+              >
+                <Link2 size={14} />
+                Link
+              </Button>
+              {linkMode === "linking" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-success"
+                    onClick={onConfirmLink}
+                    disabled={linkChainLength < 2}
+                    title="Confirm link chain"
+                  >
+                    <Check size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive"
+                    onClick={onCancelLink}
+                    title="Cancel link chain"
+                  >
+                    <X size={16} />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div className="w-px h-6 bg-border" />
+          </>
+        )}
+
+        {/* View Group — gantt + network */}
+        {(isGantt || isNetwork) && (
+          <>
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Filter activities by criteria">
+                <Filter size={14} />
+                Filter
+              </Button>
+              {isGantt && (
+                <>
+                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Group activities by WBS, status, or resource">
+                    <ListTree size={14} />
+                    Group
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Show or hide spreadsheet columns">
+                    <Columns3 size={14} />
+                    Columns
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Run schedule quality checks">
+                    <ShieldCheck size={14} />
+                    Quality
+                  </Button>
+                </>
+              )}
+            </div>
+
+            <div className="w-px h-6 bg-border" />
+          </>
+        )}
+
+        {/* Zoom Group — all views */}
         <div className="flex items-center gap-0.5">
           <Button variant="icon" size="icon" className="h-7 w-7" onClick={onZoomOut} title="Zoom out (show more time range)">
             <ZoomOut size={16} />
@@ -186,6 +230,17 @@ export function Toolbar({
             <Maximize2 size={16} />
           </Button>
         </div>
+
+        {/* Settings — gantt only */}
+        {isGantt && (
+          <>
+            <div className="w-px h-6 bg-border" />
+            <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onOpenSettings} title="Gantt chart settings">
+              <Settings2 size={14} />
+              Settings
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Right: Search */}

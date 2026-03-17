@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { getZoomPixelsPerDay, getTimelineRange, MS_PER_DAY } from "./gantt-utils";
-import type { ActivityData, GanttTimeScale } from "./types";
+import type { ActivityData, GanttZoomLevel } from "./types";
 
 /* ─────────────────────── Props ─────────────────────────────────── */
 
@@ -8,15 +8,15 @@ interface UseGanttViewportProps {
   activities: ActivityData[];
   projectStartDate: string | null;
   projectFinishDate: string | null;
-  timeScale: GanttTimeScale;
+  zoomLevel: GanttZoomLevel;
 }
 
 /* ─────────────────────── Hook ──────────────────────────────────── */
 
-function useGanttViewport({ activities, projectStartDate, projectFinishDate, timeScale }: UseGanttViewportProps) {
+function useGanttViewport({ activities, projectStartDate, projectFinishDate, zoomLevel }: UseGanttViewportProps) {
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  const pxPerDay = getZoomPixelsPerDay(timeScale);
+  const pxPerDay = getZoomPixelsPerDay(zoomLevel);
 
   const { timelineStart, timelineEnd } = useMemo(() => {
     const range = getTimelineRange(activities, projectStartDate, projectFinishDate);

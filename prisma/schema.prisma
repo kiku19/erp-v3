@@ -110,6 +110,8 @@ model Project {
   wbsNodes               WbsNode[]
   activities             Activity[]
   activityRelationships  ActivityRelationship[]
+  resources              Resource[]
+  resourceAssignments    ResourceAssignment[]
 
   @@unique([tenantId, projectId])
   @@index([tenantId, isDeleted])
@@ -185,10 +187,11 @@ model Activity {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  project         Project   @relation(fields: [projectId], references: [id])
-  wbsNode         WbsNode   @relation(fields: [wbsNodeId], references: [id])
-  predecessorRels ActivityRelationship[] @relation("SuccessorRels")
-  successorRels   ActivityRelationship[] @relation("PredecessorRels")
+  project             Project              @relation(fields: [projectId], references: [id])
+  wbsNode             WbsNode              @relation(fields: [wbsNodeId], references: [id])
+  predecessorRels     ActivityRelationship[] @relation("SuccessorRels")
+  successorRels       ActivityRelationship[] @relation("PredecessorRels")
+  resourceAssignments ResourceAssignment[]
 
   @@unique([tenantId, projectId, activityId])
   @@index([tenantId, projectId, isDeleted])
@@ -223,6 +226,48 @@ model PlannerSnapshot {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId, projectId])
+}
+
+model Resource {
+  id              String    @id @default(cuid())
+  tenantId        String
+  projectId       String
+  name            String
+  resourceType    String    @default("labor")
+  maxUnitsPerDay  Float     @default(8)
+  costPerUnit     Float     @default(0)
+  sortOrder       Int       @default(0)
+  isDeleted       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  project         Project   @relation(fields: [projectId], references: [id])
+  assignments     ResourceAssignment[]
+
+  @@index([tenantId, projectId, isDeleted])
+}
+
+model ResourceAssignment {
+  id           String    @id @default(cuid())
+  tenantId     String
+  projectId    String
+  activityId   String
+  resourceId   String
+  unitsPerDay  Float     @default(1)
+  budgetedCost Float     @default(0)
+  actualCost   Float     @default(0)
+  isDeleted    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  project      Project   @relation(fields: [projectId], references: [id])
+  activity     Activity  @relation(fields: [activityId], references: [id])
+  resource     Resource  @relation(fields: [resourceId], references: [id])
+
+  @@unique([tenantId, activityId, resourceId])
+  @@index([tenantId, projectId, isDeleted])
+  @@index([activityId, isDeleted])
+  @@index([resourceId, isDeleted])
 }
 
 model ActivityRelationship {

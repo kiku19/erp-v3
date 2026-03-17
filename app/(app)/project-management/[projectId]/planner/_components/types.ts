@@ -54,9 +54,56 @@ export interface ActivityRelationshipData {
   lag: number;
 }
 
+/* ─── Resource data ─── */
+
+export interface ResourceData {
+  id: string;
+  name: string;
+  resourceType: "labor" | "equipment" | "material";
+  maxUnitsPerDay: number;
+  costPerUnit: number;
+  sortOrder: number;
+}
+
+export interface ResourceAssignmentData {
+  id: string;
+  activityId: string;
+  resourceId: string;
+  unitsPerDay: number;
+  budgetedCost: number;
+  actualCost: number;
+}
+
 export type DetailTab = "general" | "predecessors" | "successors" | "resources" | "codes" | "notebook" | "steps";
 
+/** @deprecated Use GanttZoomLevel instead */
 export type GanttTimeScale = "day" | "week" | "month";
+
+/* ─── P6-style zoom levels (each has a top/bottom header pair) ─── */
+
+export type GanttZoomLevel =
+  | "year-quarter"    // Top: Year,    Bottom: Quarter
+  | "quarter-month"   // Top: Quarter, Bottom: Month
+  | "month-week"      // Top: Month,   Bottom: Week
+  | "week-day"        // Top: Week,    Bottom: Day
+  | "day-hour";       // Top: Day,     Bottom: Hour
+
+export type BarLabelFormat = "activityId" | "name" | "idAndName" | "none";
+export type BarColorScheme = "criticality" | "float" | "status" | "wbs";
+export type GanttRowHeight = "compact" | "normal" | "expanded";
+
+export interface GanttSettings {
+  zoomLevel: GanttZoomLevel;
+  barLabelFormat: BarLabelFormat;
+  barColorScheme: BarColorScheme;
+  rowHeight: GanttRowHeight;
+  showCriticalPath: boolean;
+  showBaselines: boolean;
+  showTodayLine: boolean;
+  showGridLines: boolean;
+  showRelationshipArrows: boolean;
+  showLegend: boolean;
+}
 
 export type LinkModeStatus = "idle" | "linking";
 
