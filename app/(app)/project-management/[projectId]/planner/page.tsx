@@ -52,7 +52,8 @@ export default function ProjectPlannerPage() {
     visitedViewsRef.current.add(viewMode);
   }
   const visited = visitedViewsRef.current;
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [wbsSidebarWidth, setWbsSidebarWidth] = useState(220);
+  const [spreadsheetWidth, setSpreadsheetWidth] = useState<number | null>(null);
   const [iconSettingsOpen, setIconSettingsOpen] = useState(false);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("general");
@@ -223,7 +224,6 @@ export default function ProjectPlannerPage() {
     (id: string, newName: string) => wbsTree.updateRow(id, { name: newName }),
     [wbsTree.updateRow],
   );
-  const handleToggleSidebar = useCallback(() => setSidebarCollapsed((prev) => !prev), []);
   const handleUpdateIcon = useCallback(
     (id: string, icon: string) => wbsTree.updateRow(id, { icon }),
     [wbsTree.updateRow],
@@ -233,6 +233,32 @@ export default function ProjectPlannerPage() {
     [wbsTree.updateRow],
   );
   const handleOpenIconSettings = useCallback(() => setIconSettingsOpen(true), []);
+
+  /* ── Drag-to-resize handlers ── */
+  const wbsWidthAtDragStartRef = useRef(220);
+  const spreadsheetWidthAtDragStartRef = useRef(0);
+  const spreadsheetContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleWbsResizeStart = useCallback(() => {
+    wbsWidthAtDragStartRef.current = wbsSidebarWidth;
+  }, [wbsSidebarWidth]);
+
+  const handleWbsResize = useCallback((delta: number) => {
+    setWbsSidebarWidth(Math.max(120, Math.min(400, wbsWidthAtDragStartRef.current + delta)));
+  }, []);
+
+  const handleSplitterResizeStart = useCallback(() => {
+    // Capture actual rendered width of spreadsheet container
+    if (spreadsheetContainerRef.current) {
+      spreadsheetWidthAtDragStartRef.current = spreadsheetContainerRef.current.getBoundingClientRect().width;
+    } else {
+      spreadsheetWidthAtDragStartRef.current = spreadsheetWidth ?? 600;
+    }
+  }, [spreadsheetWidth]);
+
+  const handleSplitterResize = useCallback((delta: number) => {
+    setSpreadsheetWidth(Math.max(200, spreadsheetWidthAtDragStartRef.current + delta));
+  }, []);
 
   // Wrap expand/collapse in startTransition so the heavy GanttCanvas repaint
   // doesn't block the UI — the chevron flips immediately, canvas updates in background.
@@ -345,33 +371,45 @@ export default function ProjectPlannerPage() {
             onSelectWbs={wbsTree.selectRow}
             onRenameWbs={handleRenameWbs}
             onMoveWbs={wbsTree.moveWbs}
-            isCollapsed={sidebarCollapsed}
-            onToggleCollapse={handleToggleSidebar}
+            width={wbsSidebarWidth}
             iconOrder={iconSettings.settings.icons}
             onUpdateIcon={handleUpdateIcon}
             onUpdateIconColor={handleUpdateIconColor}
             onOpenIconSettings={handleOpenIconSettings}
           />
 
-          {/* Center: Spreadsheet */}
-          <ActivitySpreadsheet
-            flatRows={wbsTree.flatRows}
-            selectedRowId={wbsTree.selectedRowId}
-            onToggleExpand={handleToggleExpand}
-            onSelect={wbsTree.selectRow}
-            onUpdate={wbsTree.updateRow}
-            onCommitAdd={wbsTree.commitAdd}
-            onCancelAdd={wbsTree.cancelAdd}
-            onMoveRow={wbsTree.moveRow}
-            linkMode={wbsTree.linkMode}
-            linkChain={wbsTree.linkChain}
-            onLinkClick={handleLinkClick}
-            scrollTop={sharedScrollTop}
-            onVerticalScroll={setSharedScrollTop}
+          {/* WBS ↔ Spreadsheet splitter */}
+          <SplitterHandle
+            testId="wbs-splitter-handle"
+            onResizeStart={handleWbsResizeStart}
+            onResize={handleWbsResize}
           />
 
-          {/* Splitter */}
-          <SplitterHandle />
+          {/* Center: Spreadsheet */}
+          <div ref={spreadsheetContainerRef} className="flex flex-col overflow-hidden" style={spreadsheetWidth ? { width: `${spreadsheetWidth}px`, flexShrink: 0 } : { flex: 1 }}>
+            <ActivitySpreadsheet
+              flatRows={wbsTree.flatRows}
+              selectedRowId={wbsTree.selectedRowId}
+              onToggleExpand={handleToggleExpand}
+              onSelect={wbsTree.selectRow}
+              onUpdate={wbsTree.updateRow}
+              onCommitAdd={wbsTree.commitAdd}
+              onCancelAdd={wbsTree.cancelAdd}
+              onMoveRow={wbsTree.moveRow}
+              linkMode={wbsTree.linkMode}
+              linkChain={wbsTree.linkChain}
+              onLinkClick={handleLinkClick}
+              scrollTop={sharedScrollTop}
+              onVerticalScroll={setSharedScrollTop}
+            />
+          </div>
+
+          {/* Spreadsheet ↔ Gantt splitter */}
+          <SplitterHandle
+            testId="gantt-splitter-handle"
+            onResizeStart={handleSplitterResizeStart}
+            onResize={handleSplitterResize}
+          />
 
           {/* Right: Gantt Chart */}
           <GanttChart

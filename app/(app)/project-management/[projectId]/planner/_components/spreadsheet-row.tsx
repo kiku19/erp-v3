@@ -102,6 +102,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isWbs = row.type === "wbs";
   const isMilestone = row.type === "milestone";
@@ -123,6 +124,11 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
   }, [row.isAdding]);
 
   const handleDoubleClick = (field: string, value: string) => {
+    // Cancel the pending single-click so onSelect doesn't fire
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
     setEditingField(field);
     setEditValue(value);
   };
@@ -169,7 +175,15 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
       onLinkClick(row.id, e.shiftKey);
       return;
     }
-    onSelect(row.id);
+    // Delay selection so double-click can cancel it
+    // (prevents detail panel from opening when user intends to inline-edit)
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+    }
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      onSelect(row.id);
+    }, 200);
   };
 
   return (

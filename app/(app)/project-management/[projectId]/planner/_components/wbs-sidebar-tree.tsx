@@ -7,8 +7,6 @@ import {
   ChevronRight,
   Folder,
   GripVertical,
-  PanelLeftClose,
-  PanelLeftOpen,
   Settings2,
 } from "lucide-react";
 import { useTreeDragDrop, type DropPosition } from "@/components/ui/use-tree-drag-drop";
@@ -50,8 +48,7 @@ interface WbsSidebarTreeProps {
   onSelectWbs: (id: string) => void;
   onRenameWbs?: (id: string, newName: string) => void;
   onMoveWbs?: (sourceId: string, targetId: string, position: DropPosition) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
+  width: number;
   iconOrder?: string[];
   onUpdateIcon?: (id: string, icon: string) => void;
   onUpdateIconColor?: (id: string, iconColor: string) => void;
@@ -301,8 +298,7 @@ const WbsSidebarTree = memo(function WbsSidebarTree({
   onSelectWbs,
   onRenameWbs,
   onMoveWbs,
-  isCollapsed,
-  onToggleCollapse,
+  width,
   iconOrder,
   onUpdateIcon,
   onUpdateIconColor,
@@ -391,92 +387,61 @@ const WbsSidebarTree = memo(function WbsSidebarTree({
     .filter((n) => n.parentId === null)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const sidebarWidth = isCollapsed ? 0 : 220;
-
   return (
-    <div className="flex h-full shrink-0">
-      {/* Sidebar panel — animates width */}
-      <div
-        data-testid="wbs-sidebar"
-        className="flex flex-col h-full bg-card border-r border-border overflow-hidden"
-        style={{
-          width: `${sidebarWidth}px`,
-          transition: `width var(--duration-slow) var(--ease-default)`,
-        }}
-        tabIndex={0}
-        onKeyDown={handleKeyDown}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between h-9 px-3 border-b border-border shrink-0 whitespace-nowrap">
-          <span className="text-[12px] font-semibold text-foreground">WBS Structure</span>
-          <div className="flex items-center gap-1">
-            {onOpenIconSettings && (
-              <button
-                data-testid="wbs-icon-settings-btn"
-                className="cursor-pointer text-muted-foreground hover:text-foreground"
-                onClick={onOpenIconSettings}
-              >
-                <Settings2 size={14} />
-              </button>
-            )}
+    <div
+      data-testid="wbs-sidebar"
+      className="flex flex-col h-full bg-card border-r border-border overflow-hidden shrink-0"
+      style={{ width: `${width}px` }}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between h-9 px-3 border-b border-border shrink-0 whitespace-nowrap">
+        <span className="text-[12px] font-semibold text-foreground">WBS Structure</span>
+        <div className="flex items-center gap-1">
+          {onOpenIconSettings && (
             <button
-              data-testid="wbs-collapse-btn"
+              data-testid="wbs-icon-settings-btn"
               className="cursor-pointer text-muted-foreground hover:text-foreground"
-              onClick={onToggleCollapse}
+              onClick={onOpenIconSettings}
             >
-              <PanelLeftClose size={14} />
+              <Settings2 size={14} />
             </button>
-          </div>
-        </div>
-
-        {/* Tree */}
-        <div className="flex-1 overflow-auto py-2">
-          {topLevel.map((node) => {
-            const children = wbsNodes.filter((n) => n.parentId === node.id);
-            return (
-              <TreeNode
-                key={node.id}
-                node={node}
-                children={children}
-                allNodes={wbsNodes}
-                depth={0}
-                selectedId={selectedWbsId}
-                expandedIds={expandedIds}
-                editingId={editingId}
-                dragOverId={dragOverId}
-                dropPosition={dropPosition}
-                onToggle={handleToggle}
-                onSelect={onSelectWbs}
-                onStartEditing={handleStartEditing}
-                onCommitRename={handleCommitRename}
-                onCancelEditing={handleCancelEditing}
-                onDragStart={dragHandlers.onDragStart}
-                onDragOver={dragHandlers.onDragOver}
-                onDragLeave={dragHandlers.onDragLeave}
-                onDrop={dragHandlers.onDrop}
-                onCycleIcon={handleCycleIcon}
-                onCycleIconColor={handleCycleIconColor}
-              />
-            );
-          })}
+          )}
         </div>
       </div>
 
-      {/* Expand button — visible when collapsed */}
-      {isCollapsed && (
-        <div
-          className="flex flex-col w-6 h-full bg-card border-r border-border"
-        >
-          <button
-            data-testid="wbs-expand-btn"
-            className="flex items-center justify-center w-6 h-9 shrink-0 cursor-pointer text-muted-foreground hover:text-foreground hover:bg-muted-hover"
-            onClick={onToggleCollapse}
-            title="Expand WBS panel"
-          >
-            <PanelLeftOpen size={14} />
-          </button>
-        </div>
-      )}
+      {/* Tree */}
+      <div className="flex-1 overflow-auto py-2">
+        {topLevel.map((node) => {
+          const children = wbsNodes.filter((n) => n.parentId === node.id);
+          return (
+            <TreeNode
+              key={node.id}
+              node={node}
+              children={children}
+              allNodes={wbsNodes}
+              depth={0}
+              selectedId={selectedWbsId}
+              expandedIds={expandedIds}
+              editingId={editingId}
+              dragOverId={dragOverId}
+              dropPosition={dropPosition}
+              onToggle={handleToggle}
+              onSelect={onSelectWbs}
+              onStartEditing={handleStartEditing}
+              onCommitRename={handleCommitRename}
+              onCancelEditing={handleCancelEditing}
+              onDragStart={dragHandlers.onDragStart}
+              onDragOver={dragHandlers.onDragOver}
+              onDragLeave={dragHandlers.onDragLeave}
+              onDrop={dragHandlers.onDrop}
+              onCycleIcon={handleCycleIcon}
+              onCycleIconColor={handleCycleIconColor}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 });

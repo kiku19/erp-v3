@@ -15,8 +15,7 @@ describe("WbsSidebarTree", () => {
     selectedWbsId: null as string | null,
     onSelectWbs: vi.fn(),
     onRenameWbs: vi.fn(),
-    isCollapsed: false,
-    onToggleCollapse: vi.fn(),
+    width: 220,
   };
 
   afterEach(() => cleanup());
@@ -52,27 +51,10 @@ describe("WbsSidebarTree", () => {
     expect(node?.className).not.toContain("bg-primary-active");
   });
 
-  it("hides content but keeps container when collapsed", () => {
-    render(<WbsSidebarTree {...defaultProps} isCollapsed={true} />);
+  it("renders with specified width", () => {
+    render(<WbsSidebarTree {...defaultProps} width={300} />);
     const sidebar = screen.getByTestId("wbs-sidebar");
-    expect(sidebar).toBeDefined();
-    expect(sidebar.style.width).toBe("0px");
-    expect(sidebar.className).toContain("overflow-hidden");
-  });
-
-  it("shows expand button when collapsed", () => {
-    render(<WbsSidebarTree {...defaultProps} isCollapsed={true} />);
-    const expandBtn = screen.getByTestId("wbs-expand-btn");
-    expect(expandBtn).toBeDefined();
-  });
-
-  it("calls onToggleCollapse when expand button is clicked", () => {
-    const onToggleCollapse = vi.fn();
-    render(
-      <WbsSidebarTree {...defaultProps} isCollapsed={true} onToggleCollapse={onToggleCollapse} />,
-    );
-    fireEvent.click(screen.getByTestId("wbs-expand-btn"));
-    expect(onToggleCollapse).toHaveBeenCalledOnce();
+    expect(sidebar.style.width).toBe("300px");
   });
 
   it("collapses children when clicking a parent WBS node", () => {
@@ -97,10 +79,10 @@ describe("WbsSidebarTree", () => {
     expect(screen.getAllByText("Design").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("applies transition style for smooth animation", () => {
-    render(<WbsSidebarTree {...defaultProps} isCollapsed={false} />);
+  it("applies width from prop", () => {
+    render(<WbsSidebarTree {...defaultProps} width={220} />);
     const sidebar = screen.getByTestId("wbs-sidebar");
-    expect(sidebar.style.transition).toContain("width");
+    expect(sidebar.style.width).toBe("220px");
   });
 
   /* ─── Deep nesting tests ─── */
@@ -241,20 +223,6 @@ describe("WbsSidebarTree", () => {
 
     expect(onRenameWbs).not.toHaveBeenCalled();
     expect(screen.getAllByText("Construction").length).toBeGreaterThanOrEqual(1);
-  });
-
-  /* ─── Cursor pointer tests ─── */
-
-  it("has cursor-pointer on the collapse button", () => {
-    render(<WbsSidebarTree {...defaultProps} />);
-    const collapseBtn = screen.getByTestId("wbs-collapse-btn");
-    expect(collapseBtn.className).toContain("cursor-pointer");
-  });
-
-  it("has cursor-pointer on the expand button", () => {
-    render(<WbsSidebarTree {...defaultProps} isCollapsed={true} />);
-    const expandBtn = screen.getByTestId("wbs-expand-btn");
-    expect(expandBtn.className).toContain("cursor-pointer");
   });
 
   /* ─── Drag and drop tests ─── */

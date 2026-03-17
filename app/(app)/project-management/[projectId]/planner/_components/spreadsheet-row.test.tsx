@@ -87,7 +87,8 @@ describe("SpreadsheetRowComponent", () => {
     expect(onToggleExpand).toHaveBeenCalledWith("w1");
   });
 
-  it("calls onSelect when row is clicked", () => {
+  it("calls onSelect when row is clicked (after debounce)", () => {
+    vi.useFakeTimers();
     const onSelect = vi.fn();
     render(
       <SpreadsheetRowComponent
@@ -98,7 +99,10 @@ describe("SpreadsheetRowComponent", () => {
     );
 
     fireEvent.click(screen.getByText("Site Survey"));
+    expect(onSelect).not.toHaveBeenCalled(); // not called immediately
+    vi.advanceTimersByTime(200);
     expect(onSelect).toHaveBeenCalledWith("a1");
+    vi.useRealTimers();
   });
 
   it("applies selected styles when isSelected is true", () => {
@@ -142,5 +146,48 @@ describe("SpreadsheetRowComponent", () => {
   it("shows percentage", () => {
     render(<SpreadsheetRowComponent row={activityRow} {...defaultProps} />);
     expect(screen.getByText("30%")).toBeDefined();
+  });
+
+  it("does not call onSelect when double-clicking name (edit mode)", () => {
+    vi.useFakeTimers();
+    const onSelect = vi.fn();
+    render(
+      <SpreadsheetRowComponent
+        row={activityRow}
+        {...defaultProps}
+        onSelect={onSelect}
+      />,
+    );
+
+    const nameSpan = screen.getByText("Site Survey");
+    // Simulate double-click: click fires first, then dblclick cancels the pending select
+    fireEvent.click(nameSpan);
+    fireEvent.doubleClick(nameSpan);
+    vi.advanceTimersByTime(300);
+    expect(onSelect).not.toHaveBeenCalled();
+    // Should be in edit mode
+    expect(screen.getByDisplayValue("Site Survey")).toBeDefined();
+    vi.useRealTimers();
+  });
+
+  it("does not call onSelect when double-clicking duration (edit mode)", () => {
+    vi.useFakeTimers();
+    const onSelect = vi.fn();
+    render(
+      <SpreadsheetRowComponent
+        row={activityRow}
+        {...defaultProps}
+        onSelect={onSelect}
+      />,
+    );
+
+    const durationSpan = screen.getByText("10d");
+    fireEvent.click(durationSpan);
+    fireEvent.doubleClick(durationSpan);
+    vi.advanceTimersByTime(300);
+    expect(onSelect).not.toHaveBeenCalled();
+    // Should be in edit mode
+    expect(screen.getByDisplayValue("10")).toBeDefined();
+    vi.useRealTimers();
   });
 });

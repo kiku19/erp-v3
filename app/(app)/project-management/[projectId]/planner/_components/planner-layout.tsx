@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useWbsTree } from "./use-wbs-tree";
 import { WbsSidebarTree } from "./wbs-sidebar-tree";
 import { ActivitySpreadsheet } from "./activity-spreadsheet";
@@ -24,7 +24,8 @@ function PlannerLayout({
   projectId,
   queueEvent,
 }: PlannerLayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [wbsSidebarWidth, setWbsSidebarWidth] = useState(220);
+  const wbsWidthAtDragStartRef = useRef(220);
 
   const wbsTree = useWbsTree({
     initialWbsNodes,
@@ -33,10 +34,6 @@ function PlannerLayout({
     projectStartDate: null,
     queueEvent,
   });
-
-  const handleToggleSidebar = useCallback(() => {
-    setSidebarCollapsed((prev) => !prev);
-  }, []);
 
   // Derive selected WBS id for the sidebar
   const selectedWbsId = (() => {
@@ -61,6 +58,14 @@ function PlannerLayout({
     [wbsTree],
   );
 
+  const handleWbsResizeStart = useCallback(() => {
+    wbsWidthAtDragStartRef.current = wbsSidebarWidth;
+  }, [wbsSidebarWidth]);
+
+  const handleWbsResize = useCallback((delta: number) => {
+    setWbsSidebarWidth(Math.max(120, Math.min(400, wbsWidthAtDragStartRef.current + delta)));
+  }, []);
+
   return (
     <div className="flex flex-1 overflow-hidden border-t border-border">
       {/* Left: WBS sidebar */}
@@ -70,8 +75,14 @@ function PlannerLayout({
         onSelectWbs={handleSelectWbs}
         onRenameWbs={handleRenameWbs}
         onMoveWbs={wbsTree.moveWbs}
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={handleToggleSidebar}
+        width={wbsSidebarWidth}
+      />
+
+      {/* WBS ↔ Spreadsheet splitter */}
+      <SplitterHandle
+        testId="wbs-splitter-handle"
+        onResizeStart={handleWbsResizeStart}
+        onResize={handleWbsResize}
       />
 
       {/* Center: Spreadsheet */}
@@ -82,9 +93,6 @@ function PlannerLayout({
         onSelect={wbsTree.selectRow}
         onUpdate={wbsTree.updateRow}
       />
-
-      {/* Splitter */}
-      <SplitterHandle />
 
       {/* Right: Gantt (future) */}
       <div className="flex-1 flex items-center justify-center bg-card">

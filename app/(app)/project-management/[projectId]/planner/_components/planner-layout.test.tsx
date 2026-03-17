@@ -28,8 +28,7 @@ describe("PlannerLayout composition", () => {
         wbsNodes={nodes}
         selectedWbsId={null}
         onSelectWbs={vi.fn()}
-        isCollapsed={false}
-        onToggleCollapse={vi.fn()}
+        width={220}
       />,
     );
     expect(screen.getByText("WBS Structure")).toBeDefined();
