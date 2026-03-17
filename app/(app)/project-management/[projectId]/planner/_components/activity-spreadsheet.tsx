@@ -4,7 +4,8 @@ import { useRef, useState, useCallback, useEffect, useMemo, memo, type DragEvent
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SpreadsheetRowComponent, DEFAULT_COL_WIDTHS } from "./spreadsheet-row";
 import type { SpreadsheetDropPosition, ColumnWidths } from "./spreadsheet-row";
-import type { SpreadsheetRow, LinkModeStatus, LinkChainEntry } from "./types";
+import { ArrowUp, ArrowDown } from "lucide-react";
+import type { SpreadsheetRow, LinkModeStatus, LinkChainEntry, SortConfig, SortableColumn } from "./types";
 
 /* ─────────────────────── Constants ───────────────────────────────── */
 
@@ -39,6 +40,12 @@ interface ActivitySpreadsheetProps {
   linkMode?: LinkModeStatus;
   linkChain?: LinkChainEntry[];
   onLinkClick?: (id: string, isShift: boolean) => void;
+  /** Current sort configuration */
+  sortConfig?: SortConfig | null;
+  /** Called when user clicks a column header to sort */
+  onSort?: (column: SortableColumn) => void;
+  /** True while sort is being applied (deferred transition pending) */
+  isSorting?: boolean;
   /** Shared vertical scroll position for sync with gantt */
   scrollTop?: number;
   /** Called when this panel scrolls vertically */
@@ -123,6 +130,9 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
   linkMode = "idle",
   linkChain = [],
   onLinkClick,
+  sortConfig,
+  onSort,
+  isSorting = false,
   scrollTop,
   onVerticalScroll,
 }: ActivitySpreadsheetProps) {
@@ -319,20 +329,40 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Column Headers */}
       <div className="flex items-center h-9 border-b border-border bg-muted shrink-0">
-        {COLUMNS.map((col, i) => (
-          <div
-            key={col.key}
-            className={`relative flex items-center h-full ${col.key === "pct" ? "px-1" : "px-2"} ${i > 0 ? "border-l border-border" : ""} text-[11px] font-semibold text-muted-foreground ${col.align === "end" ? "justify-end" : ""}`}
-            style={{ width: colWidths[col.key] }}
-          >
-            {col.label}
+        {COLUMNS.map((col, i) => {
+          const isActive = sortConfig?.column === col.key;
+          return (
             <div
-              data-testid={`col-resize-${col.key}`}
-              className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize z-10 hover:bg-primary/30 active:bg-primary/50"
-              onMouseDown={handleResizeMouseDown(col.key)}
-            />
+              key={col.key}
+              data-testid={`col-header-${col.key}`}
+              className={`relative flex items-center h-full ${col.key === "pct" ? "px-1" : "px-2"} ${i > 0 ? "border-l border-border" : ""} text-[11px] font-semibold ${isActive ? "text-primary" : "text-muted-foreground"} ${col.align === "end" ? "justify-end" : ""} cursor-pointer select-none hover:bg-muted-hover transition-colors duration-[var(--duration-fast)]`}
+              style={{ width: colWidths[col.key] }}
+              onClick={() => onSort?.(col.key as SortableColumn)}
+            >
+              <span className="truncate">{col.label}</span>
+              {isActive && (
+                <span className="ml-0.5 shrink-0">
+                  {sortConfig.direction === "asc" ? (
+                    <ArrowUp size={10} data-testid={`sort-asc-${col.key}`} />
+                  ) : (
+                    <ArrowDown size={10} data-testid={`sort-desc-${col.key}`} />
+                  )}
+                </span>
+              )}
+              <div
+                data-testid={`col-resize-${col.key}`}
+                className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize z-10 hover:bg-primary/30 active:bg-primary/50"
+                onMouseDown={handleResizeMouseDown(col.key)}
+              />
+            </div>
+          );
+        })}
+        {/* Sort loading indicator */}
+        {isSorting && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-20">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
-        ))}
+        )}
       </div>
 
       {/* Virtualized rows */}
