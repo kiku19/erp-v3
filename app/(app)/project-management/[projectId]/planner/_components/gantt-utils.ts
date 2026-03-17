@@ -373,12 +373,35 @@ function computeArrowPath(
   const endX = toBar.x;
   const endY = toBar.y + toBar.height / 2;
 
-  const midX = Math.max(startX + 8, endX - 8);
+  // Normal case: predecessor ends before successor starts — simple L-shape
+  if (startX + 16 <= endX) {
+    const midX = Math.max(startX + 8, endX - 8);
+    return [
+      { x: startX, y: startY },
+      { x: midX, y: startY },
+      { x: midX, y: endY },
+      { x: endX, y: endY },
+    ];
+  }
+
+  // Overlapping case: route around both bars so arrow always enters from the left
+  const gap = 8;
+  const rightX = startX + gap; // go right past predecessor
+  // Detour vertically: go below (or above) both bars
+  const fromBottom = fromBar.y + fromBar.height;
+  const toBottom = toBar.y + toBar.height;
+  const detourY =
+    endY >= startY
+      ? Math.max(fromBottom, toBottom) + gap // go below both bars
+      : Math.min(fromBar.y, toBar.y) - gap; // go above both bars
+  const leftX = endX - gap; // approach successor from the left
 
   return [
     { x: startX, y: startY },
-    { x: midX, y: startY },
-    { x: midX, y: endY },
+    { x: rightX, y: startY },
+    { x: rightX, y: detourY },
+    { x: leftX, y: detourY },
+    { x: leftX, y: endY },
     { x: endX, y: endY },
   ];
 }

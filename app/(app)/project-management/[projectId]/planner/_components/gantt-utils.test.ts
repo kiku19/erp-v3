@@ -208,6 +208,48 @@ describe("computeArrowPath", () => {
     expect(points[0].x).toBe(100); // fromBar.x + fromBar.width
     expect(points[0].y).toBe(118); // fromBar.y + fromBar.height / 2
   });
+
+  it("arrow always approaches successor from the left (last segment goes left-to-right)", () => {
+    const fromBar = { x: 0, y: 110, width: 100, height: 16 };
+    const toBar = { x: 120, y: 142, width: 80, height: 16 };
+    const points = computeArrowPath(fromBar, toBar);
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+    // Arrow tip must approach from the left — prev.x < last.x
+    expect(prev.x).toBeLessThan(last.x);
+  });
+
+  it("routes around bars when they overlap (startX > endX)", () => {
+    // Predecessor ends at x=250, successor starts at x=150 — overlap
+    const fromBar = { x: 100, y: 50, width: 150, height: 16 };
+    const toBar = { x: 150, y: 90, width: 80, height: 16 };
+    const points = computeArrowPath(fromBar, toBar);
+
+    // Must start at right edge of predecessor
+    expect(points[0].x).toBe(250);
+    expect(points[0].y).toBe(58); // 50 + 16/2
+
+    // Must end at left edge of successor
+    const last = points[points.length - 1];
+    expect(last.x).toBe(150);
+    expect(last.y).toBe(98); // 90 + 16/2
+
+    // Last segment must go left-to-right (arrow points right, into successor)
+    const prev = points[points.length - 2];
+    expect(prev.x).toBeLessThan(last.x);
+  });
+
+  it("routes around bars on the same row when overlapping", () => {
+    // Same Y position but overlapping in X
+    const fromBar = { x: 100, y: 50, width: 200, height: 16 };
+    const toBar = { x: 150, y: 50, width: 80, height: 16 };
+    const points = computeArrowPath(fromBar, toBar);
+
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+    // Arrow must still approach from the left
+    expect(prev.x).toBeLessThan(last.x);
+  });
 });
 
 /* ─── getRowHeightPx ─── */
