@@ -71,6 +71,7 @@ interface UseWbsTreeReturn {
   moveRow: (sourceId: string, targetId: string, position: DropPosition) => void;
   indentWbs: () => void;
   outdentWbs: () => void;
+  deleteWbs: (id: string) => void;
   enterLinkMode: () => void;
   exitLinkMode: () => void;
   addToLinkChain: (activityId: string, isParallel: boolean) => void;
@@ -1004,6 +1005,81 @@ function useWbsTree({
     }
   }, [selectedRowId, canOutdent, wbsNodes, activities, moveWbs, moveRow]);
 
+  /* ── Delete WBS (cascade to descendants + their activities) ── */
+
+  const deleteWbs = useCallback(
+    (id: string) => {
+      // Collect all descendant WBS ids (BFS)
+      const idsToDelete = new Set<string>();
+      const queue = [id];
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        idsToDelete.add(current);
+        for (const node of wbsNodes) {
+          if (node.parentId === current && !idsToDelete.has(node.id)) {
+            queue.push(node.id);
+          }
+        }
+      }
+
+      // Collect activities under deleted WBS nodes
+      const activityIdsToDelete = new Set<string>();
+      for (const act of activities) {
+        if (idsToDelete.has(act.wbsNodeId)) {
+          activityIdsToDelete.add(act.id);
+        }
+      }
+
+      // Collect relationships that reference deleted activities
+      const relIdsToDelete = new Set<string>();
+      for (const rel of relationships) {
+        if (activityIdsToDelete.has(rel.predecessorId) || activityIdsToDelete.has(rel.successorId)) {
+          relIdsToDelete.add(rel.id);
+        }
+      }
+
+      // Remove from local state
+      setWbsNodes((prev) => {
+        const remaining = prev.filter((n) => !idsToDelete.has(n.id));
+        return recalculateAllWbsCodes(remaining);
+      });
+      setActivities((prev) => prev.filter((a) => !activityIdsToDelete.has(a.id)));
+      setRelationships((prev) => prev.filter((r) => !relIdsToDelete.has(r.id)));
+
+      // Deselect if the selected row was deleted
+      if (selectedRowId && (idsToDelete.has(selectedRowId) || activityIdsToDelete.has(selectedRowId))) {
+        setSelectedRowId(null);
+      }
+
+      // Queue deletion events for all affected entities
+      for (const wbsId of idsToDelete) {
+        queueEvent({
+          eventType: "wbs.deleted",
+          entityType: "wbs",
+          entityId: wbsId,
+          payload: {},
+        });
+      }
+      for (const actId of activityIdsToDelete) {
+        queueEvent({
+          eventType: "activity.deleted",
+          entityType: "activity",
+          entityId: actId,
+          payload: {},
+        });
+      }
+      for (const relId of relIdsToDelete) {
+        queueEvent({
+          eventType: "relationship.deleted",
+          entityType: "relationship",
+          entityId: relId,
+          payload: {},
+        });
+      }
+    },
+    [wbsNodes, activities, relationships, selectedRowId, queueEvent],
+  );
+
   /* ── Undo / Redo ── */
 
   // Reconstruct state at a given history index by applying patches from base
@@ -1239,6 +1315,7 @@ function useWbsTree({
     moveRow,
     indentWbs,
     outdentWbs,
+    deleteWbs,
     enterLinkMode,
     exitLinkMode,
     addToLinkChain,

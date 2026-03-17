@@ -23,6 +23,7 @@ import { NetworkChart } from "./_components/network-chart";
 import { ResourceChart } from "./_components/resource-chart";
 import { ProgressChart } from "./_components/progress-chart";
 import { useWbsIconSettings } from "./_components/use-wbs-icon-settings";
+import { ConfirmDeleteModal } from "./_components/confirm-delete-modal";
 import { DEFAULT_GANTT_SETTINGS, zoomIn, zoomOut } from "./_components/gantt-utils";
 import { useSortedRows } from "./_components/use-sorted-rows";
 import type { ViewMode, DetailTab, GanttSettings, SortConfig, SortableColumn } from "./_components/types";
@@ -66,6 +67,13 @@ export default function ProjectPlannerPage() {
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [isSortTransitionPending, startSortTransition] = useTransition();
   const iconSettings = useWbsIconSettings();
+
+  // Delete confirmation state
+  const [deleteConfirmWbsId, setDeleteConfirmWbsId] = useState<string | null>(null);
+  const [skipDeleteConfirm, setSkipDeleteConfirm] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("planner:skipDeleteConfirm") === "true";
+  });
 
   const [localProjectStartDate, setLocalProjectStartDate] = useState<string | null>(null);
   const [localProjectFinishDate, setLocalProjectFinishDate] = useState<string | null>(null);
@@ -133,6 +141,18 @@ export default function ProjectPlannerPage() {
     [wbsTree.addToLinkChain],
   );
 
+  // Delete WBS handler — shows confirmation or deletes immediately if user opted out
+  const handleRequestDeleteWbs = useCallback(
+    (id: string) => {
+      if (skipDeleteConfirm) {
+        wbsTree.deleteWbs(id);
+      } else {
+        setDeleteConfirmWbsId(id);
+      }
+    },
+    [skipDeleteConfirm, wbsTree.deleteWbs],
+  );
+
   /* ── Global keyboard shortcuts ── */
   useEffect(() => {
     function handleKeyDown(e: globalThis.KeyboardEvent) {
@@ -160,10 +180,21 @@ export default function ProjectPlannerPage() {
         e.preventDefault();
         wbsTree.redo();
       }
+      // Delete / Backspace → delete selected WBS (only when a WBS node is directly selected)
+      if ((e.key === "Delete" || e.key === "Backspace") && wbsTree.selectedRowId) {
+        // Don't trigger when typing in an input/textarea
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable) return;
+        // Only delete if the selected row is a WBS node, not an activity
+        const isWbs = wbsTree.wbsNodes.some((n) => n.id === wbsTree.selectedRowId);
+        if (!isWbs) return;
+        e.preventDefault();
+        handleRequestDeleteWbs(wbsTree.selectedRowId);
+      }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen, ganttSettingsOpen]);
+  }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen, ganttSettingsOpen, handleRequestDeleteWbs]);
 
   /* ── Deselect on click outside rows ── */
   const handlePageClick = useCallback(
@@ -281,6 +312,48 @@ export default function ProjectPlannerPage() {
     setSpreadsheetWidth(Math.max(200, spreadsheetWidthAtDragStartRef.current + delta));
   }, []);
 
+  const handleConfirmDelete = useCallback(
+    (dontShowAgain: boolean) => {
+      if (dontShowAgain) {
+        setSkipDeleteConfirm(true);
+        localStorage.setItem("planner:skipDeleteConfirm", "true");
+      }
+      if (deleteConfirmWbsId) {
+        wbsTree.deleteWbs(deleteConfirmWbsId);
+      }
+      setDeleteConfirmWbsId(null);
+    },
+    [deleteConfirmWbsId, wbsTree.deleteWbs],
+  );
+
+  const handleCancelDelete = useCallback(() => {
+    setDeleteConfirmWbsId(null);
+  }, []);
+
+  // Compute descendant counts for the delete confirmation modal
+  const deleteTargetInfo = useMemo(() => {
+    if (!deleteConfirmWbsId) return { name: "", childCount: 0, activityCount: 0 };
+    const node = wbsTree.wbsNodes.find((n) => n.id === deleteConfirmWbsId);
+    // BFS to find all descendant WBS ids
+    const descendants = new Set<string>();
+    const queue = [deleteConfirmWbsId];
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const n of wbsTree.wbsNodes) {
+        if (n.parentId === current && !descendants.has(n.id)) {
+          descendants.add(n.id);
+          queue.push(n.id);
+        }
+      }
+    }
+    const allIds = new Set([deleteConfirmWbsId, ...descendants]);
+    return {
+      name: node?.name ?? "",
+      childCount: descendants.size,
+      activityCount: wbsTree.activities.filter((a) => allIds.has(a.wbsNodeId)).length,
+    };
+  }, [deleteConfirmWbsId, wbsTree.wbsNodes, wbsTree.activities]);
+
   // Wrap expand/collapse in startTransition so the heavy GanttCanvas repaint
   // doesn't block the UI — the chevron flips immediately, canvas updates in background.
   const handleToggleExpand = useCallback(
@@ -397,6 +470,14 @@ export default function ProjectPlannerPage() {
             onUpdateIcon={handleUpdateIcon}
             onUpdateIconColor={handleUpdateIconColor}
             onOpenIconSettings={handleOpenIconSettings}
+            onDeleteWbs={handleRequestDeleteWbs}
+          />
+
+          {/* WBS ↔ Spreadsheet splitter */}
+          <SplitterHandle
+            testId="wbs-splitter-handle"
+            onResizeStart={handleWbsResizeStart}
+            onResize={handleWbsResize}
           />
 
           {/* WBS ↔ Spreadsheet splitter */}
@@ -559,6 +640,16 @@ export default function ProjectPlannerPage() {
         onClose={() => setGanttSettingsOpen(false)}
         settings={ganttSettings}
         onApply={setGanttSettings}
+      />
+
+      {/* Delete WBS confirmation modal */}
+      <ConfirmDeleteModal
+        open={deleteConfirmWbsId !== null}
+        wbsName={deleteTargetInfo.name}
+        childCount={deleteTargetInfo.childCount}
+        activityCount={deleteTargetInfo.activityCount}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
       />
     </div>
   );

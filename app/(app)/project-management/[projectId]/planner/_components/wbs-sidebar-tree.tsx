@@ -53,6 +53,7 @@ interface WbsSidebarTreeProps {
   onUpdateIcon?: (id: string, icon: string) => void;
   onUpdateIconColor?: (id: string, iconColor: string) => void;
   onOpenIconSettings?: () => void;
+  onDeleteWbs?: (id: string) => void;
 }
 
 /* ─────────────────────── Tree node component ─────────────────────── */
@@ -303,6 +304,7 @@ const WbsSidebarTree = memo(function WbsSidebarTree({
   onUpdateIcon,
   onUpdateIconColor,
   onOpenIconSettings,
+  onDeleteWbs,
 }: WbsSidebarTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(wbsNodes.map((n) => n.id)),
@@ -379,8 +381,12 @@ const WbsSidebarTree = memo(function WbsSidebarTree({
         e.preventDefault();
         setEditingId(selectedWbsId);
       }
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedWbsId && !editingId) {
+        e.preventDefault();
+        onDeleteWbs?.(selectedWbsId);
+      }
     },
-    [selectedWbsId],
+    [selectedWbsId, editingId, onDeleteWbs],
   );
 
   const topLevel = wbsNodes

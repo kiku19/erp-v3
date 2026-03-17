@@ -1029,4 +1029,132 @@ describe("useWbsTree", () => {
       );
     });
   });
+
+  /* ── deleteWbs ── */
+
+  describe("deleteWbs", () => {
+    it("removes the target WBS node from the tree", () => {
+      const { result } = renderWbsTree();
+
+      act(() => result.current.deleteWbs("w3"));
+
+      expect(result.current.wbsNodes.find((n) => n.id === "w3")).toBeUndefined();
+      expect(result.current.wbsNodes).toHaveLength(2); // w1, w2 remain
+    });
+
+    it("removes child WBS nodes (cascade)", () => {
+      const { result } = renderWbsTree();
+
+      // Delete w1 which has child w2
+      act(() => result.current.deleteWbs("w1"));
+
+      expect(result.current.wbsNodes.find((n) => n.id === "w1")).toBeUndefined();
+      expect(result.current.wbsNodes.find((n) => n.id === "w2")).toBeUndefined();
+      expect(result.current.wbsNodes).toHaveLength(1); // only w3 remains
+    });
+
+    it("removes activities under deleted WBS nodes", () => {
+      const { result } = renderWbsTree();
+
+      // Delete w1 → w2 cascade → activities a1, a2 under w2 should be removed
+      act(() => result.current.deleteWbs("w1"));
+
+      expect(result.current.activities.find((a) => a.id === "a1")).toBeUndefined();
+      expect(result.current.activities.find((a) => a.id === "a2")).toBeUndefined();
+      expect(result.current.activities).toHaveLength(1); // a3 under w3 remains
+    });
+
+    it("queues wbs.deleted events for all deleted WBS nodes", () => {
+      const { result } = renderWbsTree();
+      mockQueueEvent.mockClear();
+
+      act(() => result.current.deleteWbs("w1"));
+
+      const wbsDeletedEvents = mockQueueEvent.mock.calls.filter(
+        (call) => call[0].eventType === "wbs.deleted",
+      );
+      expect(wbsDeletedEvents).toHaveLength(2); // w1 and w2
+      const deletedIds = wbsDeletedEvents.map((c) => c[0].entityId);
+      expect(deletedIds).toContain("w1");
+      expect(deletedIds).toContain("w2");
+    });
+
+    it("queues activity.deleted events for cascade-deleted activities", () => {
+      const { result } = renderWbsTree();
+      mockQueueEvent.mockClear();
+
+      act(() => result.current.deleteWbs("w1"));
+
+      const actDeletedEvents = mockQueueEvent.mock.calls.filter(
+        (call) => call[0].eventType === "activity.deleted",
+      );
+      expect(actDeletedEvents).toHaveLength(2); // a1 and a2
+      const deletedIds = actDeletedEvents.map((c) => c[0].entityId);
+      expect(deletedIds).toContain("a1");
+      expect(deletedIds).toContain("a2");
+    });
+
+    it("deselects the row if the deleted WBS was selected", () => {
+      const { result } = renderWbsTree();
+
+      act(() => result.current.selectRow("w3"));
+      expect(result.current.selectedRowId).toBe("w3");
+
+      act(() => result.current.deleteWbs("w3"));
+      expect(result.current.selectedRowId).toBeNull();
+    });
+
+    it("recalculates WBS codes after deletion", () => {
+      const { result } = renderWbsTree();
+
+      // w1 is code "1", w3 is code "2"
+      act(() => result.current.deleteWbs("w1"));
+
+      // w3 should now have code "1" since w1 was removed
+      const remaining = result.current.wbsNodes.find((n) => n.id === "w3");
+      expect(remaining?.wbsCode).toBe("1");
+    });
+
+    it("removes relationships referencing deleted activities", () => {
+      const relationships: ActivityRelationshipData[] = [
+        { id: "r1", predecessorId: "a1", successorId: "a3", relationshipType: "FS", lag: 0 },
+        { id: "r2", predecessorId: "a3", successorId: "a2", relationshipType: "FS", lag: 0 },
+      ];
+
+      const { result } = renderHook(() =>
+        useWbsTree({
+          initialWbsNodes: WBS_NODES,
+          initialActivities: ACTIVITIES,
+          initialRelationships: relationships,
+          projectId: "proj-1",
+          projectStartDate: "2026-01-01T00:00:00.000Z",
+          queueEvent: mockQueueEvent,
+        }),
+      );
+
+      mockQueueEvent.mockClear();
+
+      // Delete w1 → removes a1 and a2 → both relationships should be removed
+      act(() => result.current.deleteWbs("w1"));
+
+      expect(result.current.relationships).toHaveLength(0);
+
+      const relDeletedEvents = mockQueueEvent.mock.calls.filter(
+        (call) => call[0].eventType === "relationship.deleted",
+      );
+      expect(relDeletedEvents).toHaveLength(2);
+    });
+
+    it("removes from flatRows after deletion", () => {
+      const { result } = renderWbsTree();
+
+      const rowsBefore = result.current.flatRows.length;
+      act(() => result.current.deleteWbs("w3"));
+
+      // w3 and its activity a3 should be removed from flatRows
+      expect(result.current.flatRows.length).toBe(rowsBefore - 2);
+      expect(result.current.flatRows.find((r) => r.id === "w3")).toBeUndefined();
+      expect(result.current.flatRows.find((r) => r.id === "a3")).toBeUndefined();
+    });
+  });
 });
