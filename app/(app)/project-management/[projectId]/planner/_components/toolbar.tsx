@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import {
   Plus,
   Diamond,
@@ -50,7 +51,7 @@ interface ToolbarProps {
   onAddResource?: () => void;
 }
 
-export function Toolbar({
+export const Toolbar = memo(function Toolbar({
   viewMode = "gantt",
   onAddActivity,
   onAddMilestone,
@@ -264,4 +265,4 @@ export function Toolbar({
       </div>
     </div>
   );
-}
+});

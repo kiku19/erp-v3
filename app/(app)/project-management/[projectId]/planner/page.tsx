@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, startTransition } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,14 +94,14 @@ export default function ProjectPlannerPage() {
       setLocalProjectFinishDate(finishDate);
       wbsTree.updateProjectDates(startDate, finishDate);
     },
-    [wbsTree],
+    [wbsTree.updateProjectDates],
   );
 
   const handleLinkClick = useCallback(
     (activityId: string, isShift: boolean) => {
       wbsTree.addToLinkChain(activityId, isShift);
     },
-    [wbsTree],
+    [wbsTree.addToLinkChain],
   );
 
   /* ── Global keyboard shortcuts ── */
@@ -154,22 +154,78 @@ export default function ProjectPlannerPage() {
       }
       wbsTree.selectRow(null);
     },
-    [wbsTree],
+    [wbsTree.selectRow],
   );
 
   // Derive selected WBS id for the sidebar
-  const selectedWbsId = (() => {
+  const selectedWbsId = useMemo(() => {
     if (!wbsTree.selectedRowId) return null;
     const wbs = wbsTree.wbsNodes.find((n) => n.id === wbsTree.selectedRowId);
     if (wbs) return wbs.id;
     const act = wbsTree.activities.find((a) => a.id === wbsTree.selectedRowId);
     return act?.wbsNodeId ?? null;
-  })();
+  }, [wbsTree.selectedRowId, wbsTree.wbsNodes, wbsTree.activities]);
 
   // Derive selected activity for the detail panel (only activity/milestone, not WBS)
-  const selectedActivity = wbsTree.flatRows.find(
-    (r) => r.id === wbsTree.selectedRowId && (r.type === "activity" || r.type === "milestone"),
-  ) ?? null;
+  const selectedActivity = useMemo(
+    () =>
+      wbsTree.flatRows.find(
+        (r) => r.id === wbsTree.selectedRowId && (r.type === "activity" || r.type === "milestone"),
+      ) ?? null,
+    [wbsTree.flatRows, wbsTree.selectedRowId],
+  );
+
+  // Keep panel mounted after first selection — avoids mount/unmount cost on every click
+  const lastActivityRef = useRef(selectedActivity);
+  if (selectedActivity) {
+    lastActivityRef.current = selectedActivity;
+  }
+  const panelActivity = lastActivityRef.current;
+
+  // Panel dismissed — track which activity id was dismissed so re-selecting a
+  // *different* activity auto-reopens without a setState-during-render double pass.
+  const dismissedForIdRef = useRef<string | null>(null);
+  const [isPanelDismissed, setIsPanelDismissed] = useState(false);
+  // Auto-reopen when a *new* activity is selected
+  const isPanelEffectivelyDismissed =
+    isPanelDismissed && selectedActivity?.id === dismissedForIdRef.current;
+
+  // Stabilize callbacks for detail panel/modal
+  const handleDetailClose = useCallback(() => {
+    // Urgent: hide panel immediately (one boolean flip, no heavy re-renders)
+    dismissedForIdRef.current = selectedActivity?.id ?? null;
+    setIsPanelDismissed(true);
+    // Deferred: deselect row (spreadsheet/gantt re-renders happen in background)
+    startTransition(() => {
+      wbsTree.selectRow(null);
+    });
+  }, [wbsTree.selectRow, selectedActivity?.id]);
+  const handleExpandToggle = useCallback(() => setIsDetailExpanded(true), []);
+  const handleCollapseDetail = useCallback(() => setIsDetailExpanded(false), []);
+  const handleOpenCalendarSettings = useCallback(() => setCalendarSettingsOpen(true), []);
+  const handleOpenObs = useCallback(() => setObsOpen(true), []);
+  const handleToggleLinkMode = useCallback(() => {
+    if (wbsTree.linkMode === "idle") wbsTree.enterLinkMode();
+    else wbsTree.exitLinkMode();
+  }, [wbsTree.linkMode, wbsTree.enterLinkMode, wbsTree.exitLinkMode]);
+  const handleZoomIn = useCallback(() => setGanttSettings((s) => ({ ...s, zoomLevel: zoomIn(s.zoomLevel) })), []);
+  const handleZoomOut = useCallback(() => setGanttSettings((s) => ({ ...s, zoomLevel: zoomOut(s.zoomLevel) })), []);
+  const handleZoomFit = useCallback(() => setGanttSettings((s) => ({ ...s, zoomLevel: "month-week" })), []);
+  const handleOpenGanttSettings = useCallback(() => setGanttSettingsOpen(true), []);
+  const handleRenameWbs = useCallback(
+    (id: string, newName: string) => wbsTree.updateRow(id, { name: newName }),
+    [wbsTree.updateRow],
+  );
+  const handleToggleSidebar = useCallback(() => setSidebarCollapsed((prev) => !prev), []);
+  const handleUpdateIcon = useCallback(
+    (id: string, icon: string) => wbsTree.updateRow(id, { icon }),
+    [wbsTree.updateRow],
+  );
+  const handleUpdateIconColor = useCallback(
+    (id: string, iconColor: string) => wbsTree.updateRow(id, { iconColor }),
+    [wbsTree.updateRow],
+  );
+  const handleOpenIconSettings = useCallback(() => setIconSettingsOpen(true), []);
 
   /* ── Loading state ── */
   if (loading) {
@@ -250,21 +306,18 @@ export default function ProjectPlannerPage() {
         undoDisabled={!wbsTree.canUndo}
         redoDisabled={!wbsTree.canRedo}
         linkMode={wbsTree.linkMode}
-        onToggleLinkMode={() => {
-          if (wbsTree.linkMode === "idle") wbsTree.enterLinkMode();
-          else wbsTree.exitLinkMode();
-        }}
+        onToggleLinkMode={handleToggleLinkMode}
         onConfirmLink={wbsTree.commitLinkChain}
         onCancelLink={wbsTree.exitLinkMode}
         linkChainLength={wbsTree.linkChain.length}
-        onZoomIn={() => setGanttSettings((s) => ({ ...s, zoomLevel: zoomIn(s.zoomLevel) }))}
-        onZoomOut={() => setGanttSettings((s) => ({ ...s, zoomLevel: zoomOut(s.zoomLevel) }))}
-        onZoomFit={() => setGanttSettings((s) => ({ ...s, zoomLevel: "month-week" }))}
-        onOpenSettings={() => setGanttSettingsOpen(true)}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onZoomFit={handleZoomFit}
+        onOpenSettings={handleOpenGanttSettings}
       />
 
       {/* Body — all views stay mounted, hidden via CSS to avoid remount cost */}
-      <div className="flex flex-col flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "gantt" ? "flex" : "none" }}>
+      <div className="relative flex flex-col flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "gantt" ? "flex" : "none" }}>
         {/* Gantt area — shrinks when detail panel is open */}
         <div className="flex flex-1 overflow-hidden">
           {/* Left: WBS sidebar */}
@@ -272,14 +325,14 @@ export default function ProjectPlannerPage() {
             wbsNodes={wbsTree.wbsNodes}
             selectedWbsId={selectedWbsId}
             onSelectWbs={wbsTree.selectRow}
-            onRenameWbs={(id, newName) => wbsTree.updateRow(id, { name: newName })}
+            onRenameWbs={handleRenameWbs}
             onMoveWbs={wbsTree.moveWbs}
             isCollapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
+            onToggleCollapse={handleToggleSidebar}
             iconOrder={iconSettings.settings.icons}
-            onUpdateIcon={(id, icon) => wbsTree.updateRow(id, { icon })}
-            onUpdateIconColor={(id, iconColor) => wbsTree.updateRow(id, { iconColor })}
-            onOpenIconSettings={() => setIconSettingsOpen(true)}
+            onUpdateIcon={handleUpdateIcon}
+            onUpdateIconColor={handleUpdateIconColor}
+            onOpenIconSettings={handleOpenIconSettings}
           />
 
           {/* Center: Spreadsheet */}
@@ -318,21 +371,30 @@ export default function ProjectPlannerPage() {
           />
         </div>
 
-        {/* Activity Detail Panel — bottom, 280px when an activity is selected */}
-        {selectedActivity && !isDetailExpanded && (
-          <ActivityDetailPanel
-            activity={selectedActivity}
-            activities={wbsTree.activities}
-            wbsNodes={wbsTree.wbsNodes}
-            relationships={wbsTree.relationships}
-            onClose={() => wbsTree.selectRow(null)}
-            onUpdate={wbsTree.updateRow}
-            onExpandToggle={() => setIsDetailExpanded(true)}
-            onOpenCalendarSettings={() => setCalendarSettingsOpen(true)}
-            onOpenObs={() => setObsOpen(true)}
-            activeTab={detailTab}
-            onTabChange={setDetailTab}
-          />
+        {/* Activity Detail Panel — slide up/down animation */}
+        {panelActivity && (
+          <div
+            className="absolute bottom-0 left-0 right-0 z-10 flex flex-col transition-transform duration-[var(--duration-normal)] ease-[var(--ease-default)]"
+            style={{
+              transform: selectedActivity && !isDetailExpanded && !isPanelEffectivelyDismissed
+                ? "translateY(0)"
+                : "translateY(100%)",
+            }}
+          >
+            <ActivityDetailPanel
+              activity={panelActivity}
+              activities={wbsTree.activities}
+              wbsNodes={wbsTree.wbsNodes}
+              relationships={wbsTree.relationships}
+              onClose={handleDetailClose}
+              onUpdate={wbsTree.updateRow}
+              onExpandToggle={handleExpandToggle}
+              onOpenCalendarSettings={handleOpenCalendarSettings}
+              onOpenObs={handleOpenObs}
+              activeTab={detailTab}
+              onTabChange={setDetailTab}
+            />
+          </div>
         )}
       </div>
 
@@ -379,14 +441,14 @@ export default function ProjectPlannerPage() {
       {/* Expanded activity detail modal */}
       <ActivityDetailModal
         open={isDetailExpanded && !!selectedActivity}
-        activity={selectedActivity}
+        activity={panelActivity}
         activities={wbsTree.activities}
         wbsNodes={wbsTree.wbsNodes}
         relationships={wbsTree.relationships}
-        onClose={() => setIsDetailExpanded(false)}
+        onClose={handleCollapseDetail}
         onUpdate={wbsTree.updateRow}
-        onOpenCalendarSettings={() => setCalendarSettingsOpen(true)}
-        onOpenObs={() => setObsOpen(true)}
+        onOpenCalendarSettings={handleOpenCalendarSettings}
+        onOpenObs={handleOpenObs}
         activeTab={detailTab}
         onTabChange={setDetailTab}
       />

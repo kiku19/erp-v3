@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { CalendarCog, Network, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +37,7 @@ interface ActivityDetailModalProps {
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-function ActivityDetailModal({
+const ActivityDetailModal = memo(function ActivityDetailModal({
   open,
   activity,
   activities,
@@ -132,7 +133,7 @@ function ActivityDetailModal({
       </div>
     </Modal>
   );
-}
+});
 
 export { ActivityDetailModal };
 export type { ActivityDetailModalProps };

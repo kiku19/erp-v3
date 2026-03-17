@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { CalendarCog, Network, Maximize2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from "@/components/ui/tabs";
@@ -57,7 +58,7 @@ function IconBtn({
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-function ActivityDetailPanel({
+const ActivityDetailPanel = memo(function ActivityDetailPanel({
   activity,
   activities,
   wbsNodes,
@@ -155,7 +156,7 @@ function ActivityDetailPanel({
       </Tabs>
     </div>
   );
-}
+});
 
 export { ActivityDetailPanel };
 export type { ActivityDetailPanelProps };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { SpreadsheetRow, WbsNodeData } from "../types";
@@ -18,13 +18,13 @@ function formatDate(dateStr: string | null | undefined): string {
   return `${day}-${month}-${year}`;
 }
 
-function computeWbsPath(wbsNodeId: string | undefined, wbsNodes: WbsNodeData[]): string {
+function computeWbsPath(wbsNodeId: string | undefined, nodeMap: Map<string, WbsNodeData>): string {
   if (!wbsNodeId) return "—";
   const path: string[] = [];
-  let current = wbsNodes.find((n) => n.id === wbsNodeId);
+  let current = nodeMap.get(wbsNodeId);
   while (current) {
     path.unshift(`${current.wbsCode} ${current.name}`);
-    current = current.parentId ? wbsNodes.find((n) => n.id === current!.parentId) : undefined;
+    current = current.parentId ? nodeMap.get(current.parentId) : undefined;
   }
   return path.join(" > ") || "—";
 }
@@ -50,14 +50,16 @@ interface GeneralTabProps {
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-function GeneralTab({ activity, wbsNodes, onUpdate }: GeneralTabProps) {
+const GeneralTab = memo(function GeneralTab({ activity, wbsNodes, onUpdate }: GeneralTabProps) {
+  const nodeMap = useMemo(
+    () => new Map(wbsNodes.map((n) => [n.id, n])),
+    [wbsNodes],
+  );
+
   const wbsPath = useMemo(() => {
-    // Find the wbsNodeId from the activity — we need the parent WBS
-    // SpreadsheetRow doesn't directly expose wbsNodeId, derive from id prefix or wbsNodes
-    // For now, search through wbsNodes to find the path
     const wbsNodeId = (activity as Record<string, unknown>).wbsNodeId as string | undefined;
-    return computeWbsPath(wbsNodeId, wbsNodes);
-  }, [activity, wbsNodes]);
+    return computeWbsPath(wbsNodeId, nodeMap);
+  }, [activity, nodeMap]);
 
   const pct = activity.percentComplete ?? 0;
 
@@ -177,7 +179,7 @@ function GeneralTab({ activity, wbsNodes, onUpdate }: GeneralTabProps) {
       </div>
     </div>
   );
-}
+});
 
 export { GeneralTab };
 export type { GeneralTabProps };

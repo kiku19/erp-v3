@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,12 @@ interface RelationshipsTabProps {
 function RelationshipTable({
   title,
   rows,
-  activities,
+  activityMap,
   emptyText,
 }: {
   title: string;
   rows: ActivityRelationshipData[];
-  activities: ActivityData[];
+  activityMap: Map<string, ActivityData>;
   emptyText: string;
 }) {
   return (
@@ -57,7 +57,7 @@ function RelationshipTable({
       ) : (
         rows.map((rel) => {
           const otherActId = title === "Predecessors" ? rel.predecessorId : rel.successorId;
-          const otherAct = activities.find((a) => a.id === otherActId);
+          const otherAct = activityMap.get(otherActId);
           return (
             <div
               key={rel.id}
@@ -84,7 +84,12 @@ function RelationshipTable({
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-function RelationshipsTab({ activityId, activities, relationships }: RelationshipsTabProps) {
+const RelationshipsTab = memo(function RelationshipsTab({ activityId, activities, relationships }: RelationshipsTabProps) {
+  const activityMap = useMemo(
+    () => new Map(activities.map((a) => [a.id, a])),
+    [activities],
+  );
+
   const predecessors = useMemo(
     () => relationships.filter((r) => r.successorId === activityId),
     [relationships, activityId],
@@ -100,18 +105,18 @@ function RelationshipsTab({ activityId, activities, relationships }: Relationshi
       <RelationshipTable
         title="Predecessors"
         rows={predecessors}
-        activities={activities}
+        activityMap={activityMap}
         emptyText="No predecessors"
       />
       <RelationshipTable
         title="Successors"
         rows={successors}
-        activities={activities}
+        activityMap={activityMap}
         emptyText="No successors"
       />
     </div>
   );
-}
+});
 
 export { RelationshipsTab };
 export type { RelationshipsTabProps };

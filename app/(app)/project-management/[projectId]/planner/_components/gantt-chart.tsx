@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useRef, useCallback, useEffect, memo } from "react";
 import { useGanttViewport } from "./use-gantt-viewport";
 import { GanttTimeAxis } from "./gantt-time-axis";
 import { GanttCanvas } from "./gantt-canvas";
@@ -33,7 +33,7 @@ interface GanttChartProps {
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-function GanttChart({
+const GanttChart = memo(function GanttChart({
   flatRows,
   activities,
   relationships,
@@ -120,7 +120,7 @@ function GanttChart({
       </div>
     </div>
   );
-}
+});
 
 export { GanttChart };
 export type { GanttChartProps };

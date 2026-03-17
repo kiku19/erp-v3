@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect, type DragEvent } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect, memo, type DragEvent } from "react";
 import { cn } from "@/lib/utils";
 import {
   ChevronDown,
@@ -295,7 +295,7 @@ function TreeNode({
 
 /* ─────────────────────── Main component ──────────────────────────── */
 
-function WbsSidebarTree({
+const WbsSidebarTree = memo(function WbsSidebarTree({
   wbsNodes,
   selectedWbsId,
   onSelectWbs,
@@ -479,6 +479,6 @@ function WbsSidebarTree({
       )}
     </div>
   );
-}
+});
 
 export { WbsSidebarTree };

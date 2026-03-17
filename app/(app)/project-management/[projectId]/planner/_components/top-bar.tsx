@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, memo } from "react";
 import {
   LayoutDashboard,
   Workflow,
@@ -46,7 +46,7 @@ const VIEW_TABS: { mode: ViewMode; label: string; icon: typeof LayoutDashboard }
   { mode: "progress", label: "Progress", icon: TrendingUp },
 ];
 
-export function TopBar({
+export const TopBar = memo(function TopBar({
   projectName,
   projectCode,
   projectStartDate,
@@ -216,4 +216,4 @@ export function TopBar({
       </div>
     </div>
   );
-}
+});

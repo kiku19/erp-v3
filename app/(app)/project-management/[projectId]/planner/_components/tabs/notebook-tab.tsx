@@ -1,9 +1,10 @@
 "use client";
 
+import { memo } from "react";
 import { Edit3, Paperclip } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
-function NotebookTab() {
+const NotebookTab = memo(function NotebookTab() {
   return (
     <div data-testid="notebook-tab" className="flex gap-5 p-4 h-full overflow-auto">
       {/* Description & Notes */}
@@ -37,6 +38,6 @@ function NotebookTab() {
       </div>
     </div>
   );
-}
+});
 
 export { NotebookTab };

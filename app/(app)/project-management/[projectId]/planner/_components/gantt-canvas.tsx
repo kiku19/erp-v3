@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import {
   dateToX,
   computeBarGeometry,
@@ -96,6 +96,7 @@ function GanttCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const colorsRef = useRef<CachedColors | null>(null);
+  const barGeoMapRef = useRef(new Map<string, { x: number; y: number; width: number; height: number }>());
 
   const totalHeight = flatRows.length * rowHeight;
 
@@ -174,8 +175,9 @@ function GanttCanvas({
     const actMap = new Map<string, ActivityData>();
     for (const a of activities) actMap.set(a.id, a);
 
-    // ── Bar geometry map for arrow drawing ──
+    // ── Bar geometry map (persisted for selection overlay) ──
     const barGeoMap = new Map<string, { x: number; y: number; width: number; height: number }>();
+    barGeoMapRef.current = barGeoMap;
 
     for (let i = 0; i < flatRows.length; i++) {
       const row = flatRows[i];
@@ -266,15 +268,6 @@ function GanttCanvas({
         barGeoMap.set(row.id, { x: geo.x, y: geo.y, width: geo.width, height: geo.height });
 
         const barColor = getBarColor(act, settings, c);
-
-        // Selected outline
-        if (selectedRowId === row.id) {
-          ctx.strokeStyle = c.primary;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.roundRect(bx - 1, by - 1, geo.width + 2, geo.height + 2, 4);
-          ctx.stroke();
-        }
 
         // Bar background
         ctx.fillStyle = barColor;
@@ -431,7 +424,24 @@ function GanttCanvas({
         ctx.fillText("Milestone", lx, ly);
       }
     }
-  }, [flatRows, activities, relationships, selectedRowId, timelineStart, pxPerDay, totalWidth, scrollLeft, rowHeight, totalHeight, settings]);
+  }, [flatRows, activities, relationships, timelineStart, pxPerDay, totalWidth, scrollLeft, rowHeight, totalHeight, settings]);
+
+  /* ── Selection highlight — lightweight CSS div instead of a second canvas ── */
+  const selectionStyle = useMemo<React.CSSProperties | null>(() => {
+    if (!selectedRowId) return null;
+    const geo = barGeoMapRef.current.get(selectedRowId);
+    if (!geo) return null;
+    return {
+      position: "absolute" as const,
+      left: geo.x - scrollLeft - 1,
+      top: geo.y - 1,
+      width: geo.width + 2,
+      height: geo.height + 2,
+      borderRadius: 4,
+      border: "2px solid var(--primary)",
+      pointerEvents: "none" as const,
+    };
+  }, [selectedRowId, scrollLeft]);
 
   /* ── Click hit test ── */
   const handleClick = useCallback(
@@ -457,6 +467,12 @@ function GanttCanvas({
         className="w-full h-full cursor-pointer"
         style={{ width: "100%", height: totalHeight }}
       />
+      {selectionStyle && (
+        <div
+          data-testid="gantt-selection-overlay"
+          style={selectionStyle}
+        />
+      )}
     </div>
   );
 }

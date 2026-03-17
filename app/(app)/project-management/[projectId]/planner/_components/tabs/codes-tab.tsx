@@ -1,6 +1,8 @@
 "use client";
 
-function CodesTab() {
+import { memo } from "react";
+
+const CodesTab = memo(function CodesTab() {
   return (
     <div
       data-testid="codes-tab"
@@ -9,6 +11,6 @@ function CodesTab() {
       <p className="text-sm text-muted-foreground">Codes coming soon</p>
     </div>
   );
-}
+});
 
 export { CodesTab };

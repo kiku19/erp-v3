@@ -1,6 +1,8 @@
 "use client";
 
-function StepsTab() {
+import { memo } from "react";
+
+const StepsTab = memo(function StepsTab() {
   return (
     <div
       data-testid="steps-tab"
@@ -9,6 +11,6 @@ function StepsTab() {
       <p className="text-sm text-muted-foreground">Steps coming soon</p>
     </div>
   );
-}
+});
 
 export { StepsTab };

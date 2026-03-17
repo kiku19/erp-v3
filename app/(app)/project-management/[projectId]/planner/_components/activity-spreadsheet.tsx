@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { useRef, useState, useCallback, useEffect, memo, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SpreadsheetRowComponent, DEFAULT_COL_WIDTHS } from "./spreadsheet-row";
 import type { SpreadsheetDropPosition, ColumnWidths } from "./spreadsheet-row";
@@ -98,7 +98,7 @@ function ResizeHandle({ onResize }: { onResize: (delta: number) => void }) {
 
 /* ─────────────────────── Component ───────────────────────────────── */
 
-function ActivitySpreadsheet({
+const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
   flatRows,
   selectedRowId,
   onToggleExpand,
@@ -330,6 +330,6 @@ function ActivitySpreadsheet({
       )}
     </div>
   );
-}
+});
 
 export { ActivitySpreadsheet };

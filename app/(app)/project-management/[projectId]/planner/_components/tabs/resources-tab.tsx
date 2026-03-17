@@ -1,9 +1,10 @@
 "use client";
 
+import { memo } from "react";
 import { UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-function ResourcesTab() {
+const ResourcesTab = memo(function ResourcesTab() {
   return (
     <div data-testid="resources-tab" className="flex flex-col gap-4 p-4 h-full overflow-auto">
       {/* Header */}
@@ -33,6 +34,6 @@ function ResourcesTab() {
       </div>
     </div>
   );
-}
+});
 
 export { ResourcesTab };
