@@ -98,6 +98,7 @@ function LoginForm({ onSubmit, isLoading = false, serverError }: LoginFormProps)
         </div>
 
         <Checkbox
+          id="login-remember-me"
           label="Remember me for 30 days"
           checked={rememberMe}
           onChange={setRememberMe}
