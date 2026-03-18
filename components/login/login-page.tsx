@@ -93,11 +93,19 @@ function LoginPage() {
       </div>
 
       {/* Form Panel */}
-      <div className="relative flex w-[55%] items-center justify-center overflow-hidden bg-card">
+      <div className="relative flex w-full lg:w-[55%] flex-col items-center justify-center overflow-hidden bg-card">
         <BlobBackground variant="light" />
 
+        {/* Mobile Logo — visible only when branding panel is hidden */}
+        <div className="relative z-10 flex items-center gap-2.5 mb-8 lg:hidden">
+          <Hexagon className="h-8 w-8 text-foreground" />
+          <span className="text-[22px] font-semibold text-foreground">
+            Acme ERP
+          </span>
+        </div>
+
         {/* Glassmorphism Card */}
-        <Card className="relative z-10 w-full max-w-[520px] mx-auto rounded-[20px] border-card/40 bg-card/80 p-[50px] backdrop-blur-[24px] shadow-[var(--shadow-glass)]">
+        <Card className="relative z-10 w-full max-w-[520px] mx-6 sm:mx-auto rounded-[20px] border-card/40 bg-card/80 p-6 sm:p-[50px] backdrop-blur-[24px] shadow-[var(--shadow-glass)]">
           <LoginForm
             onSubmit={handleSubmit}
             isLoading={isLoading}
