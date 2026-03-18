@@ -17,9 +17,11 @@ interface ActivityData {
   name: string;
   activityType: string;
   duration: number;
+  durationUnit: string;
+  totalQuantity: number;
+  totalWorkHours: number;
   startDate: string | null;
   finishDate: string | null;
-  totalFloat: number;
   percentComplete: number;
   sortOrder: number;
 }
@@ -89,9 +91,11 @@ async function buildPlannerState(
         name: true,
         activityType: true,
         duration: true,
+        durationUnit: true,
+        totalQuantity: true,
+        totalWorkHours: true,
         startDate: true,
         finishDate: true,
-        totalFloat: true,
         percentComplete: true,
         sortOrder: true,
       },
@@ -146,9 +150,11 @@ async function buildPlannerState(
     name: string;
     activityType: string;
     duration: number;
+    durationUnit: string;
+    totalQuantity: number;
+    totalWorkHours: number;
     startDate: Date | null;
     finishDate: Date | null;
-    totalFloat: number;
     percentComplete: number;
     sortOrder: number;
   }) => ({

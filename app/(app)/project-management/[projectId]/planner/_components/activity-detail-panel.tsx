@@ -30,6 +30,7 @@ interface ActivityDetailPanelProps {
   onExpandToggle: () => void;
   onOpenCalendarSettings: () => void;
   onOpenObs: () => void;
+  onRemoveRelationship?: (relationshipId: string) => void;
   activeTab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
 }
@@ -68,6 +69,7 @@ const ActivityDetailPanel = memo(function ActivityDetailPanel({
   onExpandToggle,
   onOpenCalendarSettings,
   onOpenObs,
+  onRemoveRelationship,
   activeTab,
   onTabChange,
 }: ActivityDetailPanelProps) {
@@ -110,8 +112,7 @@ const ActivityDetailPanel = memo(function ActivityDetailPanel({
       >
         <TabList className="px-4 shrink-0">
           <Tab value="general">General</Tab>
-          <Tab value="predecessors">Predecessors</Tab>
-          <Tab value="successors">Successors</Tab>
+          <Tab value="relationships">Relationships</Tab>
           <Tab value="resources">Resources</Tab>
           <Tab value="codes">Codes</Tab>
           <Tab value="notebook">Notebook</Tab>
@@ -126,18 +127,12 @@ const ActivityDetailPanel = memo(function ActivityDetailPanel({
               onUpdate={onUpdate}
             />
           </TabPanel>
-          <TabPanel value="predecessors">
+          <TabPanel value="relationships">
             <RelationshipsTab
               activityId={activity.id}
               activities={activities}
               relationships={relationships}
-            />
-          </TabPanel>
-          <TabPanel value="successors">
-            <RelationshipsTab
-              activityId={activity.id}
-              activities={activities}
-              relationships={relationships}
+              onRemoveRelationship={onRemoveRelationship}
             />
           </TabPanel>
           <TabPanel value="resources">

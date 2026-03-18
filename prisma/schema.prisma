@@ -178,9 +178,11 @@ model Activity {
   name            String
   activityType    String    @default("task")
   duration        Int       @default(0)
+  durationUnit    String    @default("days")
+  totalQuantity   Float     @default(0)
+  totalWorkHours  Float     @default(0)
   startDate       DateTime?
   finishDate      DateTime?
-  totalFloat      Float     @default(0)
   percentComplete Float     @default(0)
   sortOrder       Int       @default(0)
   isDeleted       Boolean   @default(false)
@@ -268,6 +270,20 @@ model ResourceAssignment {
   @@index([tenantId, projectId, isDeleted])
   @@index([activityId, isDeleted])
   @@index([resourceId, isDeleted])
+}
+
+model ProjectLayout {
+  id              String   @id @default(cuid())
+  tenantId        String
+  name            String
+  description     String   @default("")
+  structure       Json
+  sourceProjectId String?
+  isDeleted       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, isDeleted])
 }
 
 model ActivityRelationship {

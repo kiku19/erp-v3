@@ -48,8 +48,7 @@ describe("ActivityDetailModal", () => {
   it("renders all tab labels", () => {
     render(<ActivityDetailModal {...defaultProps} />);
     expect(screen.getByText("General")).toBeDefined();
-    expect(screen.getByText("Predecessors")).toBeDefined();
-    expect(screen.getByText("Successors")).toBeDefined();
+    expect(screen.getByText("Relationships")).toBeDefined();
     expect(screen.getByText("Resources")).toBeDefined();
     expect(screen.getByText("Codes")).toBeDefined();
     expect(screen.getByText("Notebook")).toBeDefined();

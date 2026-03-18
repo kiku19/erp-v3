@@ -24,8 +24,11 @@ import { ResourceChart } from "./_components/resource-chart";
 import { ProgressChart } from "./_components/progress-chart";
 import { useWbsIconSettings } from "./_components/use-wbs-icon-settings";
 import { ConfirmDeleteModal } from "./_components/confirm-delete-modal";
+import { SaveLayoutModal } from "./_components/save-layout-modal";
+import { LayoutsModal } from "./_components/layouts-modal";
 import { DEFAULT_GANTT_SETTINGS, zoomIn, zoomOut } from "./_components/gantt-utils";
 import { useSortedRows } from "./_components/use-sorted-rows";
+import { useAuth } from "@/lib/auth-context";
 import type { ViewMode, DetailTab, GanttSettings, SortConfig, SortableColumn } from "./_components/types";
 
 export default function ProjectPlannerPage() {
@@ -70,6 +73,9 @@ export default function ProjectPlannerPage() {
 
   // Delete confirmation state
   const [deleteConfirmWbsId, setDeleteConfirmWbsId] = useState<string | null>(null);
+  const [saveLayoutOpen, setSaveLayoutOpen] = useState(false);
+  const [layoutsModalOpen, setLayoutsModalOpen] = useState(false);
+  const { accessToken } = useAuth();
   const [skipDeleteConfirm, setSkipDeleteConfirm] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("planner:skipDeleteConfirm") === "true";
@@ -452,6 +458,8 @@ export default function ProjectPlannerPage() {
         onZoomOut={handleZoomOut}
         onZoomFit={handleZoomFit}
         onOpenSettings={handleOpenGanttSettings}
+        onSaveAsLayout={() => setSaveLayoutOpen(true)}
+        onViewLayouts={() => setLayoutsModalOpen(true)}
       />
 
       {/* Body — all views stay mounted, hidden via CSS to avoid remount cost */}
@@ -552,6 +560,7 @@ export default function ProjectPlannerPage() {
               onExpandToggle={handleExpandToggle}
               onOpenCalendarSettings={handleOpenCalendarSettings}
               onOpenObs={handleOpenObs}
+              onRemoveRelationship={wbsTree.removeRelationship}
               activeTab={detailTab}
               onTabChange={setDetailTab}
             />
@@ -610,6 +619,7 @@ export default function ProjectPlannerPage() {
         onUpdate={wbsTree.updateRow}
         onOpenCalendarSettings={handleOpenCalendarSettings}
         onOpenObs={handleOpenObs}
+        onRemoveRelationship={wbsTree.removeRelationship}
         activeTab={detailTab}
         onTabChange={setDetailTab}
       />
@@ -640,6 +650,21 @@ export default function ProjectPlannerPage() {
         onClose={() => setGanttSettingsOpen(false)}
         settings={ganttSettings}
         onApply={setGanttSettings}
+      />
+
+      {/* Save as Layout modal */}
+      <SaveLayoutModal
+        open={saveLayoutOpen}
+        onClose={() => setSaveLayoutOpen(false)}
+        projectId={projectId}
+        accessToken={accessToken}
+      />
+
+      {/* Layouts list modal */}
+      <LayoutsModal
+        open={layoutsModalOpen}
+        onClose={() => setLayoutsModalOpen(false)}
+        accessToken={accessToken}
       />
 
       {/* Delete WBS confirmation modal */}

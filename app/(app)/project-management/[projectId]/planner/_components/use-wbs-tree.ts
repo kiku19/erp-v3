@@ -13,6 +13,8 @@ import type {
   LinkChainEntry,
 } from "./types";
 import { forwardPass } from "@/lib/planner/forward-pass";
+import { backwardPass } from "@/lib/planner/backward-pass";
+import { toDays } from "@/lib/planner/duration-utils";
 
 /* ─────────────────────── Types ───────────────────────────────────── */
 
@@ -72,6 +74,7 @@ interface UseWbsTreeReturn {
   indentWbs: () => void;
   outdentWbs: () => void;
   deleteWbs: (id: string) => void;
+  removeRelationship: (relationshipId: string) => void;
   enterLinkMode: () => void;
   exitLinkMode: () => void;
   addToLinkChain: (activityId: string, isParallel: boolean) => void;
@@ -161,6 +164,9 @@ function flattenTree(
             hasChildren: false,
             activityId: act.activityId,
             duration: act.duration,
+            durationUnit: act.durationUnit,
+            totalQuantity: act.totalQuantity,
+            totalWorkHours: act.totalWorkHours,
             startDate: act.startDate,
             finishDate: act.finishDate,
             totalFloat: act.totalFloat,
@@ -286,6 +292,7 @@ function useWbsTree({
   interface Patch {
     wbs: { added: WbsNodeData[]; removed: WbsNodeData[]; modified: { before: WbsNodeData; after: WbsNodeData }[] };
     act: { added: ActivityData[]; removed: ActivityData[]; modified: { before: ActivityData; after: ActivityData }[] };
+    rel: { added: ActivityRelationshipData[]; removed: ActivityRelationshipData[]; modified: { before: ActivityRelationshipData; after: ActivityRelationshipData }[] };
   }
 
   function computePatch<T extends { id: string }>(
@@ -327,15 +334,17 @@ function useWbsTree({
     return result;
   }
 
-  const baseStateRef = useRef<{ wbsNodes: WbsNodeData[]; activities: ActivityData[] }>({
+  const baseStateRef = useRef<{ wbsNodes: WbsNodeData[]; activities: ActivityData[]; relationships: ActivityRelationshipData[] }>({
     wbsNodes: initialWbsNodes,
     activities: initialActivities,
+    relationships: initialRelationships,
   });
   const patchesRef = useRef<Patch[]>([]);
   const historyIndexRef = useRef(0); // 0 = base state, N = after N patches applied
-  const prevStateRef = useRef<{ wbsNodes: WbsNodeData[]; activities: ActivityData[] }>({
+  const prevStateRef = useRef<{ wbsNodes: WbsNodeData[]; activities: ActivityData[]; relationships: ActivityRelationshipData[] }>({
     wbsNodes: initialWbsNodes,
     activities: initialActivities,
+    relationships: initialRelationships,
   });
   const isRestoringRef = useRef(false);
   const [historyTick, setHistoryTick] = useState(0);
@@ -344,41 +353,46 @@ function useWbsTree({
   useEffect(() => {
     isRestoringRef.current = true;
     setWbsNodes(initialWbsNodes);
-    setActivities(initialActivities);
+    // Compute totalFloat client-side (server no longer provides it)
+    const withFloat = runSchedule(initialActivities, initialRelationships);
+    setActivities(withFloat);
     setRelationships(initialRelationships);
     setResources(initialResources);
     setResourceAssignments(initialResourceAssignments);
     setExpandedIds(new Set(initialWbsNodes.map((n) => n.id)));
-    baseStateRef.current = { wbsNodes: initialWbsNodes, activities: initialActivities };
-    prevStateRef.current = { wbsNodes: initialWbsNodes, activities: initialActivities };
+    baseStateRef.current = { wbsNodes: initialWbsNodes, activities: withFloat, relationships: initialRelationships };
+    prevStateRef.current = { wbsNodes: initialWbsNodes, activities: withFloat, relationships: initialRelationships };
     patchesRef.current = [];
     historyIndexRef.current = 0;
     setHistoryTick((t) => t + 1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialWbsNodes, initialActivities, initialRelationships, initialResources, initialResourceAssignments]);
 
   /* ── Auto-push delta on data changes ── */
   useEffect(() => {
     if (isRestoringRef.current) {
       isRestoringRef.current = false;
-      prevStateRef.current = { wbsNodes, activities };
+      // Don't overwrite prevStateRef — sync effect already set it correctly
       return;
     }
     const prev = prevStateRef.current;
-    if (prev.wbsNodes === wbsNodes && prev.activities === activities) return;
+    if (prev.wbsNodes === wbsNodes && prev.activities === activities && prev.relationships === relationships) return;
 
     const tPatch = performance.now();
     const patch: Patch = {
       wbs: computePatch(prev.wbsNodes, wbsNodes),
       act: computePatch(prev.activities, activities),
+      rel: computePatch(prev.relationships, relationships),
     };
     console.log(`[DnD:perf] computePatch: ${(performance.now() - tPatch).toFixed(1)}ms`);
 
     // Skip empty patches (no actual data change)
     if (
       patch.wbs.added.length === 0 && patch.wbs.removed.length === 0 && patch.wbs.modified.length === 0 &&
-      patch.act.added.length === 0 && patch.act.removed.length === 0 && patch.act.modified.length === 0
+      patch.act.added.length === 0 && patch.act.removed.length === 0 && patch.act.modified.length === 0 &&
+      patch.rel.added.length === 0 && patch.rel.removed.length === 0 && patch.rel.modified.length === 0
     ) {
-      prevStateRef.current = { wbsNodes, activities };
+      prevStateRef.current = { wbsNodes, activities, relationships };
       return;
     }
 
@@ -386,9 +400,9 @@ function useWbsTree({
     patchesRef.current = patchesRef.current.slice(0, historyIndexRef.current);
     patchesRef.current.push(patch);
     historyIndexRef.current = patchesRef.current.length;
-    prevStateRef.current = { wbsNodes, activities };
+    prevStateRef.current = { wbsNodes, activities, relationships };
     setHistoryTick((t) => t + 1);
-  }, [wbsNodes, activities]);
+  }, [wbsNodes, activities, relationships]);
 
   /* ── Memoized flattened rows (with optional adding placeholder) ── */
   const flatRows = useMemo(() => {
@@ -573,7 +587,8 @@ function useWbsTree({
         const newItem: ActivityData = {
           id, wbsNodeId: effectiveWbsId, activityId, name,
           activityType: isMilestone ? "milestone" : "task",
-          duration: 0,
+          duration: 0, durationUnit: "days",
+          totalQuantity: 0, totalWorkHours: 0,
           startDate: projectStartDate ?? null,
           finishDate: projectStartDate ?? null,
           totalFloat: 0, percentComplete: 0, sortOrder,
@@ -672,13 +687,13 @@ function useWbsTree({
     [queueEvent],
   );
 
-  /* ── Run forward pass and apply cascading date changes ── */
-  const runForwardPass = useCallback(
+  /* ── Run forward + backward pass and apply cascading date/float changes ── */
+  const runSchedule = useCallback(
     (currentActivities: ActivityData[], currentRelationships: ActivityRelationshipData[]) => {
-      if (!projectStartDate || currentRelationships.length === 0) return currentActivities;
+      if (!projectStartDate) return currentActivities;
 
       try {
-        const fpActivities = currentActivities.map((a) => ({ id: a.id, duration: a.duration }));
+        const fpActivities = currentActivities.map((a) => ({ id: a.id, duration: toDays(a.duration, a.durationUnit) }));
         const fpRels = currentRelationships.map((r) => ({
           predecessorId: r.predecessorId,
           successorId: r.successorId,
@@ -686,13 +701,20 @@ function useWbsTree({
         }));
         const scheduled = forwardPass(fpActivities, fpRels, projectStartDate);
 
+        // Backward pass for totalFloat
+        const bpResults = currentRelationships.length > 0
+          ? backwardPass(fpActivities, fpRels, scheduled)
+          : null;
+
         let changed = false;
         const updated = currentActivities.map((a) => {
           const dates = scheduled.get(a.id);
           if (!dates) return a;
-          if (a.startDate !== dates.startDate || a.finishDate !== dates.finishDate) {
+          const bp = bpResults?.get(a.id);
+          const newFloat = bp?.totalFloat ?? 0;
+          if (a.startDate !== dates.startDate || a.finishDate !== dates.finishDate || a.totalFloat !== newFloat) {
             changed = true;
-            return { ...a, startDate: dates.startDate, finishDate: dates.finishDate };
+            return { ...a, startDate: dates.startDate, finishDate: dates.finishDate, totalFloat: newFloat };
           }
           return a;
         });
@@ -721,17 +743,19 @@ function useWbsTree({
           payload: fields,
         });
       } else {
-        // Auto-calculate start/finish when duration changes
-        let enrichedFields = { ...fields };
+        // Auto-calculate start/finish locally for display when duration changes
+        let displayFields = { ...fields };
         if ("duration" in fields && typeof fields.duration === "number") {
           const activity = activities.find((a) => a.id === id);
+          const unit = (fields.durationUnit as string) ?? activity?.durationUnit ?? "days";
+          const daysValue = toDays(fields.duration as number, unit as ActivityData["durationUnit"]);
           const baseStart = activity?.startDate ?? projectStartDate;
           if (baseStart) {
             const start = new Date(baseStart);
             const finish = new Date(start);
-            finish.setUTCDate(finish.getUTCDate() + (fields.duration as number));
-            enrichedFields = {
-              ...enrichedFields,
+            finish.setUTCDate(finish.getUTCDate() + daysValue);
+            displayFields = {
+              ...displayFields,
               startDate: activity?.startDate ?? start.toISOString(),
               finishDate: finish.toISOString(),
             };
@@ -740,47 +764,34 @@ function useWbsTree({
 
         // Apply the field change first
         const updatedActivities = activities.map((a) =>
-          a.id === id ? { ...a, ...enrichedFields } as ActivityData : a,
+          a.id === id ? { ...a, ...displayFields } as ActivityData : a,
         );
 
         // Run forward pass if relationships exist to cascade date changes
-        if (relationships.length > 0 && ("duration" in fields || "startDate" in fields || "finishDate" in fields)) {
-          const cascaded = runForwardPass(updatedActivities, relationships);
+        if (relationships.length > 0 && ("duration" in fields || "durationUnit" in fields)) {
+          const cascaded = runSchedule(updatedActivities, relationships);
           setActivities(cascaded);
-
-          // Queue events for all changed activities
-          for (const act of cascaded) {
-            const original = activities.find((a) => a.id === act.id);
-            if (original && (original.startDate !== act.startDate || original.finishDate !== act.finishDate)) {
-              if (act.id === id) {
-                queueEvent({
-                  eventType: "activity.updated",
-                  entityType: "activity",
-                  entityId: id,
-                  payload: { ...enrichedFields, startDate: act.startDate, finishDate: act.finishDate },
-                });
-              } else {
-                queueEvent({
-                  eventType: "activity.updated",
-                  entityType: "activity",
-                  entityId: act.id,
-                  payload: { startDate: act.startDate, finishDate: act.finishDate },
-                });
-              }
-            }
-          }
         } else {
           setActivities(updatedActivities);
+        }
+
+        // Only emit editable fields in event payload (server computes dates)
+        const editablePayload: Record<string, unknown> = {};
+        const editableKeys = ["name", "activityType", "duration", "durationUnit", "totalQuantity", "totalWorkHours", "percentComplete", "sortOrder"];
+        for (const key of editableKeys) {
+          if (key in fields) editablePayload[key] = fields[key];
+        }
+        if (Object.keys(editablePayload).length > 0) {
           queueEvent({
             eventType: "activity.updated",
             entityType: "activity",
             entityId: id,
-            payload: enrichedFields,
+            payload: editablePayload,
           });
         }
       }
     },
-    [wbsNodes, activities, relationships, projectStartDate, queueEvent, runForwardPass],
+    [wbsNodes, activities, relationships, projectStartDate, queueEvent, runSchedule],
   );
 
   /* ── Move row (unified for spreadsheet drag-drop) ── */
@@ -1080,6 +1091,28 @@ function useWbsTree({
     [wbsNodes, activities, relationships, selectedRowId, queueEvent],
   );
 
+  /* ── Remove relationship ── */
+
+  const removeRelationship = useCallback(
+    (relationshipId: string) => {
+      const updatedRels = relationships.filter((r) => r.id !== relationshipId);
+      setRelationships(updatedRels);
+
+      queueEvent({
+        eventType: "relationship.deleted",
+        entityType: "relationship",
+        entityId: relationshipId,
+        payload: {},
+      });
+
+      if (projectStartDate) {
+        const cascaded = runSchedule(activities, updatedRels);
+        if (cascaded !== activities) setActivities(cascaded);
+      }
+    },
+    [relationships, activities, projectStartDate, queueEvent, runSchedule],
+  );
+
   /* ── Undo / Redo ── */
 
   // Reconstruct state at a given history index by applying patches from base
@@ -1087,12 +1120,14 @@ function useWbsTree({
     (targetIndex: number) => {
       let wbs = baseStateRef.current.wbsNodes;
       let acts = baseStateRef.current.activities;
+      let rels = baseStateRef.current.relationships;
       for (let i = 0; i < targetIndex; i++) {
         const p = patchesRef.current[i];
         wbs = applyPatch(wbs, p.wbs, true);
         acts = applyPatch(acts, p.act, true);
+        rels = applyPatch(rels, p.rel, true);
       }
-      return { wbsNodes: wbs, activities: acts };
+      return { wbsNodes: wbs, activities: acts, relationships: rels };
     },
     [],
   );
@@ -1108,9 +1143,11 @@ function useWbsTree({
     historyIndexRef.current--;
     const state = reconstructState(historyIndexRef.current);
     setWbsNodes(state.wbsNodes);
-    setActivities(state.activities);
+    setRelationships(state.relationships);
+    const cascaded = runSchedule(state.activities, state.relationships);
+    setActivities(cascaded);
     setHistoryTick((t) => t + 1);
-  }, [reconstructState]);
+  }, [reconstructState, runSchedule]);
 
   const redo = useCallback(() => {
     if (historyIndexRef.current >= patchesRef.current.length) return;
@@ -1118,9 +1155,11 @@ function useWbsTree({
     historyIndexRef.current++;
     const state = reconstructState(historyIndexRef.current);
     setWbsNodes(state.wbsNodes);
-    setActivities(state.activities);
+    setRelationships(state.relationships);
+    const cascaded = runSchedule(state.activities, state.relationships);
+    setActivities(cascaded);
     setHistoryTick((t) => t + 1);
-  }, [reconstructState]);
+  }, [reconstructState, runSchedule]);
 
   /* ── Link mode ── */
 
@@ -1192,7 +1231,7 @@ function useWbsTree({
 
     // Cycle check: try forward pass with new relationships before committing
     const allRels = [...relationships, ...newRels];
-    const fpActivities = activities.map((a) => ({ id: a.id, duration: a.duration }));
+    const fpActivities = activities.map((a) => ({ id: a.id, duration: toDays(a.duration, a.durationUnit) }));
     const fpRels = allRels.map((r) => ({
       predecessorId: r.predecessorId,
       successorId: r.successorId,
@@ -1229,28 +1268,17 @@ function useWbsTree({
       });
     }
 
-    // Run forward pass to recalculate dates
+    // Run forward pass locally to recalculate display dates
+    // (server will recompute authoritatively on save)
     if (projectStartDate) {
-      const cascaded = runForwardPass(activities, updatedRels);
+      const cascaded = runSchedule(activities, updatedRels);
       if (cascaded !== activities) {
         setActivities(cascaded);
-        // Queue date change events
-        for (const act of cascaded) {
-          const original = activities.find((a) => a.id === act.id);
-          if (original && (original.startDate !== act.startDate || original.finishDate !== act.finishDate)) {
-            queueEvent({
-              eventType: "activity.updated",
-              entityType: "activity",
-              entityId: act.id,
-              payload: { startDate: act.startDate, finishDate: act.finishDate },
-            });
-          }
-        }
       }
     }
 
     exitLinkMode();
-  }, [linkChain, relationships, activities, projectId, projectStartDate, queueEvent, runForwardPass, exitLinkMode]);
+  }, [linkChain, relationships, activities, projectId, projectStartDate, queueEvent, runSchedule, exitLinkMode]);
 
   /* ── Update project dates ── */
 
@@ -1263,26 +1291,15 @@ function useWbsTree({
         payload: { startDate, finishDate },
       });
 
-      // Recalculate all activity dates via forward pass with new start
+      // Recalculate display dates locally (server recomputes authoritatively on save)
       if (relationships.length > 0) {
-        const cascaded = runForwardPass(activities, relationships);
+        const cascaded = runSchedule(activities, relationships);
         if (cascaded !== activities) {
           setActivities(cascaded);
-          for (const act of cascaded) {
-            const original = activities.find((a) => a.id === act.id);
-            if (original && (original.startDate !== act.startDate || original.finishDate !== act.finishDate)) {
-              queueEvent({
-                eventType: "activity.updated",
-                entityType: "activity",
-                entityId: act.id,
-                payload: { startDate: act.startDate, finishDate: act.finishDate },
-              });
-            }
-          }
         }
       }
     },
-    [projectId, activities, relationships, queueEvent, runForwardPass],
+    [projectId, activities, relationships, queueEvent, runSchedule],
   );
 
   return {
@@ -1316,6 +1333,7 @@ function useWbsTree({
     indentWbs,
     outdentWbs,
     deleteWbs,
+    removeRelationship,
     enterLinkMode,
     exitLinkMode,
     addToLinkChain,

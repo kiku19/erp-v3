@@ -6,9 +6,9 @@ const mockAuth = { tenantId: "t-1", userId: "u-1", email: "a@b.com", role: "admi
 const mockTx = {
   plannerSnapshot: { findUnique: vi.fn(), upsert: vi.fn() },
   plannerEvent: { create: vi.fn() },
-  activity: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
+  activity: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}), findMany: vi.fn().mockResolvedValue([]) },
   wbsNode: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
-  activityRelationship: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
+  activityRelationship: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}), findMany: vi.fn().mockResolvedValue([]) },
   project: { update: vi.fn().mockResolvedValue({}) },
 };
 
@@ -79,5 +79,73 @@ describe("POST /api/planner/canvas/save", () => {
     const body = await res.json();
     expect(body.version).toBe(1);
     expect(mockTx.plannerEvent.create).toHaveBeenCalledOnce();
+  });
+
+  it("runs schedule recomputation after applying events when project has startDate", async () => {
+    mockPrisma.project.findFirst.mockResolvedValue({ id: "p", startDate: new Date("2025-01-06") });
+    mockTx.plannerSnapshot.findUnique.mockResolvedValue({ version: 0 });
+    mockTx.plannerSnapshot.upsert.mockResolvedValue({});
+    mockTx.plannerEvent.create.mockResolvedValue({});
+    mockTx.activity.findMany.mockResolvedValue([
+      { id: "a-1", duration: 5, durationUnit: "days" },
+      { id: "a-2", duration: 3, durationUnit: "days" },
+    ]);
+    mockTx.activityRelationship.findMany.mockResolvedValue([
+      { predecessorId: "a-1", successorId: "a-2", lag: 0 },
+    ]);
+
+    const res = await makeRequest({
+      projectId: "p",
+      baseVersion: 0,
+      events: [{ eventType: "activity.created", entityType: "activity", entityId: "a-1", payload: { name: "Test" } }],
+    });
+    expect(res.status).toBe(200);
+
+    // Verify activities were updated with computed dates
+    expect(mockTx.activity.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "a-1" },
+        data: expect.objectContaining({
+          startDate: expect.any(Date),
+          finishDate: expect.any(Date),
+        }),
+      }),
+    );
+    expect(mockTx.activity.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "a-2" },
+        data: expect.objectContaining({
+          startDate: expect.any(Date),
+          finishDate: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it("skips schedule recomputation when project has no startDate", async () => {
+    mockPrisma.project.findFirst.mockResolvedValue({ id: "p", startDate: null });
+    mockTx.plannerSnapshot.findUnique.mockResolvedValue({ version: 0 });
+    mockTx.plannerSnapshot.upsert.mockResolvedValue({});
+    mockTx.plannerEvent.create.mockResolvedValue({});
+    mockTx.activity.findMany.mockResolvedValue([
+      { id: "a-1", duration: 5, durationUnit: "days" },
+    ]);
+    mockTx.activityRelationship.findMany.mockResolvedValue([]);
+
+    const res = await makeRequest({
+      projectId: "p",
+      baseVersion: 0,
+      events: [{ eventType: "activity.created", entityType: "activity", entityId: "a-1", payload: { name: "Test" } }],
+    });
+    expect(res.status).toBe(200);
+
+    // activity.update should not be called for schedule recomputation
+    // (it may be called by applyPlannerEvent for other reasons, but not with startDate/finishDate)
+    const updateCalls = mockTx.activity.update.mock.calls;
+    const scheduleCalls = updateCalls.filter((call: unknown[]) => {
+      const data = (call[0] as { data: Record<string, unknown> }).data;
+      return "startDate" in data && "finishDate" in data;
+    });
+    expect(scheduleCalls).toHaveLength(0);
   });
 });

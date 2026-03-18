@@ -124,7 +124,47 @@ describe("applyPlannerEvent", () => {
         name: "Site Survey",
         activityType: "task",
         duration: 10,
+        durationUnit: "days",
+        totalQuantity: 0,
+        totalWorkHours: 0,
         sortOrder: 0,
+      },
+    });
+  });
+
+  it("applies activity.created with durationUnit and new fields", async () => {
+    await applyPlannerEvent(tx as never, TENANT_ID, {
+      eventType: "activity.created",
+      entityType: "activity",
+      entityId: "temp-act-2",
+      payload: {
+        projectId: "proj-1",
+        wbsNodeId: "wbs-1",
+        activityId: "A1020",
+        name: "Excavation",
+        activityType: "task",
+        duration: 2,
+        durationUnit: "weeks",
+        totalQuantity: 500,
+        totalWorkHours: 80,
+        sortOrder: 1,
+      },
+    });
+
+    expect(tx.activity.create).toHaveBeenCalledWith({
+      data: {
+        id: "temp-act-2",
+        tenantId: TENANT_ID,
+        projectId: "proj-1",
+        wbsNodeId: "wbs-1",
+        activityId: "A1020",
+        name: "Excavation",
+        activityType: "task",
+        duration: 2,
+        durationUnit: "weeks",
+        totalQuantity: 500,
+        totalWorkHours: 80,
+        sortOrder: 1,
       },
     });
   });
@@ -149,21 +189,38 @@ describe("applyPlannerEvent", () => {
       data: expect.objectContaining({
         activityType: "milestone",
         duration: 0,
+        durationUnit: "days",
+        totalQuantity: 0,
+        totalWorkHours: 0,
       }),
     });
   });
 
-  it("applies activity.updated event", async () => {
+  it("applies activity.updated event with new fields", async () => {
     await applyPlannerEvent(tx as never, TENANT_ID, {
       eventType: "activity.updated",
       entityType: "activity",
       entityId: "act-1",
-      payload: { name: "Updated Survey", duration: 15 },
+      payload: { name: "Updated Survey", duration: 15, durationUnit: "hours", totalQuantity: 100, totalWorkHours: 40 },
     });
 
     expect(tx.activity.update).toHaveBeenCalledWith({
       where: { id: "act-1" },
-      data: { name: "Updated Survey", duration: 15 },
+      data: { name: "Updated Survey", duration: 15, durationUnit: "hours", totalQuantity: 100, totalWorkHours: 40 },
+    });
+  });
+
+  it("strips startDate/finishDate/totalFloat from activity.updated (server-computed)", async () => {
+    await applyPlannerEvent(tx as never, TENANT_ID, {
+      eventType: "activity.updated",
+      entityType: "activity",
+      entityId: "act-1",
+      payload: { duration: 10, startDate: "2025-01-01", finishDate: "2025-01-11", totalFloat: 5 },
+    });
+
+    expect(tx.activity.update).toHaveBeenCalledWith({
+      where: { id: "act-1" },
+      data: { duration: 10 },
     });
   });
 

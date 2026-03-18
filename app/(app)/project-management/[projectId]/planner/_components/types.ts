@@ -30,6 +30,8 @@ export interface WbsNodeData {
   iconColor?: string;
 }
 
+export type DurationUnit = "hours" | "days" | "weeks" | "months";
+
 export interface ActivityData {
   id: string;
   wbsNodeId: string;
@@ -37,6 +39,9 @@ export interface ActivityData {
   name: string;
   activityType: "task" | "milestone";
   duration: number;
+  durationUnit: DurationUnit;
+  totalQuantity: number;
+  totalWorkHours: number;
   startDate: string | null;
   finishDate: string | null;
   totalFloat: number;
@@ -74,7 +79,7 @@ export interface ResourceAssignmentData {
   actualCost: number;
 }
 
-export type DetailTab = "general" | "predecessors" | "successors" | "resources" | "codes" | "notebook" | "steps";
+export type DetailTab = "general" | "relationships" | "resources" | "codes" | "notebook" | "steps";
 
 /** @deprecated Use GanttZoomLevel instead */
 export type GanttTimeScale = "day" | "week" | "month";
@@ -144,6 +149,9 @@ export interface SpreadsheetRow {
   /** Activity-specific */
   activityId?: string;
   duration?: number;
+  durationUnit?: DurationUnit;
+  totalQuantity?: number;
+  totalWorkHours?: number;
   startDate?: string | null;
   finishDate?: string | null;
   totalFloat?: number;

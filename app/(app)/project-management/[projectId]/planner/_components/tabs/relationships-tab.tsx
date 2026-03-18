@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ActivityData, ActivityRelationshipData } from "../types";
@@ -12,6 +12,7 @@ interface RelationshipsTabProps {
   activityId: string;
   activities: ActivityData[];
   relationships: ActivityRelationshipData[];
+  onRemoveRelationship?: (relationshipId: string) => void;
 }
 
 /* ─────────────────────── Sub-table ─────────────────────────────── */
@@ -21,11 +22,13 @@ function RelationshipTable({
   rows,
   activityMap,
   emptyText,
+  onRemoveRelationship,
 }: {
   title: string;
   rows: ActivityRelationshipData[];
   activityMap: Map<string, ActivityData>;
   emptyText: string;
+  onRemoveRelationship?: (relationshipId: string) => void;
 }) {
   return (
     <div className="flex flex-col flex-1">
@@ -47,6 +50,7 @@ function RelationshipTable({
         <span className="flex-1 text-[11px] font-semibold text-muted-foreground">Activity Name</span>
         <span className="w-[60px] text-center text-[11px] font-semibold text-muted-foreground">Type</span>
         <span className="w-[60px] text-right text-[11px] font-semibold text-muted-foreground">Lag</span>
+        {onRemoveRelationship && <span className="w-[32px]" />}
       </div>
 
       {/* Rows */}
@@ -74,6 +78,19 @@ function RelationshipTable({
               <span className="w-[60px] text-right text-[12px] text-foreground">
                 {rel.lag === 0 ? "0" : `${rel.lag}d`}
               </span>
+              {onRemoveRelationship && (
+                <span className="w-[32px] flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => onRemoveRelationship(rel.id)}
+                    data-testid={`remove-rel-${rel.id}`}
+                  >
+                    <X size={12} />
+                  </Button>
+                </span>
+              )}
             </div>
           );
         })
@@ -84,7 +101,7 @@ function RelationshipTable({
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-const RelationshipsTab = memo(function RelationshipsTab({ activityId, activities, relationships }: RelationshipsTabProps) {
+const RelationshipsTab = memo(function RelationshipsTab({ activityId, activities, relationships, onRemoveRelationship }: RelationshipsTabProps) {
   const activityMap = useMemo(
     () => new Map(activities.map((a) => [a.id, a])),
     [activities],
@@ -107,12 +124,14 @@ const RelationshipsTab = memo(function RelationshipsTab({ activityId, activities
         rows={predecessors}
         activityMap={activityMap}
         emptyText="No predecessors"
+        onRemoveRelationship={onRemoveRelationship}
       />
       <RelationshipTable
         title="Successors"
         rows={successors}
         activityMap={activityMap}
         emptyText="No successors"
+        onRemoveRelationship={onRemoveRelationship}
       />
     </div>
   );

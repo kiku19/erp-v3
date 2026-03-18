@@ -14,17 +14,20 @@ const WBS_NODES: WbsNodeData[] = [
 const ACTIVITIES: ActivityData[] = [
   {
     id: "a1", wbsNodeId: "w2", activityId: "A1010", name: "Site Survey",
-    activityType: "task", duration: 10, startDate: null, finishDate: null,
+    activityType: "task", duration: 10, durationUnit: "days",
+    totalQuantity: 0, totalWorkHours: 0, startDate: null, finishDate: null,
     totalFloat: 0, percentComplete: 0, sortOrder: 0,
   },
   {
     id: "a2", wbsNodeId: "w2", activityId: "A1020", name: "Soil Testing",
-    activityType: "task", duration: 5, startDate: null, finishDate: null,
+    activityType: "task", duration: 5, durationUnit: "days",
+    totalQuantity: 0, totalWorkHours: 0, startDate: null, finishDate: null,
     totalFloat: 0, percentComplete: 0, sortOrder: 1,
   },
   {
     id: "a3", wbsNodeId: "w3", activityId: "A1030", name: "Foundation",
-    activityType: "task", duration: 20, startDate: null, finishDate: null,
+    activityType: "task", duration: 20, durationUnit: "days",
+    totalQuantity: 0, totalWorkHours: 0, startDate: null, finishDate: null,
     totalFloat: 0, percentComplete: 0, sortOrder: 0,
   },
 ];
@@ -911,17 +914,20 @@ describe("useWbsTree", () => {
     const ACTIVITIES_WITH_DATES: ActivityData[] = [
       {
         id: "a1", wbsNodeId: "w2", activityId: "A1010", name: "Site Survey",
-        activityType: "task", duration: 10, startDate: "2026-01-01T00:00:00.000Z",
+        activityType: "task", duration: 10, durationUnit: "days",
+        totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-01T00:00:00.000Z",
         finishDate: "2026-01-11T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 0,
       },
       {
         id: "a2", wbsNodeId: "w2", activityId: "A1020", name: "Soil Testing",
-        activityType: "task", duration: 5, startDate: "2026-01-01T00:00:00.000Z",
+        activityType: "task", duration: 5, durationUnit: "days",
+        totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-01T00:00:00.000Z",
         finishDate: "2026-01-06T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 1,
       },
       {
         id: "a3", wbsNodeId: "w3", activityId: "A1030", name: "Foundation",
-        activityType: "task", duration: 20, startDate: "2026-01-01T00:00:00.000Z",
+        activityType: "task", duration: 20, durationUnit: "days",
+        totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-01T00:00:00.000Z",
         finishDate: "2026-01-21T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 0,
       },
     ];
@@ -1155,6 +1161,138 @@ describe("useWbsTree", () => {
       expect(result.current.flatRows.length).toBe(rowsBefore - 2);
       expect(result.current.flatRows.find((r) => r.id === "w3")).toBeUndefined();
       expect(result.current.flatRows.find((r) => r.id === "a3")).toBeUndefined();
+    });
+  });
+
+  /* ── removeRelationship ── */
+
+  describe("removeRelationship", () => {
+    const RELS: ActivityRelationshipData[] = [
+      { id: "r1", predecessorId: "a1", successorId: "a2", relationshipType: "FS", lag: 0 },
+      { id: "r2", predecessorId: "a2", successorId: "a3", relationshipType: "FS", lag: 0 },
+    ];
+
+    const ACTS_WITH_DATES: ActivityData[] = [
+      {
+        id: "a1", wbsNodeId: "w2", activityId: "A1010", name: "Site Survey",
+        activityType: "task", duration: 10, durationUnit: "days",
+        totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-01T00:00:00.000Z",
+        finishDate: "2026-01-11T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 0,
+      },
+      {
+        id: "a2", wbsNodeId: "w2", activityId: "A1020", name: "Soil Testing",
+        activityType: "task", duration: 5, durationUnit: "days",
+        totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-11T00:00:00.000Z",
+        finishDate: "2026-01-16T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 1,
+      },
+      {
+        id: "a3", wbsNodeId: "w3", activityId: "A1030", name: "Foundation",
+        activityType: "task", duration: 20, durationUnit: "days",
+        totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-16T00:00:00.000Z",
+        finishDate: "2026-02-05T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 0,
+      },
+    ];
+
+    function renderWithRels() {
+      return renderHook(() =>
+        useWbsTree({
+          initialWbsNodes: WBS_NODES,
+          initialActivities: ACTS_WITH_DATES,
+          initialRelationships: RELS,
+          projectId: "proj-1",
+          projectStartDate: "2026-01-01T00:00:00.000Z",
+          queueEvent: mockQueueEvent,
+        }),
+      );
+    }
+
+    it("removes from local state", () => {
+      const { result } = renderWithRels();
+      expect(result.current.relationships).toHaveLength(2);
+
+      act(() => result.current.removeRelationship("r1"));
+
+      expect(result.current.relationships).toHaveLength(1);
+      expect(result.current.relationships.find((r) => r.id === "r1")).toBeUndefined();
+    });
+
+    it("queues relationship.deleted event", () => {
+      const { result } = renderWithRels();
+      mockQueueEvent.mockClear();
+
+      act(() => result.current.removeRelationship("r1"));
+
+      expect(mockQueueEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventType: "relationship.deleted",
+          entityType: "relationship",
+          entityId: "r1",
+        }),
+      );
+    });
+
+    it("recalculates schedule", () => {
+      const { result } = renderWithRels();
+
+      // Before removing: a2 starts at Jan 11 (after a1)
+      expect(result.current.activities.find((a) => a.id === "a2")!.startDate).toBe("2026-01-11T00:00:00.000Z");
+
+      act(() => result.current.removeRelationship("r1"));
+
+      // After removing r1 (a1→a2): a2 should start at project start (Jan 1)
+      const a2 = result.current.activities.find((a) => a.id === "a2")!;
+      expect(a2.startDate).toBe("2026-01-01T00:00:00.000Z");
+    });
+
+    it("undo after removeRelationship restores the relationship", () => {
+      const { result } = renderWithRels();
+
+      act(() => result.current.removeRelationship("r1"));
+      expect(result.current.relationships).toHaveLength(1);
+
+      act(() => result.current.undo());
+      expect(result.current.relationships).toHaveLength(2);
+      expect(result.current.relationships.find((r) => r.id === "r1")).toBeDefined();
+    });
+
+    it("redo after undo re-removes the relationship", () => {
+      const { result } = renderWithRels();
+
+      act(() => result.current.removeRelationship("r1"));
+      act(() => result.current.undo());
+      expect(result.current.relationships).toHaveLength(2);
+
+      act(() => result.current.redo());
+      expect(result.current.relationships).toHaveLength(1);
+      expect(result.current.relationships.find((r) => r.id === "r1")).toBeUndefined();
+    });
+
+    it("undo/redo tracks relationship changes from commitLinkChain", () => {
+      const { result } = renderHook(() =>
+        useWbsTree({
+          initialWbsNodes: WBS_NODES,
+          initialActivities: ACTS_WITH_DATES,
+          projectId: "proj-1",
+          projectStartDate: "2026-01-01T00:00:00.000Z",
+          queueEvent: mockQueueEvent,
+        }),
+      );
+
+      // Create relationships via commitLinkChain
+      act(() => result.current.enterLinkMode());
+      act(() => result.current.addToLinkChain("a1", false));
+      act(() => result.current.addToLinkChain("a2", false));
+      act(() => result.current.commitLinkChain());
+
+      expect(result.current.relationships).toHaveLength(1);
+
+      // Undo should remove the relationships
+      act(() => result.current.undo());
+      expect(result.current.relationships).toHaveLength(0);
+
+      // Redo should restore
+      act(() => result.current.redo());
+      expect(result.current.relationships).toHaveLength(1);
     });
   });
 });

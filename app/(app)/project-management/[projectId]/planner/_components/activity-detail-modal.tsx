@@ -31,6 +31,7 @@ interface ActivityDetailModalProps {
   onUpdate: (id: string, fields: Record<string, unknown>) => void;
   onOpenCalendarSettings: () => void;
   onOpenObs: () => void;
+  onRemoveRelationship?: (relationshipId: string) => void;
   activeTab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
 }
@@ -47,6 +48,7 @@ const ActivityDetailModal = memo(function ActivityDetailModal({
   onUpdate,
   onOpenCalendarSettings,
   onOpenObs,
+  onRemoveRelationship,
   activeTab,
   onTabChange,
 }: ActivityDetailModalProps) {
@@ -98,8 +100,7 @@ const ActivityDetailModal = memo(function ActivityDetailModal({
         >
           <TabList className="px-6 shrink-0">
             <Tab value="general">General</Tab>
-            <Tab value="predecessors">Predecessors</Tab>
-            <Tab value="successors">Successors</Tab>
+            <Tab value="relationships">Relationships</Tab>
             <Tab value="resources">Resources</Tab>
             <Tab value="codes">Codes</Tab>
             <Tab value="notebook">Notebook</Tab>
@@ -110,11 +111,8 @@ const ActivityDetailModal = memo(function ActivityDetailModal({
             <TabPanel value="general">
               <GeneralTab activity={activity} wbsNodes={wbsNodes} onUpdate={onUpdate} />
             </TabPanel>
-            <TabPanel value="predecessors">
-              <RelationshipsTab activityId={activity.id} activities={activities} relationships={relationships} />
-            </TabPanel>
-            <TabPanel value="successors">
-              <RelationshipsTab activityId={activity.id} activities={activities} relationships={relationships} />
+            <TabPanel value="relationships">
+              <RelationshipsTab activityId={activity.id} activities={activities} relationships={relationships} onRemoveRelationship={onRemoveRelationship} />
             </TabPanel>
             <TabPanel value="resources">
               <ResourcesTab />

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authenticateRequest, isAuthError } from "@/lib/api-auth";
 import { z } from "zod";
 import { applyPlannerEvent } from "@/lib/planner/apply-event";
+import { computeSchedule } from "@/lib/planner/compute-schedule";
 
 const plannerSaveSchema = z.object({
   projectId: z.string().min(1),
@@ -130,6 +131,40 @@ export async function POST(request: NextRequest) {
 
         // Apply event to WbsNode/Activity models
         await applyPlannerEvent(tx, auth.tenantId, e);
+      }
+
+      // ── Server-side schedule recomputation ──
+      // Load all activities + relationships and recompute dates via CPM
+      const allActivities = await tx.activity.findMany({
+        where: { tenantId: auth.tenantId, projectId, isDeleted: false },
+        select: { id: true, duration: true, durationUnit: true },
+      });
+      const allRelationships = await tx.activityRelationship.findMany({
+        where: { tenantId: auth.tenantId, projectId, isDeleted: false },
+        select: { predecessorId: true, successorId: true, lag: true },
+      });
+
+      if (allActivities.length > 0 && project.startDate) {
+        const schedule = computeSchedule(
+          allActivities.map((a) => ({
+            id: a.id,
+            duration: a.duration,
+            durationUnit: a.durationUnit,
+          })),
+          allRelationships,
+          project.startDate.toISOString(),
+        );
+
+        // Batch update all activities with computed dates
+        for (const [actId, result] of schedule) {
+          await tx.activity.update({
+            where: { id: actId },
+            data: {
+              startDate: new Date(result.startDate),
+              finishDate: new Date(result.finishDate),
+            },
+          });
+        }
       }
 
       // Bump version
