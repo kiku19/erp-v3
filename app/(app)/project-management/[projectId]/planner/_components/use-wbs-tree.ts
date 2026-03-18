@@ -760,37 +760,38 @@ function useWbsTree({
           payload: fields,
         });
       } else {
-        // Auto-calculate start/finish locally for display when duration changes
-        let displayFields = { ...fields };
-        if ("duration" in fields && typeof fields.duration === "number") {
-          const activity = activities.find((a) => a.id === id);
-          const unit = (fields.durationUnit as string) ?? activity?.durationUnit ?? "days";
-          const daysValue = toDays(fields.duration as number, unit as ActivityData["durationUnit"]);
-          const baseStart = activity?.startDate ?? projectStartDate;
-          if (baseStart) {
-            const start = new Date(baseStart);
-            const finish = new Date(start);
-            finish.setUTCDate(finish.getUTCDate() + daysValue);
-            displayFields = {
-              ...displayFields,
-              startDate: activity?.startDate ?? start.toISOString(),
-              finishDate: finish.toISOString(),
-            };
+        // Use functional updater so batch calls (e.g. fill) each see latest state
+        setActivities((prev) => {
+          // Auto-calculate start/finish locally for display when duration changes
+          let displayFields = { ...fields };
+          if ("duration" in fields && typeof fields.duration === "number") {
+            const activity = prev.find((a) => a.id === id);
+            const unit = (fields.durationUnit as string) ?? activity?.durationUnit ?? "days";
+            const daysValue = toDays(fields.duration as number, unit as ActivityData["durationUnit"]);
+            const baseStart = activity?.startDate ?? projectStartDate;
+            if (baseStart) {
+              const start = new Date(baseStart);
+              const finish = new Date(start);
+              finish.setUTCDate(finish.getUTCDate() + daysValue);
+              displayFields = {
+                ...displayFields,
+                startDate: activity?.startDate ?? start.toISOString(),
+                finishDate: finish.toISOString(),
+              };
+            }
           }
-        }
 
-        // Apply the field change first
-        const updatedActivities = activities.map((a) =>
-          a.id === id ? { ...a, ...displayFields } as ActivityData : a,
-        );
+          // Apply the field change
+          const updatedActivities = prev.map((a) =>
+            a.id === id ? { ...a, ...displayFields } as ActivityData : a,
+          );
 
-        // Run forward pass if relationships exist to cascade date changes
-        if (relationships.length > 0 && ("duration" in fields || "durationUnit" in fields)) {
-          const cascaded = runSchedule(updatedActivities, relationships);
-          setActivities(cascaded);
-        } else {
-          setActivities(updatedActivities);
-        }
+          // Run forward pass if relationships exist to cascade date changes
+          if (relationships.length > 0 && ("duration" in fields || "durationUnit" in fields)) {
+            return runSchedule(updatedActivities, relationships);
+          }
+          return updatedActivities;
+        });
 
         // Only emit editable fields in event payload (server computes dates)
         const editablePayload: Record<string, unknown> = {};
@@ -808,7 +809,7 @@ function useWbsTree({
         }
       }
     },
-    [wbsNodes, activities, relationships, projectStartDate, queueEvent, runSchedule],
+    [wbsNodes, relationships, projectStartDate, queueEvent, runSchedule],
   );
 
   /* ── Move row (unified for spreadsheet drag-drop) ── */

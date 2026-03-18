@@ -67,6 +67,11 @@ export default function ProjectPlannerPage() {
   const [ganttSettings, setGanttSettings] = useState<GanttSettings>({ ...DEFAULT_GANTT_SETTINGS });
   const [ganttSettingsOpen, setGanttSettingsOpen] = useState(false);
   const [sharedScrollTop, setSharedScrollTop] = useState(0);
+  // Direct DOM ref for lag-free scroll sync between spreadsheet ↔ gantt
+  const scrollSyncRef = useRef<{ spreadsheet: HTMLElement | null; gantt: HTMLElement | null }>({
+    spreadsheet: null,
+    gantt: null,
+  });
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [isSortTransitionPending, startSortTransition] = useTransition();
   const iconSettings = useWbsIconSettings();
@@ -109,7 +114,6 @@ export default function ProjectPlannerPage() {
   // Defer heavy chart data so drag-drop updates the spreadsheet immediately
   // while charts re-render in the background
   const deferredActivities = useDeferredValue(wbsTree.activities);
-  const deferredFlatRows = useDeferredValue(wbsTree.flatRows);
   const deferredWbsNodes = useDeferredValue(wbsTree.wbsNodes);
   const deferredRelationships = useDeferredValue(wbsTree.relationships);
 
@@ -574,6 +578,8 @@ export default function ProjectPlannerPage() {
             isSorting={isSortTransitionPending}
             scrollTop={sharedScrollTop}
               onVerticalScroll={setSharedScrollTop}
+              scrollSyncRef={scrollSyncRef}
+              scrollSyncRole="spreadsheet"
             />
           </div>
 
@@ -585,6 +591,7 @@ export default function ProjectPlannerPage() {
           />
 
           {/* Right: Gantt Chart */}
+          <div className="relative flex flex-col flex-1 overflow-hidden">
           <GanttChart
             flatRows={deferredSortedFlatRows}
             activities={deferredActivities}
@@ -597,7 +604,10 @@ export default function ProjectPlannerPage() {
             settings={ganttSettings}
             scrollTop={sharedScrollTop}
             onVerticalScroll={setSharedScrollTop}
+            scrollSyncRef={scrollSyncRef}
+            scrollSyncRole="gantt"
           />
+          </div>
         </div>
 
         {/* Activity Detail Panel — slide up/down animation */}

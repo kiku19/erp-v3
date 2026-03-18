@@ -1,6 +1,12 @@
 "use client";
 
-import { type HTMLAttributes, type ReactNode } from "react";
+import {
+  useState,
+  useCallback,
+  type HTMLAttributes,
+  type ReactNode,
+  type MouseEvent,
+} from "react";
 import { cn } from "@/lib/utils";
 import {
   Table,
@@ -16,6 +22,8 @@ import {
   DropdownMenu,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { CellContextMenu, type ContextMenuState } from "@/components/ui/cell-context-menu";
+import { FillModal } from "@/components/ui/fill-modal";
 
 /* ─── Types ────────────────────────────────── */
 
@@ -36,6 +44,13 @@ interface DataTableAction<T> {
   label: string;
   onClick: (row: T) => void;
   icon?: ReactNode;
+}
+
+/* ─── Cell Selection Types ─────────────────── */
+
+interface CellPosition {
+  rowIndex: number;
+  colIndex: number;
 }
 
 /* ─── DataTableHeader ──────────────────────── */
@@ -78,21 +93,55 @@ interface DataTableRowProps<T> {
   columns: DataTableColumn<T>[];
   row: T;
   actions?: DataTableAction<T>[];
+  rowIndex?: number;
+  selectedCells?: Set<string>;
+  onCellClick?: (rowIndex: number, colIndex: number, shiftKey: boolean) => void;
+  onCellContextMenu?: (e: MouseEvent, rowIndex: number, colIndex: number) => void;
+  selectable?: boolean;
 }
 
 function DataTableRow<T>({
   columns,
   row,
   actions,
+  rowIndex = 0,
+  selectedCells,
+  onCellClick,
+  onCellContextMenu,
+  selectable,
 }: DataTableRowProps<T>) {
   return (
     <TableRow>
-      {columns.map((col) => {
+      {columns.map((col, colIndex) => {
         const value = row[col.key];
         const avatarConfig = col.avatar?.(row);
+        const cellKey = `${rowIndex}-${colIndex}`;
+        const isSelected = selectable && selectedCells?.has(cellKey);
 
         return (
-          <TableCell key={col.key} className={col.className}>
+          <TableCell
+            key={col.key}
+            className={cn(
+              col.className,
+              selectable && "cursor-cell select-none",
+              isSelected && "bg-primary/10 outline outline-2 outline-primary/40",
+            )}
+            data-selected={isSelected ? "true" : undefined}
+            data-cell={selectable ? cellKey : undefined}
+            onClick={
+              selectable
+                ? (e) => onCellClick?.(rowIndex, colIndex, e.shiftKey)
+                : undefined
+            }
+            onContextMenu={
+              selectable
+                ? (e) => {
+                    e.preventDefault();
+                    onCellContextMenu?.(e, rowIndex, colIndex);
+                  }
+                : undefined
+            }
+          >
             {avatarConfig ? (
               <div className="flex items-center gap-3">
                 <Avatar initials={avatarConfig.initials} src={avatarConfig.src} size="sm" />
@@ -138,6 +187,7 @@ function DataTableRow<T>({
   );
 }
 
+
 /* ─── DataTable ────────────────────────────── */
 
 interface DataTableProps<T> extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
@@ -146,6 +196,8 @@ interface DataTableProps<T> extends Omit<HTMLAttributes<HTMLDivElement>, "childr
   rowKey: keyof T & string;
   actions?: DataTableAction<T>[];
   emptyMessage?: string;
+  selectable?: boolean;
+  onCellFill?: (columnKey: keyof T & string, rowKeys: string[], value: string) => void;
 }
 
 function DataTable<T>({
@@ -154,9 +206,102 @@ function DataTable<T>({
   rowKey,
   actions,
   emptyMessage = "No data available",
+  selectable,
+  onCellFill,
   className,
   ...props
 }: DataTableProps<T>) {
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const [anchor, setAnchor] = useState<CellPosition | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [fillModalOpen, setFillModalOpen] = useState(false);
+
+  const handleCellClick = useCallback(
+    (rowIndex: number, colIndex: number, shiftKey: boolean) => {
+      if (!selectable) return;
+
+      if (shiftKey && anchor) {
+        // Range select: same column as anchor, from anchor row to clicked row
+        const colTarget = anchor.colIndex;
+        const minRow = Math.min(anchor.rowIndex, rowIndex);
+        const maxRow = Math.max(anchor.rowIndex, rowIndex);
+        const newSelected = new Set<string>();
+        for (let r = minRow; r <= maxRow; r++) {
+          newSelected.add(`${r}-${colTarget}`);
+        }
+        setSelectedCells(newSelected);
+      } else {
+        // Single select
+        setAnchor({ rowIndex, colIndex });
+        setSelectedCells(new Set([`${rowIndex}-${colIndex}`]));
+      }
+    },
+    [selectable, anchor],
+  );
+
+  const handleCellContextMenu = useCallback(
+    (e: MouseEvent, rowIndex: number, colIndex: number) => {
+      if (!selectable) return;
+
+      const cellKey = `${rowIndex}-${colIndex}`;
+      // Only show context menu if the right-clicked cell is selected
+      if (selectedCells.has(cellKey) && selectedCells.size > 0) {
+        setContextMenu({ x: e.clientX, y: e.clientY });
+      }
+    },
+    [selectable, selectedCells],
+  );
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleFillOpen = useCallback(() => {
+    setFillModalOpen(true);
+  }, []);
+
+  const handleFillApply = useCallback(
+    (value: string) => {
+      if (!onCellFill || selectedCells.size === 0 || !anchor) {
+        setFillModalOpen(false);
+        return;
+      }
+
+      // Determine the column key from the anchor's colIndex
+      const colKey = columns[anchor.colIndex]?.key;
+      if (!colKey) {
+        setFillModalOpen(false);
+        return;
+      }
+
+      // Collect the row keys for all selected cells
+      const rowKeys: string[] = [];
+      const sortedCells = Array.from(selectedCells)
+        .map((key) => {
+          const [r] = key.split("-").map(Number);
+          return r;
+        })
+        .sort((a, b) => a - b);
+
+      for (const r of sortedCells) {
+        const row = data[r];
+        if (row) {
+          rowKeys.push(String(row[rowKey]));
+        }
+      }
+
+      onCellFill(colKey, rowKeys, value);
+      setFillModalOpen(false);
+      setSelectedCells(new Set());
+      setAnchor(null);
+    },
+    [onCellFill, selectedCells, anchor, columns, data, rowKey],
+  );
+
+  const handleFillClose = useCallback(() => {
+    setFillModalOpen(false);
+  }, []);
+
   return (
     <div
       className={cn(
@@ -187,22 +332,46 @@ function DataTable<T>({
               </TableCell>
             </TableRow>
           ) : (
-            data.map((row) => (
+            data.map((row, rowIndex) => (
               <DataTableRow
                 key={String(row[rowKey])}
                 columns={columns}
                 row={row}
                 actions={actions}
+                rowIndex={rowIndex}
+                selectedCells={selectable ? selectedCells : undefined}
+                onCellClick={selectable ? handleCellClick : undefined}
+                onCellContextMenu={selectable ? handleCellContextMenu : undefined}
+                selectable={selectable}
               />
             ))
           )}
         </TableBody>
       </Table>
+
+      {/* Context Menu */}
+      {selectable && contextMenu && (
+        <CellContextMenu
+          position={contextMenu}
+          onFill={handleFillOpen}
+          onClose={closeContextMenu}
+        />
+      )}
+
+      {/* Fill Modal */}
+      {selectable && (
+        <FillModal
+          open={fillModalOpen}
+          onClose={handleFillClose}
+          cellCount={selectedCells.size}
+          onApply={handleFillApply}
+        />
+      )}
     </div>
   );
 }
 
-/* ─── Icon ─────────────────────────────────── */
+/* ─── Icons ────────────────────────────────── */
 
 function MoreHorizontalIcon() {
   return (

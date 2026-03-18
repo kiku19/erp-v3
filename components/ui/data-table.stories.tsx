@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   DataTable,
@@ -151,4 +152,47 @@ export const HeaderOnly: Story = {
       action={<Button variant="outline">Export CSV</Button>}
     />
   ),
+};
+
+export const SelectableWithFill: Story = {
+  render: function SelectableStory() {
+    const [users, setUsers] = useState(sampleUsers);
+
+    const handleCellFill = (
+      columnKey: string,
+      rowKeys: string[],
+      value: string,
+    ) => {
+      setUsers((prev) =>
+        prev.map((user) =>
+          rowKeys.includes(user.id)
+            ? { ...user, [columnKey]: value }
+            : user,
+        ),
+      );
+    };
+
+    const plainColumns: DataTableColumn<User>[] = [
+      { key: "name", header: "Name" },
+      { key: "email", header: "Email" },
+      { key: "role", header: "Role" },
+      { key: "status", header: "Status" },
+    ];
+
+    return (
+      <div className="flex flex-col gap-0">
+        <DataTableHeader
+          title="Selectable Table"
+          description="Click a cell to select it. Shift+click to select a range. Right-click selected cells to fill."
+        />
+        <DataTable
+          columns={plainColumns}
+          data={users}
+          rowKey="id"
+          selectable
+          onCellFill={handleCellFill}
+        />
+      </div>
+    );
+  },
 };

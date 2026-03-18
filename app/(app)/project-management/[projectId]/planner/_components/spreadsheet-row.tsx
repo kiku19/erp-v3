@@ -76,6 +76,12 @@ interface SpreadsheetRowProps {
   linkChainIndex?: number | null;
   isParallelInChain?: boolean;
   onLinkClick?: (id: string, isShift: boolean) => void;
+  /** Cell selection support */
+  rowIndex?: number;
+  /** Set of column indices that are selected in this row (undefined = no selection) */
+  selectedColIndices?: Set<number>;
+  onCellClick?: (rowIndex: number, colIndex: number, shiftKey: boolean) => void;
+  onCellContextMenu?: (e: React.MouseEvent, rowIndex: number, colIndex: number) => void;
 }
 
 const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
@@ -98,6 +104,10 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
   linkChainIndex = null,
   isParallelInChain = false,
   onLinkClick,
+  rowIndex = 0,
+  selectedColIndices,
+  onCellClick,
+  onCellContextMenu,
 }: SpreadsheetRowProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -169,6 +179,28 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
   const isActivityRow = !isWbs;
   const inChain = linkChainIndex !== null;
 
+  /** Returns cell selection props for a given column index */
+  const cellProps = (colIndex: number) => {
+    const cellKey = `${rowIndex}-${colIndex}`;
+    const isCellSelected = selectedColIndices?.has(colIndex) ?? false;
+    return {
+      "data-cell": cellKey,
+      ...(isCellSelected ? { "data-selected": "true" } : {}),
+      className: isCellSelected ? "bg-primary/10 outline outline-2 outline-primary/40" : undefined,
+      onClick: onCellClick
+        ? (e: React.MouseEvent) => {
+            onCellClick(rowIndex, colIndex, e.shiftKey);
+          }
+        : undefined,
+      onContextMenu: onCellContextMenu
+        ? (e: React.MouseEvent) => {
+            e.preventDefault();
+            onCellContextMenu(e, rowIndex, colIndex);
+          }
+        : undefined,
+    };
+  };
+
   const handleRowClick = (e: React.MouseEvent) => {
     if (isLinking && isActivityRow && onLinkClick) {
       e.stopPropagation();
@@ -213,10 +245,14 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary z-10" />
       )}
 
-      {/* ID Column */}
+      {/* ID Column (colIndex=0) */}
       <div
-        className="flex items-center gap-1 h-full px-2 shrink-0 text-muted-foreground overflow-hidden"
+        className={cn("flex items-center gap-1 h-full px-2 shrink-0 text-muted-foreground overflow-hidden", cellProps(0).className)}
         style={{ width: cw.id }}
+        data-cell={cellProps(0)["data-cell"]}
+        data-selected={cellProps(0)["data-selected"]}
+        onClick={cellProps(0).onClick}
+        onContextMenu={cellProps(0).onContextMenu}
       >
         {isLinking && inChain ? (
           <span
@@ -239,11 +275,15 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         </span>
       </div>
 
-      {/* Name Column */}
+      {/* Name Column (colIndex=1) */}
       <div
-        className="flex items-center gap-1.5 h-full pr-2 border-l border-border shrink-0 overflow-hidden"
+        className={cn("flex items-center gap-1.5 h-full pr-2 border-l border-border shrink-0 overflow-hidden", cellProps(1).className)}
         style={{ width: cw.name, paddingLeft: `${row.depth * 20}px` }}
         data-testid="name-cell"
+        data-cell={cellProps(1)["data-cell"]}
+        data-selected={cellProps(1)["data-selected"]}
+        onClick={cellProps(1).onClick}
+        onContextMenu={cellProps(1).onContextMenu}
       >
         {/* Expand/collapse chevron for WBS */}
         {isWbs && row.hasChildren ? (
@@ -318,10 +358,14 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         )}
       </div>
 
-      {/* Duration */}
+      {/* Duration (colIndex=2) */}
       <div
-        className="flex items-center h-full px-2 border-l border-border shrink-0 justify-end"
+        className={cn("flex items-center h-full px-2 border-l border-border shrink-0 justify-end", cellProps(2).className)}
         style={{ width: cw.duration }}
+        data-cell={cellProps(2)["data-cell"]}
+        data-selected={cellProps(2)["data-selected"]}
+        onClick={cellProps(2).onClick}
+        onContextMenu={cellProps(2).onContextMenu}
       >
         {!isWbs && (
           editingField === "duration" ? (
@@ -347,30 +391,42 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         )}
       </div>
 
-      {/* Start */}
+      {/* Start (colIndex=3) */}
       <div
-        className="flex items-center h-full px-2 border-l border-border shrink-0"
+        className={cn("flex items-center h-full px-2 border-l border-border shrink-0", cellProps(3).className)}
         style={{ width: cw.start }}
+        data-cell={cellProps(3)["data-cell"]}
+        data-selected={cellProps(3)["data-selected"]}
+        onClick={cellProps(3).onClick}
+        onContextMenu={cellProps(3).onContextMenu}
       >
         <span className="text-muted-foreground text-[11px]">
           {formatDate(row.startDate)}
         </span>
       </div>
 
-      {/* Finish */}
+      {/* Finish (colIndex=4) */}
       <div
-        className="flex items-center h-full px-2 border-l border-border shrink-0"
+        className={cn("flex items-center h-full px-2 border-l border-border shrink-0", cellProps(4).className)}
         style={{ width: cw.finish }}
+        data-cell={cellProps(4)["data-cell"]}
+        data-selected={cellProps(4)["data-selected"]}
+        onClick={cellProps(4).onClick}
+        onContextMenu={cellProps(4).onContextMenu}
       >
         <span className="text-muted-foreground text-[11px]">
           {formatDate(row.finishDate)}
         </span>
       </div>
 
-      {/* Float */}
+      {/* Float (colIndex=5) */}
       <div
-        className="flex items-center h-full px-2 border-l border-border shrink-0 justify-end"
+        className={cn("flex items-center h-full px-2 border-l border-border shrink-0 justify-end", cellProps(5).className)}
         style={{ width: cw.float }}
+        data-cell={cellProps(5)["data-cell"]}
+        data-selected={cellProps(5)["data-selected"]}
+        onClick={cellProps(5).onClick}
+        onContextMenu={cellProps(5).onContextMenu}
       >
         {!isWbs && (
           <span className="text-muted-foreground">
@@ -379,10 +435,14 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         )}
       </div>
 
-      {/* Percent */}
+      {/* Percent (colIndex=6) */}
       <div
-        className="flex items-center h-full px-1 border-l border-border shrink-0 justify-end"
+        className={cn("flex items-center h-full px-1 border-l border-border shrink-0 justify-end", cellProps(6).className)}
         style={{ width: cw.pct }}
+        data-cell={cellProps(6)["data-cell"]}
+        data-selected={cellProps(6)["data-selected"]}
+        onClick={cellProps(6).onClick}
+        onContextMenu={cellProps(6).onContextMenu}
       >
         {!isWbs && (
           <span className="text-muted-foreground">
@@ -391,10 +451,14 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         )}
       </div>
 
-      {/* Predecessors */}
+      {/* Predecessors (colIndex=7) */}
       <div
-        className="flex items-center h-full px-2 border-l border-border shrink-0 overflow-hidden"
+        className={cn("flex items-center h-full px-2 border-l border-border shrink-0 overflow-hidden", cellProps(7).className)}
         style={{ width: cw.pred }}
+        data-cell={cellProps(7)["data-cell"]}
+        data-selected={cellProps(7)["data-selected"]}
+        onClick={cellProps(7).onClick}
+        onContextMenu={cellProps(7).onContextMenu}
       >
         {!isWbs && row.predecessors && (
           <span className="text-muted-foreground text-[11px] truncate">

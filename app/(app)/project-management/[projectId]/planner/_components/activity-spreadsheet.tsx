@@ -1,17 +1,45 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect, useMemo, memo, type DragEvent, type MouseEvent as ReactMouseEvent } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo, memo, type DragEvent, type MouseEvent as ReactMouseEvent, type MutableRefObject } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { SpreadsheetRowComponent, DEFAULT_COL_WIDTHS } from "./spreadsheet-row";
 import type { SpreadsheetDropPosition, ColumnWidths } from "./spreadsheet-row";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import type { SpreadsheetRow, LinkModeStatus, LinkChainEntry, SortConfig, SortableColumn } from "./types";
+import { CellContextMenu, type ContextMenuState } from "@/components/ui/cell-context-menu";
+import { FillModal } from "@/components/ui/fill-modal";
 
 /* ─────────────────────── Constants ───────────────────────────────── */
 
 const ROW_HEIGHT = 32;
-const OVERSCAN = 15;
+const OVERSCAN = 25;
 const MIN_COL_WIDTH = 30;
+
+/** Fillable column indices: name=1, duration=2, pct=6 */
+const FILLABLE_COL_INDICES = new Set([1, 2, 6]);
+
+/** Maps column index to the SpreadsheetRow field key used by onUpdate */
+const COLUMN_KEY_MAP: Record<number, string> = {
+  1: "name",
+  2: "duration",
+  6: "percentComplete",
+};
+
+interface CellPosition {
+  rowIndex: number;
+  colIndex: number;
+}
+
+function coerceFillValue(columnKey: string, raw: string): unknown {
+  switch (columnKey) {
+    case "duration":
+      return parseInt(raw, 10) || 0;
+    case "percentComplete":
+      return Math.min(100, Math.max(0, parseInt(raw, 10) || 0));
+    default:
+      return raw;
+  }
+}
 
 type ColKey = keyof ColumnWidths;
 
@@ -50,6 +78,12 @@ interface ActivitySpreadsheetProps {
   scrollTop?: number;
   /** Called when this panel scrolls vertically */
   onVerticalScroll?: (scrollTop: number) => void;
+  /** Optional bulk fill callback. Falls back to calling onUpdate per row if not provided. */
+  onCellFill?: (columnKey: string, rowIds: string[], value: string) => void;
+  /** Direct DOM scroll sync ref — bypasses React for lag-free sync */
+  scrollSyncRef?: MutableRefObject<{ spreadsheet: HTMLElement | null; gantt: HTMLElement | null }>;
+  /** Which role this component plays in the scroll sync pair */
+  scrollSyncRole?: "spreadsheet" | "gantt";
 }
 
 /* ─────────────────────── Drop position from container Y ───────────── */
@@ -135,6 +169,9 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
   isSorting = false,
   scrollTop,
   onVerticalScroll,
+  onCellFill,
+  scrollSyncRef,
+  scrollSyncRole,
 }: ActivitySpreadsheetProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const isExternalScrollRef = useRef(false);
@@ -143,6 +180,134 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<SpreadsheetDropPosition | null>(null);
   const [colWidths, setColWidths] = useState<ColumnWidths>({ ...DEFAULT_COL_WIDTHS });
+
+  /* ─── Cell selection state ─── */
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const [cellAnchor, setCellAnchor] = useState<CellPosition | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [fillModalOpen, setFillModalOpen] = useState(false);
+
+  // Pre-compute which row indices have selected cells → avoids passing Set to every row
+  const selectedRowIndices = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    for (const key of selectedCells) {
+      const [r, c] = key.split("-").map(Number);
+      let cols = map.get(r);
+      if (!cols) {
+        cols = new Set<number>();
+        map.set(r, cols);
+      }
+      cols.add(c);
+    }
+    return map;
+  }, [selectedCells]);
+
+  // Clear selection when flatRows changes (sort, add, delete)
+  const flatRowsRef = useRef(flatRows);
+  useEffect(() => {
+    if (flatRowsRef.current !== flatRows) {
+      flatRowsRef.current = flatRows;
+      setSelectedCells(new Set());
+      setCellAnchor(null);
+    }
+  }, [flatRows]);
+
+  // Clear selection on Escape
+  useEffect(() => {
+    function handleEscape(e: globalThis.KeyboardEvent) {
+      if (e.key === "Escape" && selectedCells.size > 0) {
+        setSelectedCells(new Set());
+        setCellAnchor(null);
+      }
+    }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [selectedCells.size]);
+
+  // Use refs for values needed inside stable callbacks to avoid re-creating them
+  const cellAnchorRef = useRef(cellAnchor);
+  cellAnchorRef.current = cellAnchor;
+  const selectedCellsRef = useRef(selectedCells);
+  selectedCellsRef.current = selectedCells;
+
+  const handleCellClick = useCallback(
+    (rowIndex: number, colIndex: number, shiftKey: boolean) => {
+      const anchor = cellAnchorRef.current;
+      if (shiftKey && anchor) {
+        const colTarget = anchor.colIndex;
+        const minRow = Math.min(anchor.rowIndex, rowIndex);
+        const maxRow = Math.max(anchor.rowIndex, rowIndex);
+        const newSelected = new Set<string>();
+        for (let r = minRow; r <= maxRow; r++) {
+          newSelected.add(`${r}-${colTarget}`);
+        }
+        setSelectedCells(newSelected);
+      } else {
+        setCellAnchor({ rowIndex, colIndex });
+        setSelectedCells(new Set([`${rowIndex}-${colIndex}`]));
+      }
+    },
+    [],
+  );
+
+  const handleCellContextMenu = useCallback(
+    (e: ReactMouseEvent, rowIndex: number, colIndex: number) => {
+      const cellKey = `${rowIndex}-${colIndex}`;
+      const cells = selectedCellsRef.current;
+      if (cells.has(cellKey) && cells.size > 0 && FILLABLE_COL_INDICES.has(colIndex)) {
+        setContextMenu({ x: e.clientX, y: e.clientY });
+      }
+    },
+    [],
+  );
+
+  const handleFillApply = useCallback(
+    (value: string) => {
+      if (selectedCells.size === 0 || !cellAnchor) {
+        setFillModalOpen(false);
+        return;
+      }
+
+      const columnKey = COLUMN_KEY_MAP[cellAnchor.colIndex];
+      if (!columnKey) {
+        setFillModalOpen(false);
+        return;
+      }
+
+      // Collect affected row IDs, skipping WBS rows
+      const affectedRowIds: string[] = [];
+      const sortedRowIndices = Array.from(selectedCells)
+        .map((key) => parseInt(key.split("-")[0], 10))
+        .sort((a, b) => a - b);
+
+      for (const r of sortedRowIndices) {
+        const row = flatRows[r];
+        if (row && row.type !== "wbs") {
+          affectedRowIds.push(row.id);
+        }
+      }
+
+      if (affectedRowIds.length === 0) {
+        setFillModalOpen(false);
+        return;
+      }
+
+      if (onCellFill) {
+        onCellFill(columnKey, affectedRowIds, value);
+      } else {
+        // Fallback: call onUpdate per row
+        const coerced = coerceFillValue(columnKey, value);
+        for (const id of affectedRowIds) {
+          onUpdate(id, { [columnKey]: coerced });
+        }
+      }
+
+      setFillModalOpen(false);
+      setSelectedCells(new Set());
+      setCellAnchor(null);
+    },
+    [selectedCells, cellAnchor, flatRows, onCellFill, onUpdate],
+  );
 
   // We store the width at drag start so delta is always from the original
   const dragStartWidthRef = useRef<number>(0);
@@ -206,24 +371,54 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
     overscan: OVERSCAN,
   });
 
-  // Scroll sync: notify parent when this panel scrolls
-  const handleScrollSync = useCallback(() => {
-    if (parentRef.current && !isExternalScrollRef.current && onVerticalScroll) {
-      onVerticalScroll(parentRef.current.scrollTop);
+  // Register this scroll container with the sync ref for direct DOM sync
+  const registerScrollContainer = useCallback((el: HTMLDivElement | null) => {
+    parentRef.current = el;
+    if (scrollSyncRef && scrollSyncRole) {
+      scrollSyncRef.current[scrollSyncRole] = el;
     }
-    isExternalScrollRef.current = false;
-  }, [onVerticalScroll]);
+  }, [scrollSyncRef, scrollSyncRole]);
 
-  // Scroll sync: apply external scroll position
+  // Scroll sync: directly poke peer container (bypasses React for zero-lag sync)
+  const scrollStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleScrollSync = useCallback(() => {
+    if (!parentRef.current || isExternalScrollRef.current) {
+      isExternalScrollRef.current = false;
+      return;
+    }
+    const myTop = parentRef.current.scrollTop;
+    // Direct DOM sync to peer container — immediate, no React involved
+    if (scrollSyncRef) {
+      const peerKey = scrollSyncRole === "spreadsheet" ? "gantt" : "spreadsheet";
+      const peer = scrollSyncRef.current[peerKey];
+      if (peer && Math.abs(peer.scrollTop - myTop) > 1) {
+        peer.scrollTop = myTop;
+      }
+      lastDirectSyncRef.current = performance.now();
+    }
+    // Lazily update React state on scroll end (keeps smoothScrollTo working)
+    if (scrollStateTimerRef.current) clearTimeout(scrollStateTimerRef.current);
+    scrollStateTimerRef.current = setTimeout(() => {
+      onVerticalScroll?.(parentRef.current?.scrollTop ?? 0);
+    }, 100);
+    isExternalScrollRef.current = false;
+  }, [onVerticalScroll, scrollSyncRef, scrollSyncRole]);
+
+  // Sync from external source (programmatic scroll only — e.g. smoothScrollTo).
+  // Skip when direct DOM sync is active (the scroll handler already synced).
+  const lastDirectSyncRef = useRef(0);
   useEffect(() => {
     if (scrollTop !== undefined && parentRef.current) {
+      const timeSinceDirectSync = performance.now() - lastDirectSyncRef.current;
+      if (scrollSyncRef && timeSinceDirectSync < 200) return;
+
       const container = parentRef.current;
       if (Math.abs(container.scrollTop - scrollTop) > 1) {
         isExternalScrollRef.current = true;
         container.scrollTop = scrollTop;
       }
     }
-  }, [scrollTop]);
+  }, [scrollTop, scrollSyncRef]);
 
   const handleDragStart = useCallback((e: DragEvent, id: string) => {
     draggedIdRef.current = id;
@@ -374,8 +569,9 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
         </div>
       ) : (
         <div
-          ref={parentRef}
+          ref={registerScrollContainer}
           className="flex-1 overflow-auto"
+          style={{ willChange: "transform" }}
           onScroll={handleScrollSync}
           onDragOver={handleContainerDragOver}
           onDrop={handleContainerDrop}
@@ -386,6 +582,7 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
               height: `${virtualizer.getTotalSize() + (gapIndex >= 0 ? ROW_HEIGHT : 0)}px`,
               width: "100%",
               position: "relative",
+              contain: "layout style paint",
             }}
           >
             {/* Shadow placeholder at the gap position */}
@@ -429,6 +626,8 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
                     transform: `translateY(${virtualRow.start + gapOffset}px)`,
                     transition: gapIndex >= 0 ? "transform 150ms ease" : undefined,
                     opacity: isDragged ? 0.3 : 1,
+                    willChange: "transform",
+                    contain: "layout style paint",
                   }}
                 >
                   <SpreadsheetRowComponent
@@ -449,6 +648,10 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
                     linkChainIndex={chainIdx}
                     isParallelInChain={chainEntry?.isParallel ?? false}
                     onLinkClick={onLinkClick}
+                    rowIndex={virtualRow.index}
+                    selectedColIndices={selectedRowIndices.get(virtualRow.index)}
+                    onCellClick={handleCellClick}
+                    onCellContextMenu={handleCellContextMenu}
                   />
                 </div>
               );
@@ -456,6 +659,23 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
           </div>
         </div>
       )}
+
+      {/* Cell selection context menu */}
+      {contextMenu && (
+        <CellContextMenu
+          position={contextMenu}
+          onFill={() => setFillModalOpen(true)}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Fill modal */}
+      <FillModal
+        open={fillModalOpen}
+        onClose={() => setFillModalOpen(false)}
+        cellCount={selectedCells.size}
+        onApply={handleFillApply}
+      />
     </div>
   );
 });
