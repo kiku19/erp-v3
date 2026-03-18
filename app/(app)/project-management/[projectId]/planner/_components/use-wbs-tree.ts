@@ -60,6 +60,8 @@ interface UseWbsTreeReturn {
   toggleExpand: (id: string) => void;
   expandAll: () => void;
   collapseAll: () => void;
+  hiddenWbsIds: Set<string>;
+  toggleWbsVisibility: (id: string) => void;
   selectRow: (id: string | null) => void;
   addWbs: () => void;
   addActivity: () => void;
@@ -87,6 +89,7 @@ function flattenTree(
   activities: ActivityData[],
   expandedIds: Set<string>,
   relationships?: ActivityRelationshipData[],
+  hiddenWbsIds?: Set<string>,
 ): SpreadsheetRow[] {
   const rows: SpreadsheetRow[] = [];
 
@@ -128,6 +131,9 @@ function flattenTree(
   function walk(parentId: string | null, depth: number) {
     const children = childWbsMap.get(parentId) ?? [];
     for (const node of children) {
+      // Skip hidden WBS nodes and all their descendants
+      if (hiddenWbsIds?.has(node.id)) continue;
+
       const nodeActivities = activityMap.get(node.id) ?? [];
       const childWbs = childWbsMap.get(node.id) ?? [];
       const hasChildren = childWbs.length > 0 || nodeActivities.length > 0;
@@ -273,6 +279,7 @@ function useWbsTree({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(initialWbsNodes.map((n) => n.id)),
   );
+  const [hiddenWbsIds, setHiddenWbsIds] = useState<Set<string>>(new Set());
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [addingState, setAddingState] = useState<AddingState | null>(null);
   const [linkMode, setLinkMode] = useState<LinkModeStatus>("idle");
@@ -393,7 +400,7 @@ function useWbsTree({
   /* ── Memoized flattened rows (with optional adding placeholder) ── */
   const flatRows = useMemo(() => {
     const tFlat = performance.now();
-    const rows = flattenTree(wbsNodes, activities, expandedIds, relationships);
+    const rows = flattenTree(wbsNodes, activities, expandedIds, relationships, hiddenWbsIds);
     console.log(`[DnD:perf] flattenTree: ${(performance.now() - tFlat).toFixed(1)}ms (${wbsNodes.length} wbs, ${activities.length} activities → ${rows.length} rows)`);
 
     if (addingState) {
@@ -412,7 +419,7 @@ function useWbsTree({
     }
 
     return rows;
-  }, [wbsNodes, activities, expandedIds, addingState, relationships]);
+  }, [wbsNodes, activities, expandedIds, addingState, relationships, hiddenWbsIds]);
 
   // Measure total drop→DOM-update time
   useEffect(() => {
@@ -439,6 +446,16 @@ function useWbsTree({
 
   const collapseAll = useCallback(() => {
     setExpandedIds(new Set());
+  }, []);
+
+  /* ── WBS Visibility ── */
+  const toggleWbsVisibility = useCallback((id: string) => {
+    setHiddenWbsIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }, []);
 
   /* ── Selection ── */
@@ -1304,6 +1321,8 @@ function useWbsTree({
     toggleExpand,
     expandAll,
     collapseAll,
+    hiddenWbsIds,
+    toggleWbsVisibility,
     selectRow,
     addWbs,
     addActivity,

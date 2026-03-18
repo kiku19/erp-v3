@@ -5,8 +5,11 @@ import { cn } from "@/lib/utils";
 import {
   ChevronDown,
   ChevronRight,
+  Eye,
+  EyeOff,
   Folder,
   GripVertical,
+  LocateFixed,
   Settings2,
 } from "lucide-react";
 import { useTreeDragDrop, type DropPosition } from "@/components/ui/use-tree-drag-drop";
@@ -54,6 +57,9 @@ interface WbsSidebarTreeProps {
   onUpdateIconColor?: (id: string, iconColor: string) => void;
   onOpenIconSettings?: () => void;
   onDeleteWbs?: (id: string) => void;
+  hiddenWbsIds?: Set<string>;
+  onToggleVisibility?: (id: string) => void;
+  onScrollToWbs?: (id: string) => void;
 }
 
 /* ─────────────────────── Tree node component ─────────────────────── */
@@ -79,6 +85,9 @@ interface TreeNodeProps {
   onDrop: (e: DragEvent, id: string) => void;
   onCycleIcon?: (id: string) => void;
   onCycleIconColor?: (id: string) => void;
+  hiddenWbsIds?: Set<string>;
+  onToggleVisibility?: (id: string) => void;
+  onScrollToWbs?: (id: string) => void;
 }
 
 function EditInput({
@@ -154,12 +163,16 @@ function TreeNode({
   onDrop,
   onCycleIcon,
   onCycleIconColor,
+  hiddenWbsIds,
+  onToggleVisibility,
+  onScrollToWbs,
 }: TreeNodeProps) {
   const isExpanded = expandedIds.has(node.id);
   const hasChildren = children.length > 0;
   const isSelected = selectedId === node.id;
   const isEditing = editingId === node.id;
   const isDragOver = dragOverId === node.id;
+  const isHidden = hiddenWbsIds?.has(node.id) ?? false;
 
   const WBS_DEPTH_BG = [
     "bg-[var(--color-wbs-level-0)]",
@@ -177,11 +190,12 @@ function TreeNode({
         data-testid={`wbs-node-${node.id}`}
         draggable
         className={cn(
-          "relative flex items-center gap-1.5 h-7 rounded-[4px] cursor-pointer text-[12px] w-full",
+          "group/wbs relative flex items-center gap-1.5 h-7 rounded-[4px] cursor-pointer text-[12px] w-full",
           isSelected
             ? "bg-muted text-foreground"
             : cn(depthBg, "text-foreground hover:brightness-95"),
           isDragOver && dropPosition === "inside" && "ring-2 ring-primary",
+          isHidden && "opacity-60",
         )}
         style={{ paddingLeft: `${8 + depth * 16}px`, paddingRight: 8 }}
         onClick={() => {
@@ -254,7 +268,47 @@ function TreeNode({
             onCancel={onCancelEditing}
           />
         ) : (
-          <span className="truncate font-medium">{node.name}</span>
+          <span className={cn("truncate font-medium", isHidden && "opacity-50")}>{node.name}</span>
+        )}
+
+        {/* Action icons: visibility toggle + scroll-to */}
+        {!isEditing && (
+          <span className={cn(
+            "ml-auto flex items-center gap-0.5 shrink-0 transition-opacity duration-[var(--duration-fast)]",
+            isHidden ? "opacity-100" : "opacity-0 group-hover/wbs:opacity-100",
+          )}>
+            {onToggleVisibility && (
+              <button
+                data-testid={`wbs-visibility-${node.id}`}
+                className={cn(
+                  "flex items-center justify-center w-4 h-4 rounded-[2px] cursor-pointer",
+                  isHidden
+                    ? "text-muted-foreground opacity-100"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleVisibility(node.id);
+                }}
+                title={isHidden ? "Show in views" : "Hide from views"}
+              >
+                {isHidden ? <EyeOff size={11} /> : <Eye size={11} />}
+              </button>
+            )}
+            {onScrollToWbs && !isHidden && (
+              <button
+                data-testid={`wbs-scroll-to-${node.id}`}
+                className="flex items-center justify-center w-4 h-4 rounded-[2px] cursor-pointer text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onScrollToWbs(node.id);
+                }}
+                title="Scroll to in activity view"
+              >
+                <LocateFixed size={11} />
+              </button>
+            )}
+          </span>
         )}
       </div>
 
@@ -284,6 +338,9 @@ function TreeNode({
               onDrop={onDrop}
               onCycleIcon={onCycleIcon}
               onCycleIconColor={onCycleIconColor}
+              hiddenWbsIds={hiddenWbsIds}
+              onToggleVisibility={onToggleVisibility}
+              onScrollToWbs={onScrollToWbs}
             />
           );
         })}
@@ -305,6 +362,9 @@ const WbsSidebarTree = memo(function WbsSidebarTree({
   onUpdateIconColor,
   onOpenIconSettings,
   onDeleteWbs,
+  hiddenWbsIds,
+  onToggleVisibility,
+  onScrollToWbs,
 }: WbsSidebarTreeProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(wbsNodes.map((n) => n.id)),
@@ -444,6 +504,9 @@ const WbsSidebarTree = memo(function WbsSidebarTree({
               onDrop={dragHandlers.onDrop}
               onCycleIcon={handleCycleIcon}
               onCycleIconColor={handleCycleIconColor}
+              hiddenWbsIds={hiddenWbsIds}
+              onToggleVisibility={onToggleVisibility}
+              onScrollToWbs={onScrollToWbs}
             />
           );
         })}

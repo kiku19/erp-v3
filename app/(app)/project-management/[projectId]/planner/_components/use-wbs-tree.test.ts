@@ -1030,6 +1030,75 @@ describe("useWbsTree", () => {
     });
   });
 
+  /* ── WBS visibility (hiddenWbsIds / toggleWbsVisibility) ── */
+
+  describe("toggleWbsVisibility", () => {
+    it("starts with no hidden WBS nodes", () => {
+      const { result } = renderWbsTree();
+      expect(result.current.hiddenWbsIds.size).toBe(0);
+    });
+
+    it("hides a WBS node and its descendants from flatRows", () => {
+      const { result } = renderWbsTree();
+
+      // Hide w1 → w1, w2, a1, a2 should all disappear from flatRows
+      act(() => result.current.toggleWbsVisibility("w1"));
+
+      expect(result.current.hiddenWbsIds.has("w1")).toBe(true);
+      const rows = result.current.flatRows;
+      // Only w3 and a3 remain
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toMatchObject({ id: "w3", type: "wbs" });
+      expect(rows[1]).toMatchObject({ id: "a3", type: "activity" });
+    });
+
+    it("hides a leaf WBS node without affecting siblings", () => {
+      const { result } = renderWbsTree();
+
+      // Hide w3 → only w3 and a3 disappear
+      act(() => result.current.toggleWbsVisibility("w3"));
+
+      const rows = result.current.flatRows;
+      // w1, w2, a1, a2 remain
+      expect(rows).toHaveLength(4);
+      expect(rows.find((r) => r.id === "w3")).toBeUndefined();
+      expect(rows.find((r) => r.id === "a3")).toBeUndefined();
+    });
+
+    it("un-hides a previously hidden WBS node", () => {
+      const { result } = renderWbsTree();
+
+      act(() => result.current.toggleWbsVisibility("w3"));
+      expect(result.current.flatRows).toHaveLength(4);
+
+      act(() => result.current.toggleWbsVisibility("w3"));
+      expect(result.current.hiddenWbsIds.has("w3")).toBe(false);
+      expect(result.current.flatRows).toHaveLength(6);
+    });
+
+    it("hides a nested WBS without hiding parent", () => {
+      const { result } = renderWbsTree();
+
+      // Hide w2 (child of w1) → w2, a1, a2 disappear but w1 and w3 remain
+      act(() => result.current.toggleWbsVisibility("w2"));
+
+      const rows = result.current.flatRows;
+      expect(rows).toHaveLength(3); // w1, w3, a3
+      expect(rows[0]).toMatchObject({ id: "w1", type: "wbs" });
+      expect(rows[1]).toMatchObject({ id: "w3", type: "wbs" });
+      expect(rows[2]).toMatchObject({ id: "a3", type: "activity" });
+    });
+
+    it("does not affect the wbsNodes data array (only flatRows)", () => {
+      const { result } = renderWbsTree();
+
+      act(() => result.current.toggleWbsVisibility("w1"));
+
+      // wbsNodes should still contain all nodes
+      expect(result.current.wbsNodes).toHaveLength(3);
+    });
+  });
+
   /* ── deleteWbs ── */
 
   describe("deleteWbs", () => {

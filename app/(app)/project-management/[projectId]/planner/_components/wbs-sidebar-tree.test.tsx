@@ -422,6 +422,137 @@ describe("WbsSidebarTree", () => {
     expect(onDeleteWbs).not.toHaveBeenCalled();
   });
 
+  /* ─── Visibility toggle (eye icon) tests ─── */
+
+  it("renders eye icon for each WBS node when onToggleVisibility is provided", () => {
+    render(
+      <WbsSidebarTree {...defaultProps} onToggleVisibility={vi.fn()} />,
+    );
+    expect(screen.getByTestId("wbs-visibility-w1")).toBeDefined();
+    expect(screen.getByTestId("wbs-visibility-w2")).toBeDefined();
+    expect(screen.getByTestId("wbs-visibility-w3")).toBeDefined();
+  });
+
+  it("does not render eye icon when onToggleVisibility is not provided", () => {
+    render(<WbsSidebarTree {...defaultProps} />);
+    expect(screen.queryByTestId("wbs-visibility-w1")).toBeNull();
+  });
+
+  it("calls onToggleVisibility when eye icon is clicked", () => {
+    const onToggleVisibility = vi.fn();
+    render(
+      <WbsSidebarTree {...defaultProps} onToggleVisibility={onToggleVisibility} />,
+    );
+
+    fireEvent.click(screen.getByTestId("wbs-visibility-w1"));
+    expect(onToggleVisibility).toHaveBeenCalledWith("w1");
+  });
+
+  it("shows EyeOff icon for hidden WBS nodes", () => {
+    const hiddenWbsIds = new Set(["w1"]);
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        hiddenWbsIds={hiddenWbsIds}
+        onToggleVisibility={vi.fn()}
+      />,
+    );
+
+    // The hidden node should have dimmed styling
+    const node = screen.getByTestId("wbs-node-w1");
+    expect(node.className).toContain("opacity-60");
+  });
+
+  it("does not apply dimmed styling to non-hidden nodes", () => {
+    const hiddenWbsIds = new Set(["w1"]);
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        hiddenWbsIds={hiddenWbsIds}
+        onToggleVisibility={vi.fn()}
+      />,
+    );
+
+    const node = screen.getByTestId("wbs-node-w3");
+    expect(node.className).not.toContain("opacity-60");
+  });
+
+  /* ─── Scroll-to icon tests ─── */
+
+  it("renders scroll-to icon for each WBS node when onScrollToWbs is provided", () => {
+    render(
+      <WbsSidebarTree {...defaultProps} onScrollToWbs={vi.fn()} />,
+    );
+    expect(screen.getByTestId("wbs-scroll-to-w1")).toBeDefined();
+    expect(screen.getByTestId("wbs-scroll-to-w3")).toBeDefined();
+  });
+
+  it("does not render scroll-to icon when onScrollToWbs is not provided", () => {
+    render(<WbsSidebarTree {...defaultProps} />);
+    expect(screen.queryByTestId("wbs-scroll-to-w1")).toBeNull();
+  });
+
+  it("calls onScrollToWbs when scroll-to icon is clicked", () => {
+    const onScrollToWbs = vi.fn();
+    render(
+      <WbsSidebarTree {...defaultProps} onScrollToWbs={onScrollToWbs} />,
+    );
+
+    fireEvent.click(screen.getByTestId("wbs-scroll-to-w3"));
+    expect(onScrollToWbs).toHaveBeenCalledWith("w3");
+  });
+
+  it("does not render scroll-to icon for hidden WBS nodes", () => {
+    const hiddenWbsIds = new Set(["w1"]);
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        hiddenWbsIds={hiddenWbsIds}
+        onToggleVisibility={vi.fn()}
+        onScrollToWbs={vi.fn()}
+      />,
+    );
+
+    // w1 is hidden — no scroll-to icon
+    expect(screen.queryByTestId("wbs-scroll-to-w1")).toBeNull();
+    // w3 is visible — scroll-to icon present
+    expect(screen.getByTestId("wbs-scroll-to-w3")).toBeDefined();
+  });
+
+  it("eye icon click does not trigger onSelectWbs", () => {
+    const onSelectWbs = vi.fn();
+    const onToggleVisibility = vi.fn();
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        onSelectWbs={onSelectWbs}
+        onToggleVisibility={onToggleVisibility}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("wbs-visibility-w1"));
+    expect(onToggleVisibility).toHaveBeenCalledWith("w1");
+    expect(onSelectWbs).not.toHaveBeenCalled();
+  });
+
+  it("scroll-to icon click does not trigger onSelectWbs", () => {
+    const onSelectWbs = vi.fn();
+    const onScrollToWbs = vi.fn();
+    render(
+      <WbsSidebarTree
+        {...defaultProps}
+        onSelectWbs={onSelectWbs}
+        onScrollToWbs={onScrollToWbs}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("wbs-scroll-to-w1"));
+    expect(onScrollToWbs).toHaveBeenCalledWith("w1");
+    expect(onSelectWbs).not.toHaveBeenCalled();
+  });
+
+  /* ─── Delete key tests ─── */
+
   it("does not call onDeleteWbs when in edit mode", () => {
     const onDeleteWbs = vi.fn();
     render(

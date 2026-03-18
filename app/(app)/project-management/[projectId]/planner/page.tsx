@@ -196,6 +196,13 @@ export default function ProjectPlannerPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen, ganttSettingsOpen, handleRequestDeleteWbs]);
 
+  // Cleanup scroll animation on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
+    };
+  }, []);
+
   /* ── Deselect on click outside rows ── */
   const handlePageClick = useCallback(
     (e: React.MouseEvent) => {
@@ -285,6 +292,56 @@ export default function ProjectPlannerPage() {
     [wbsTree.updateRow],
   );
   const handleOpenIconSettings = useCallback(() => setIconSettingsOpen(true), []);
+
+  // Smooth scroll animation for scroll-to-WBS
+  const scrollAnimRef = useRef<number>(0);
+
+  const smoothScrollTo = useCallback(
+    (targetTop: number) => {
+      // Cancel any in-flight animation
+      if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
+
+      const start = sharedScrollTop;
+      const distance = targetTop - start;
+      if (Math.abs(distance) < 1) {
+        setSharedScrollTop(targetTop);
+        return;
+      }
+
+      const duration = 300; // ms — matches var(--duration-slow)
+      const startTime = performance.now();
+
+      function step(now: number) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // ease-out cubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        setSharedScrollTop(start + distance * eased);
+
+        if (progress < 1) {
+          scrollAnimRef.current = requestAnimationFrame(step);
+        } else {
+          scrollAnimRef.current = 0;
+        }
+      }
+
+      scrollAnimRef.current = requestAnimationFrame(step);
+    },
+    [sharedScrollTop],
+  );
+
+  // Scroll to a WBS node in the activity/gantt view
+  const handleScrollToWbs = useCallback(
+    (wbsId: string) => {
+      const rowIndex = sortedFlatRows.findIndex((r) => r.id === wbsId);
+      if (rowIndex >= 0) {
+        const ROW_HEIGHT = 32;
+        smoothScrollTo(rowIndex * ROW_HEIGHT);
+        wbsTree.selectRow(wbsId);
+      }
+    },
+    [sortedFlatRows, wbsTree.selectRow, smoothScrollTo],
+  );
 
   /* ── Drag-to-resize handlers ── */
   const wbsWidthAtDragStartRef = useRef(220);
@@ -471,6 +528,9 @@ export default function ProjectPlannerPage() {
             onUpdateIconColor={handleUpdateIconColor}
             onOpenIconSettings={handleOpenIconSettings}
             onDeleteWbs={handleRequestDeleteWbs}
+            hiddenWbsIds={wbsTree.hiddenWbsIds}
+            onToggleVisibility={wbsTree.toggleWbsVisibility}
+            onScrollToWbs={handleScrollToWbs}
           />
 
           {/* WBS ↔ Spreadsheet splitter */}
