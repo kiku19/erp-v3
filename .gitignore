@@ -6,3 +6,4 @@ app/generated
 *storybook.log
 storybook-static
 .playwright-mcp
+.claude/worktrees
