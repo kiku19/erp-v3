@@ -1,5 +1,6 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { RelationshipsTab } from "./relationships-tab";
 import type { ActivityData, ActivityRelationshipData } from "../types";
 
@@ -109,5 +110,47 @@ describe("RelationshipsTab", () => {
       />,
     );
     expect(screen.getByTestId("relationships-tab")).toBeDefined();
+  });
+
+  it("renders remove button when onRemoveRelationship provided", () => {
+    const onRemove = vi.fn();
+    render(
+      <RelationshipsTab
+        activityId="act-2"
+        activities={mockActivities}
+        relationships={mockRelationships}
+        onRemoveRelationship={onRemove}
+      />,
+    );
+    // act-2 has 1 predecessor (r1) and 1 successor (r3) → 2 remove buttons
+    expect(screen.getByTestId("remove-rel-r1")).toBeDefined();
+    expect(screen.getByTestId("remove-rel-r3")).toBeDefined();
+  });
+
+  it("calls onRemoveRelationship with relationship id on click", async () => {
+    const user = userEvent.setup();
+    const onRemove = vi.fn();
+    render(
+      <RelationshipsTab
+        activityId="act-2"
+        activities={mockActivities}
+        relationships={mockRelationships}
+        onRemoveRelationship={onRemove}
+      />,
+    );
+    await user.click(screen.getByTestId("remove-rel-r1"));
+    expect(onRemove).toHaveBeenCalledWith("r1");
+  });
+
+  it("does not render remove button when prop is omitted", () => {
+    render(
+      <RelationshipsTab
+        activityId="act-2"
+        activities={mockActivities}
+        relationships={mockRelationships}
+      />,
+    );
+    expect(screen.queryByTestId("remove-rel-r1")).toBeNull();
+    expect(screen.queryByTestId("remove-rel-r3")).toBeNull();
   });
 });

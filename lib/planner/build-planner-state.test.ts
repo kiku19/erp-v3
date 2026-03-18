@@ -76,9 +76,12 @@ describe("buildPlannerState", () => {
         name: true,
         activityType: true,
         duration: true,
+        durationUnit: true,
+        totalQuantity: true,
+        totalWorkHours: true,
         startDate: true,
         finishDate: true,
-        totalFloat: true,
+
         percentComplete: true,
         sortOrder: true,
       },
@@ -100,7 +103,7 @@ describe("buildPlannerState", () => {
         duration: 10,
         startDate: new Date("2026-01-01"),
         finishDate: new Date("2026-01-15"),
-        totalFloat: 0,
+
         percentComplete: 0,
         sortOrder: 0,
       },
@@ -132,7 +135,7 @@ describe("buildPlannerState", () => {
         duration: 10,
         startDate: new Date("2026-03-01T00:00:00.000Z"),
         finishDate: new Date("2026-03-15T00:00:00.000Z"),
-        totalFloat: 0,
+
         percentComplete: 0,
         sortOrder: 0,
       },
@@ -159,7 +162,7 @@ describe("buildPlannerState", () => {
         duration: 0,
         startDate: null,
         finishDate: null,
-        totalFloat: 0,
+
         percentComplete: 0,
         sortOrder: 0,
       },

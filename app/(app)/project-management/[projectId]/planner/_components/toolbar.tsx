@@ -21,6 +21,7 @@ import {
   Maximize2,
   Search,
   Settings2,
+  LayoutTemplate,
 } from "lucide-react";
 import type { LinkModeStatus, ViewMode } from "./types";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,8 @@ interface ToolbarProps {
   onCancelLink?: () => void;
   linkChainLength?: number;
   onAddResource?: () => void;
+  onSaveAsLayout?: () => void;
+  onViewLayouts?: () => void;
 }
 
 export const Toolbar = memo(function Toolbar({
@@ -74,6 +77,8 @@ export const Toolbar = memo(function Toolbar({
   onCancelLink,
   linkChainLength = 0,
   onAddResource,
+  onSaveAsLayout,
+  onViewLayouts,
 }: ToolbarProps) {
   const isGantt = viewMode === "gantt";
   const isNetwork = viewMode === "network";
@@ -242,6 +247,19 @@ export const Toolbar = memo(function Toolbar({
             </Button>
           </>
         )}
+
+        {/* Layout actions */}
+        <div className="w-px h-6 bg-border" />
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onSaveAsLayout} title="Save project structure as a reusable layout template">
+            <LayoutTemplate size={14} />
+            Save as Layout
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onViewLayouts} title="View all saved project layouts">
+            <LayoutTemplate size={14} />
+            Layouts
+          </Button>
+        </div>
       </div>
 
       {/* Right: Search */}
