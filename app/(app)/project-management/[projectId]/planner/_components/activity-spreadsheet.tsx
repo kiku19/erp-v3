@@ -311,6 +311,7 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
 
   // We store the width at drag start so delta is always from the original
   const dragStartWidthRef = useRef<number>(0);
+  const resizedRef = useRef(false);
 
   const handleColumnResizeStart = useCallback(
     (key: ColKey) => {
@@ -354,6 +355,8 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
         document.removeEventListener("mouseup", onMouseUp);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
+        // Flag that a resize just finished so the click handler skips sort
+        resizedRef.current = true;
       };
 
       document.body.style.cursor = "col-resize";
@@ -532,7 +535,13 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
               data-testid={`col-header-${col.key}`}
               className={`relative flex items-center h-full ${col.key === "pct" ? "px-1" : "px-2"} ${i > 0 ? "border-l border-border" : ""} text-[11px] font-semibold ${isActive ? "text-primary" : "text-muted-foreground"} ${col.align === "end" ? "justify-end" : ""} cursor-pointer select-none hover:bg-muted-hover transition-colors duration-[var(--duration-fast)]`}
               style={{ width: colWidths[col.key] }}
-              onClick={() => onSort?.(col.key as SortableColumn)}
+              onClick={() => {
+                if (resizedRef.current) {
+                  resizedRef.current = false;
+                  return;
+                }
+                onSort?.(col.key as SortableColumn);
+              }}
             >
               <span className="truncate">{col.label}</span>
               {isActive && (
