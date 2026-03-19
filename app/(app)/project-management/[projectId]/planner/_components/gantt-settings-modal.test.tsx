@@ -21,22 +21,23 @@ describe("GanttSettingsModal", () => {
     expect(screen.getByText("Gantt Settings")).toBeDefined();
   });
 
-  it("renders three tabs", () => {
+  it("renders three tabs with bars and display disabled", () => {
     render(<GanttSettingsModal {...defaultProps} />);
     expect(screen.getByText("Timescale")).toBeDefined();
-    expect(screen.getByText("Bars")).toBeDefined();
-    expect(screen.getByText("Display")).toBeDefined();
+    const barsTab = screen.getByText("Bars");
+    const displayTab = screen.getByText("Display");
+    expect(barsTab).toBeDefined();
+    expect(displayTab).toBeDefined();
+    expect(barsTab.closest("button")?.hasAttribute("disabled")).toBe(true);
+    expect(displayTab.closest("button")?.hasAttribute("disabled")).toBe(true);
   });
 
-  it("shows display toggles when Display tab is clicked", () => {
+  it("does not switch to display tab when clicked (disabled)", () => {
     render(<GanttSettingsModal {...defaultProps} />);
     fireEvent.click(screen.getByText("Display"));
-    expect(screen.getByText("Critical Path")).toBeDefined();
-    expect(screen.getByText("Baselines")).toBeDefined();
-    expect(screen.getByText("Today Line")).toBeDefined();
-    expect(screen.getByText("Grid Lines")).toBeDefined();
-    expect(screen.getByText("Relationship Arrows")).toBeDefined();
-    expect(screen.getByText("Legend")).toBeDefined();
+    // Should still show timescale content, not display toggles
+    expect(screen.queryByText("Critical Path")).toBeNull();
+    expect(screen.getByText("Zoom Level")).toBeDefined();
   });
 
   it("calls onApply with settings when Apply is clicked", () => {

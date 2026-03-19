@@ -50,7 +50,6 @@ interface ToolbarProps {
   onConfirmLink?: () => void;
   onCancelLink?: () => void;
   linkChainLength?: number;
-  onAddResource?: () => void;
   onSaveAsLayout?: () => void;
   onViewLayouts?: () => void;
   groupBy?: GroupByField;
@@ -79,15 +78,12 @@ export const Toolbar = memo(function Toolbar({
   onConfirmLink,
   onCancelLink,
   linkChainLength = 0,
-  onAddResource,
   onSaveAsLayout,
   onViewLayouts,
   groupBy = "wbs",
   onGroupByChange,
 }: ToolbarProps) {
   const isGantt = viewMode === "gantt";
-  const isNetwork = viewMode === "network";
-  const isResource = viewMode === "resource";
 
   return (
     <div className="flex items-center justify-between px-4 h-11 border-b border-border bg-card shrink-0">
@@ -113,12 +109,12 @@ export const Toolbar = memo(function Toolbar({
 
             <div className="w-px h-6 bg-border" />
 
-            {/* Indent Group — gantt only */}
+            {/* Indent Group — gantt only (disabled — coming soon) */}
             <div className="flex items-center gap-0.5">
-              <Button variant="icon" size="icon" className="h-7 w-7" onClick={onOutdent} disabled={outdentDisabled} title="Outdent selected item (move it up a level)">
+              <Button variant="icon" size="icon" className="h-7 w-7" disabled title="Outdent — coming soon">
                 <IndentDecrease size={16} />
               </Button>
-              <Button variant="icon" size="icon" className="h-7 w-7" onClick={onIndent} disabled={indentDisabled} title="Indent selected item (make it a child)">
+              <Button variant="icon" size="icon" className="h-7 w-7" disabled title="Indent — coming soon">
                 <IndentIncrease size={16} />
               </Button>
             </div>
@@ -127,21 +123,8 @@ export const Toolbar = memo(function Toolbar({
           </>
         )}
 
-        {/* Resource Add — resource view only */}
-        {isResource && onAddResource && (
-          <>
-            <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onAddResource} title="Add a new resource">
-                <Plus size={14} />
-                Resource
-              </Button>
-            </div>
-            <div className="w-px h-6 bg-border" />
-          </>
-        )}
-
-        {/* Undo Redo — gantt + resource */}
-        {(isGantt || isResource) && (
+        {/* Undo Redo — gantt only */}
+        {isGantt && (
           <>
             <div className="flex items-center gap-0.5">
               <Button variant="icon" size="icon" className="h-7 w-7" onClick={onUndo} disabled={undoDisabled} title="Undo last action (Ctrl+Z)">
@@ -199,11 +182,11 @@ export const Toolbar = memo(function Toolbar({
           </>
         )}
 
-        {/* View Group — gantt + network */}
-        {(isGantt || isNetwork) && (
+        {/* View Group — gantt only */}
+        {isGantt && (
           <>
             <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Filter activities by criteria">
+              <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" disabled title="Filter — coming soon">
                 <Filter size={14} />
                 Filter
               </Button>
@@ -243,11 +226,11 @@ export const Toolbar = memo(function Toolbar({
                       None
                     </DropdownMenuItem>
                   </DropdownMenu>
-                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Show or hide spreadsheet columns">
+                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" disabled title="Columns — coming soon">
                     <Columns3 size={14} />
                     Columns
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Run schedule quality checks">
+                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" disabled title="Quality — coming soon">
                     <ShieldCheck size={14} />
                     Quality
                   </Button>

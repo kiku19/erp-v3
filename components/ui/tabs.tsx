@@ -77,9 +77,10 @@ interface TabProps {
   children: ReactNode;
   value: string;
   className?: string;
+  disabled?: boolean;
 }
 
-function Tab({ children, value, className }: TabProps) {
+function Tab({ children, value, className, disabled }: TabProps) {
   const { activeValue, setActiveValue } = useTabsContext();
   const isActive = activeValue === value;
 
@@ -88,11 +89,15 @@ function Tab({ children, value, className }: TabProps) {
       type="button"
       role="tab"
       aria-selected={isActive}
-      onClick={() => setActiveValue(value)}
-      className={`flex items-center justify-center px-4 py-2.5 text-[13px] transition-colors duration-[var(--duration-fast)] cursor-pointer ${
-        isActive
-          ? "font-semibold text-foreground border-b-2 border-foreground"
-          : "text-muted-foreground hover:text-foreground"
+      aria-disabled={disabled}
+      disabled={disabled}
+      onClick={() => !disabled && setActiveValue(value)}
+      className={`flex items-center justify-center px-4 py-2.5 text-[13px] transition-colors duration-[var(--duration-fast)] ${
+        disabled
+          ? "text-muted-foreground/50 cursor-not-allowed"
+          : isActive
+            ? "font-semibold text-foreground border-b-2 border-foreground cursor-pointer"
+            : "text-muted-foreground hover:text-foreground cursor-pointer"
       } ${className ?? ""}`}
     >
       {children}

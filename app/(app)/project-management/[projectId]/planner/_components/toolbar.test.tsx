@@ -81,4 +81,27 @@ describe("Toolbar", () => {
     rerender(<Toolbar viewMode="network" />);
     expect(screen.getByTitle("Zoom in (show more detail)")).toBeDefined();
   });
+
+  it("does not render add/undo/filter buttons in non-gantt views", () => {
+    render(<Toolbar viewMode="network" />);
+    expect(screen.queryByText("Activity")).toBeNull();
+    expect(screen.queryByText("Filter")).toBeNull();
+  });
+
+  it("renders indent buttons as disabled", () => {
+    render(<Toolbar viewMode="gantt" />);
+    const outdent = screen.getByTitle("Outdent — coming soon");
+    const indent = screen.getByTitle("Indent — coming soon");
+    expect(outdent).toBeDefined();
+    expect(indent).toBeDefined();
+    expect(outdent.hasAttribute("disabled")).toBe(true);
+    expect(indent.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("renders filter, columns, quality buttons as disabled", () => {
+    render(<Toolbar viewMode="gantt" />);
+    expect(screen.getByTitle("Filter — coming soon").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByTitle("Columns — coming soon").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByTitle("Quality — coming soon").hasAttribute("disabled")).toBe(true);
+  });
 });
