@@ -127,9 +127,13 @@ export interface SortConfig {
   direction: SortDirection;
 }
 
+/* ─── Grouping ─── */
+
+export type GroupByField = "wbs" | "resource" | "none";
+
 /* ─── Flattened spreadsheet row ─── */
 
-export type WbsRowType = "wbs" | "activity" | "milestone";
+export type WbsRowType = "wbs" | "activity" | "milestone" | "group-header";
 
 export interface SpreadsheetRow {
   id: string;
@@ -138,6 +142,8 @@ export interface SpreadsheetRow {
   name: string;
   isExpanded: boolean;
   hasChildren: boolean;
+  /** Resource ID for group-header rows */
+  groupKey?: string;
   /** When true, this row is a placeholder for inline name input */
   isAdding?: boolean;
   /** WBS icon name (defaults to "Folder") */

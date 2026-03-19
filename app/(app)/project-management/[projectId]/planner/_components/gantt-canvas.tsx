@@ -187,6 +187,9 @@ function GanttCanvas({
       // Skip rows outside viewport
       if (rowY + rowHeight < 0 || rowY > h) continue;
 
+      // Skip group-header rows — no bar to render
+      if (row.type === "group-header") continue;
+
       if (row.type === "wbs") {
         // ── Summary bar ──
         const childActs = activities.filter((a) => a.wbsNodeId === row.id);

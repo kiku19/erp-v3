@@ -23,9 +23,10 @@ import {
   Settings2,
   LayoutTemplate,
 } from "lucide-react";
-import type { LinkModeStatus, ViewMode } from "./types";
+import type { LinkModeStatus, ViewMode, GroupByField } from "./types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 
 interface ToolbarProps {
   viewMode?: ViewMode;
@@ -52,6 +53,8 @@ interface ToolbarProps {
   onAddResource?: () => void;
   onSaveAsLayout?: () => void;
   onViewLayouts?: () => void;
+  groupBy?: GroupByField;
+  onGroupByChange?: (field: GroupByField) => void;
 }
 
 export const Toolbar = memo(function Toolbar({
@@ -79,6 +82,8 @@ export const Toolbar = memo(function Toolbar({
   onAddResource,
   onSaveAsLayout,
   onViewLayouts,
+  groupBy = "wbs",
+  onGroupByChange,
 }: ToolbarProps) {
   const isGantt = viewMode === "gantt";
   const isNetwork = viewMode === "network";
@@ -204,10 +209,40 @@ export const Toolbar = memo(function Toolbar({
               </Button>
               {isGantt && (
                 <>
-                  <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Group activities by WBS, status, or resource">
-                    <ListTree size={14} />
-                    Group
-                  </Button>
+                  <DropdownMenu
+                    trigger={
+                      <Button
+                        variant={groupBy !== "wbs" ? "default" : "ghost"}
+                        size="sm"
+                        className="h-7 px-2.5 text-[12px]"
+                        title="Group activities by WBS or resource"
+                        data-testid="group-dropdown-trigger"
+                      >
+                        <ListTree size={14} />
+                        Group
+                      </Button>
+                    }
+                    className="w-[180px]"
+                  >
+                    <DropdownMenuItem
+                      active={groupBy === "wbs"}
+                      onClick={() => onGroupByChange?.("wbs")}
+                    >
+                      WBS (default)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      active={groupBy === "resource"}
+                      onClick={() => onGroupByChange?.("resource")}
+                    >
+                      Assigned Resource
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      active={groupBy === "none"}
+                      onClick={() => onGroupByChange?.("none")}
+                    >
+                      None
+                    </DropdownMenuItem>
+                  </DropdownMenu>
                   <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" title="Show or hide spreadsheet columns">
                     <Columns3 size={14} />
                     Columns
