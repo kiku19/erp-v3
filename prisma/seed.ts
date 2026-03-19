@@ -338,7 +338,6 @@ async function seedPlanner(tenantId: string) {
               duration,
               startDate: activityStartDate,
               finishDate: activityFinishDate,
-              totalFloat: Math.floor(Math.random() * 21), // 0-20
               percentComplete:
                 projConfig.status === "Completed"
                   ? 100

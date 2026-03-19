@@ -8,23 +8,23 @@ datasource db {
 }
 
 model Tenant {
-  id                      String    @id @default(cuid())
-  tenantName              String
-  email                   String    @unique
-  password                String
-  role                    String    @default("admin")
-  accessTokenExpiryMins   Int       @default(15)
-  refreshTokenExpiryDays  Int       @default(7)
-  rememberMeExpiryDays    Int       @default(30)
-  refreshToken            String?
-  refreshTokenExpiresAt   DateTime?
-  accessTokenExpiresAt    DateTime?
-  isDeleted               Boolean   @default(false)
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  id                     String    @id @default(cuid())
+  tenantName             String
+  email                  String    @unique
+  password               String
+  role                   String    @default("admin")
+  accessTokenExpiryMins  Int       @default(15)
+  refreshTokenExpiryDays Int       @default(7)
+  rememberMeExpiryDays   Int       @default(30)
+  refreshToken           String?
+  refreshTokenExpiresAt  DateTime?
+  accessTokenExpiresAt   DateTime?
+  isDeleted              Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  users                   User[]
-  canvasSnapshots         CanvasSnapshot[]
+  users           User[]
+  canvasSnapshots CanvasSnapshot[]
 
   @@index([email, isDeleted])
 }
@@ -49,35 +49,35 @@ model User {
 }
 
 model Eps {
-  id          String    @id @default(cuid())
-  tenantId    String
-  name        String
-  sortOrder   Int       @default(0)
-  isDeleted   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  sortOrder Int      @default(0)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  nodes       Node[]
-  projects    Project[]
+  nodes    Node[]
+  projects Project[]
 
   @@index([tenantId, isDeleted])
 }
 
 model Node {
-  id            String    @id @default(cuid())
-  tenantId      String
-  epsId         String
-  parentNodeId  String?
-  name          String
-  sortOrder     Int       @default(0)
-  isDeleted     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  tenantId     String
+  epsId        String
+  parentNodeId String?
+  name         String
+  sortOrder    Int      @default(0)
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  eps           Eps       @relation(fields: [epsId], references: [id])
-  parentNode    Node?     @relation("NodeToNode", fields: [parentNodeId], references: [id])
-  childNodes    Node[]    @relation("NodeToNode")
-  projects      Project[]
+  eps        Eps       @relation(fields: [epsId], references: [id])
+  parentNode Node?     @relation("NodeToNode", fields: [parentNodeId], references: [id])
+  childNodes Node[]    @relation("NodeToNode")
+  projects   Project[]
 
   @@index([tenantId, isDeleted])
   @@index([epsId, isDeleted])
@@ -104,14 +104,14 @@ model Project {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  eps                    Eps                    @relation(fields: [epsId], references: [id])
-  node                   Node?                  @relation(fields: [nodeId], references: [id])
-  plannerEvents          PlannerEvent[]
-  wbsNodes               WbsNode[]
-  activities             Activity[]
-  activityRelationships  ActivityRelationship[]
-  resources              Resource[]
-  resourceAssignments    ResourceAssignment[]
+  eps                   Eps                    @relation(fields: [epsId], references: [id])
+  node                  Node?                  @relation(fields: [nodeId], references: [id])
+  plannerEvents         PlannerEvent[]
+  wbsNodes              WbsNode[]
+  activities            Activity[]
+  activityRelationships ActivityRelationship[]
+  resources             Resource[]
+  resourceAssignments   ResourceAssignment[]
 
   @@unique([tenantId, projectId])
   @@index([tenantId, isDeleted])
@@ -130,7 +130,7 @@ model CanvasEvent {
   payload    Json
   createdAt  DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@index([tenantId, version])
   @@index([tenantId, entityId])
@@ -142,27 +142,27 @@ model CanvasSnapshot {
   version   Int      @default(0)
   updatedAt DateTime @updatedAt
 
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
 }
 
 model WbsNode {
-  id            String    @id @default(cuid())
-  tenantId      String
-  projectId     String
-  parentId      String?
-  wbsCode       String
-  name          String
-  sortOrder     Int       @default(0)
-  isDeleted     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  tenantId  String
+  projectId String
+  parentId  String?
+  wbsCode   String
+  name      String
+  sortOrder Int      @default(0)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  project       Project   @relation(fields: [projectId], references: [id])
-  parentWbs     WbsNode?  @relation("WbsToWbs", fields: [parentId], references: [id])
-  childWbs      WbsNode[] @relation("WbsToWbs")
-  activities    Activity[]
+  project    Project    @relation(fields: [projectId], references: [id])
+  parentWbs  WbsNode?   @relation("WbsToWbs", fields: [parentId], references: [id])
+  childWbs   WbsNode[]  @relation("WbsToWbs")
+  activities Activity[]
 
   @@unique([tenantId, projectId, wbsCode])
   @@index([tenantId, projectId, isDeleted])
@@ -179,6 +179,7 @@ model Activity {
   activityType    String    @default("task")
   duration        Int       @default(0)
   durationUnit    String    @default("days")
+  uom             String    @default("")
   totalQuantity   Float     @default(0)
   totalWorkHours  Float     @default(0)
   startDate       DateTime?
@@ -189,8 +190,8 @@ model Activity {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  project             Project              @relation(fields: [projectId], references: [id])
-  wbsNode             WbsNode              @relation(fields: [wbsNodeId], references: [id])
+  project             Project                @relation(fields: [projectId], references: [id])
+  wbsNode             WbsNode                @relation(fields: [wbsNodeId], references: [id])
   predecessorRels     ActivityRelationship[] @relation("SuccessorRels")
   successorRels       ActivityRelationship[] @relation("PredecessorRels")
   resourceAssignments ResourceAssignment[]
@@ -213,8 +214,8 @@ model PlannerEvent {
   isDeleted  Boolean  @default(false)
   createdAt  DateTime @default(now())
 
-  project    Project  @relation(fields: [projectId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
 
   @@index([tenantId, projectId, version])
   @@index([tenantId, projectId, entityId])
@@ -231,40 +232,40 @@ model PlannerSnapshot {
 }
 
 model Resource {
-  id              String    @id @default(cuid())
-  tenantId        String
-  projectId       String
-  name            String
-  resourceType    String    @default("labor")
-  maxUnitsPerDay  Float     @default(8)
-  costPerUnit     Float     @default(0)
-  sortOrder       Int       @default(0)
-  isDeleted       Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String   @id @default(cuid())
+  tenantId       String
+  projectId      String
+  name           String
+  resourceType   String   @default("labor")
+  maxUnitsPerDay Float    @default(8)
+  costPerUnit    Float    @default(0)
+  sortOrder      Int      @default(0)
+  isDeleted      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  project         Project   @relation(fields: [projectId], references: [id])
-  assignments     ResourceAssignment[]
+  project     Project              @relation(fields: [projectId], references: [id])
+  assignments ResourceAssignment[]
 
   @@index([tenantId, projectId, isDeleted])
 }
 
 model ResourceAssignment {
-  id           String    @id @default(cuid())
+  id           String   @id @default(cuid())
   tenantId     String
   projectId    String
   activityId   String
   resourceId   String
-  unitsPerDay  Float     @default(1)
-  budgetedCost Float     @default(0)
-  actualCost   Float     @default(0)
-  isDeleted    Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  unitsPerDay  Float    @default(1)
+  budgetedCost Float    @default(0)
+  actualCost   Float    @default(0)
+  isDeleted    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  project      Project   @relation(fields: [projectId], references: [id])
-  activity     Activity  @relation(fields: [activityId], references: [id])
-  resource     Resource  @relation(fields: [resourceId], references: [id])
+  project  Project  @relation(fields: [projectId], references: [id])
+  activity Activity @relation(fields: [activityId], references: [id])
+  resource Resource @relation(fields: [resourceId], references: [id])
 
   @@unique([tenantId, activityId, resourceId])
   @@index([tenantId, projectId, isDeleted])

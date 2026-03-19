@@ -41,6 +41,10 @@
    - ❌ Any query missing `tenantId` · `prisma.*.delete()` / `deleteMany()` · Query without `isDeleted: false` · Local timezone dates
    - ✅ `where: { tenantId, isDeleted: false }` on reads · `data: { tenantId }` on creates · `data: { isDeleted: true }` for deletes · `new Date()` for timestamps
 
+9. **Worktrees must NEVER touch the database schema.** All worktrees share a single PostgreSQL database. Schema modifications (`prisma migrate dev`, `prisma db push`, `prisma migrate reset`, editing `prisma/schema.prisma`) must ONLY happen in the **main working directory** (`/home/kishore/Project/erp-v3`). Worktrees may only run `npx prisma generate` (client codegen, safe). If a feature requires schema changes, make them in the main branch first, then start the worktree.
+   - ❌ Running `prisma migrate dev` in a worktree · Running `prisma db push` in a worktree · Editing `prisma/schema.prisma` in a worktree · Running `prisma migrate reset` in a worktree
+   - ✅ Schema changes in main working directory only · `npx prisma generate` in worktree (safe) · Worktree code works with the existing DB schema
+
 ## Design Tokens (from `app/globals.css`)
 - **Colors:** `background`, `foreground`, `primary`, `secondary`, `muted`, `accent`, `destructive`, `card`, `border`, `input`, `ring` — each has a `-foreground` variant
 - **Status:** `success`, `warning`, `error`, `info` — each has `-bg` and `-foreground` variants

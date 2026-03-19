@@ -23,6 +23,7 @@ Start the Next.js dev server for the current git worktree.
    ```
    npx prisma generate
    ```
+   ⚠️ **NEVER run `prisma migrate dev`, `prisma db push`, or `prisma migrate reset` in a worktree.** All worktrees share the same database. Schema changes must only happen in the main working directory. Worktrees may only run `prisma generate`.
 
 5. **Kill any existing process on the port**:
    ```

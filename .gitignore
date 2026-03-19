@@ -7,3 +7,4 @@ app/generated
 storybook-static
 .playwright-mcp
 .claude/worktrees
+test-results
