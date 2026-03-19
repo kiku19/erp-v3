@@ -11,6 +11,10 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ projectId: "prj-001" }),
 }));
 
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ accessToken: "test-token", user: null, loading: false }),
+}));
+
 const defaultCanvasReturn: UsePlannerCanvasReturn = {
   project: {
     id: "prj-001",
@@ -106,11 +110,28 @@ describe("ProjectPlannerPage", () => {
     expect(screen.getByTestId("gantt-chart")).toBeDefined();
   });
 
-  it("shows network view when network tab is clicked", () => {
+  it("shows coming soon when network tab is clicked", () => {
     render(<ProjectPlannerPage />);
     const networkToggles = screen.getAllByTestId("view-toggle-network");
     fireEvent.click(networkToggles[0]);
-    expect(screen.getByTestId("network-chart")).toBeDefined();
+    expect(screen.getByTestId("network-coming-soon")).toBeDefined();
+    expect(screen.getByText("Network View — Coming Soon")).toBeDefined();
+  });
+
+  it("shows coming soon when resource tab is clicked", () => {
+    render(<ProjectPlannerPage />);
+    const resourceToggles = screen.getAllByTestId("view-toggle-resource");
+    fireEvent.click(resourceToggles[0]);
+    expect(screen.getByTestId("resource-coming-soon")).toBeDefined();
+    expect(screen.getByText("Resource View — Coming Soon")).toBeDefined();
+  });
+
+  it("shows coming soon when progress tab is clicked", () => {
+    render(<ProjectPlannerPage />);
+    const progressToggles = screen.getAllByTestId("view-toggle-progress");
+    fireEvent.click(progressToggles[0]);
+    expect(screen.getByTestId("progress-coming-soon")).toBeDefined();
+    expect(screen.getByText("Progress View — Coming Soon")).toBeDefined();
   });
 
   it("renders autosave indicator", () => {

@@ -22,7 +22,7 @@ export default defineConfig({
           name: 'unit',
           environment: 'jsdom',
           include: ['**/*.test.{ts,tsx}'],
-          exclude: ['node_modules', '.storybook'],
+          exclude: ['node_modules', '.storybook', '.claude/**'],
         },
       },
       {

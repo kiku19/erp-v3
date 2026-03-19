@@ -100,8 +100,8 @@ function GanttSettingsModal({ open, onClose, settings, onApply }: GanttSettingsM
         <Tabs defaultValue="timescale">
           <TabList>
             <Tab value="timescale">Timescale</Tab>
-            <Tab value="bars">Bars</Tab>
-            <Tab value="display">Display</Tab>
+            <Tab value="bars" disabled>Bars</Tab>
+            <Tab value="display" disabled>Display</Tab>
           </TabList>
 
           <TabPanels>

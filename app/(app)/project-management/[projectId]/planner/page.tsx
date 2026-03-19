@@ -20,9 +20,7 @@ import { CalendarSettingsModal } from "./_components/calendar-settings-modal";
 import { ObsModal } from "./_components/obs-modal";
 import { GanttChart } from "./_components/gantt-chart";
 import { GanttSettingsModal } from "./_components/gantt-settings-modal";
-import { NetworkChart } from "./_components/network-chart";
-import { ResourceChart } from "./_components/resource-chart";
-import { ProgressChart } from "./_components/progress-chart";
+import { Construction } from "lucide-react";
 import { useWbsIconSettings } from "./_components/use-wbs-icon-settings";
 import { ConfirmDeleteModal } from "./_components/confirm-delete-modal";
 import { SaveLayoutModal } from "./_components/save-layout-modal";
@@ -53,12 +51,6 @@ export default function ProjectPlannerPage() {
     reload,
   } = usePlannerCanvas(projectId);
   const [viewMode, setViewMode] = useState<ViewMode>("gantt");
-  // Track which views have been visited so we can lazy-mount then keep alive via CSS
-  const visitedViewsRef = useRef<Set<ViewMode>>(new Set(["gantt"]));
-  if (!visitedViewsRef.current.has(viewMode)) {
-    visitedViewsRef.current.add(viewMode);
-  }
-  const visited = visitedViewsRef.current;
   const [wbsSidebarWidth, setWbsSidebarWidth] = useState(220);
   const [spreadsheetWidth, setSpreadsheetWidth] = useState<number | null>(null);
   const [iconSettingsOpen, setIconSettingsOpen] = useState(false);
@@ -739,45 +731,23 @@ export default function ProjectPlannerPage() {
         )}
       </div>
 
-      {visited.has("network") && (
-        <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "network" ? "block" : "none" }}>
-          <NetworkChart
-            activities={deferredActivities}
-            relationships={deferredRelationships}
-            wbsNodes={deferredWbsNodes}
-            selectedRowId={wbsTree.selectedRowId}
-            onSelectRow={wbsTree.selectRow}
-            projectStartDate={effectiveStartDate}
-          />
+      {/* Coming Soon placeholders for Network / Resource / Progress */}
+      {(["network", "resource", "progress"] as const).map((mode) => (
+        <div
+          key={mode}
+          data-testid={`${mode}-coming-soon`}
+          className="flex-1 overflow-hidden border-t border-border flex items-center justify-center bg-background"
+          style={{ display: viewMode === mode ? "flex" : "none" }}
+        >
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <Construction size={32} />
+            <p className="text-sm font-medium">
+              {mode.charAt(0).toUpperCase() + mode.slice(1)} View — Coming Soon
+            </p>
+            <p className="text-xs">This feature is under development.</p>
+          </div>
         </div>
-      )}
-
-      {visited.has("resource") && (
-        <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "resource" ? "block" : "none" }}>
-          <ResourceChart
-            activities={deferredActivities}
-            resources={wbsTree.resources}
-            assignments={wbsTree.resourceAssignments}
-            projectStartDate={effectiveStartDate}
-            projectFinishDate={effectiveFinishDate}
-            timeScale="week"
-          />
-        </div>
-      )}
-
-      {visited.has("progress") && (
-        <div className="flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "progress" ? "block" : "none" }}>
-          <ProgressChart
-            activities={deferredActivities}
-            wbsNodes={deferredWbsNodes}
-            resources={wbsTree.resources}
-            assignments={wbsTree.resourceAssignments}
-            projectStartDate={effectiveStartDate}
-            projectFinishDate={effectiveFinishDate}
-            timeScale="week"
-          />
-        </div>
-      )}
+      ))}
 
       {/* Expanded activity detail modal */}
       <ActivityDetailModal
