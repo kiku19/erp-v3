@@ -74,12 +74,12 @@ describe("Toolbar", () => {
     expect(screen.getByText("WBS")).toBeDefined();
   });
 
-  it("renders zoom buttons in all views", () => {
-    const { rerender } = render(<Toolbar viewMode="gantt" />);
-    expect(screen.getByTitle("Zoom in (show more detail)")).toBeDefined();
-
-    rerender(<Toolbar viewMode="network" />);
-    expect(screen.getByTitle("Zoom in (show more detail)")).toBeDefined();
+  it("renders zoom and settings buttons as disabled", () => {
+    render(<Toolbar viewMode="gantt" />);
+    expect(screen.getByTitle("Zoom in — coming soon").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByTitle("Zoom out — coming soon").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByTitle("Zoom fit — coming soon").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByTitle("Settings — coming soon").hasAttribute("disabled")).toBe(true);
   });
 
   it("does not render add/undo/filter buttons in non-gantt views", () => {

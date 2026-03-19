@@ -242,24 +242,24 @@ export const Toolbar = memo(function Toolbar({
           </>
         )}
 
-        {/* Zoom Group — all views */}
+        {/* Zoom Group — disabled (coming soon) */}
         <div className="flex items-center gap-0.5">
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onZoomOut} title="Zoom out (show more time range)">
+          <Button variant="icon" size="icon" className="h-7 w-7" disabled title="Zoom out — coming soon">
             <ZoomOut size={16} />
           </Button>
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onZoomIn} title="Zoom in (show more detail)">
+          <Button variant="icon" size="icon" className="h-7 w-7" disabled title="Zoom in — coming soon">
             <ZoomIn size={16} />
           </Button>
-          <Button variant="icon" size="icon" className="h-7 w-7" onClick={onZoomFit} title="Fit entire schedule in view">
+          <Button variant="icon" size="icon" className="h-7 w-7" disabled title="Zoom fit — coming soon">
             <Maximize2 size={16} />
           </Button>
         </div>
 
-        {/* Settings — gantt only */}
+        {/* Settings — disabled (coming soon) */}
         {isGantt && (
           <>
             <div className="w-px h-6 bg-border" />
-            <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" onClick={onOpenSettings} title="Gantt chart settings">
+            <Button variant="ghost" size="sm" className="h-7 px-2.5 text-[12px]" disabled title="Settings — coming soon">
               <Settings2 size={14} />
               Settings
             </Button>
