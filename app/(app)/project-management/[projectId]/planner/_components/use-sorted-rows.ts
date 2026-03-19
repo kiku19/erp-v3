@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { SpreadsheetRow, SortConfig } from "./types";
+import type { SpreadsheetRow, SortConfig, GroupByField } from "./types";
 
 /* ─────────────────────── Sort value extractors ─────────────────── */
 
@@ -78,31 +78,56 @@ function extractNumericId(s: string): number | null {
   return val;
 }
 
-/* ─────────────────────── Tree-aware sort ───────────────────────── */
+/* ─────────────────────── Sort strategies ─────────────────────────── */
+
+/** Check if a row type acts as a segment boundary (group header) */
+function isSegmentBoundary(row: SpreadsheetRow): boolean {
+  return row.type === "wbs" || row.type === "group-header";
+}
 
 /**
- * Sorts flatRows while preserving the WBS tree hierarchy.
+ * Sorts flatRows based on the active grouping mode.
  *
- * Strategy: each WBS node stays in its current position relative to its
- * sibling WBS nodes, but the activities *within* each WBS group are sorted
- * by the specified column. This preserves the tree structure while giving
- * the user meaningful sorting of activities.
- *
- * Performance: O(n log n) per WBS group. Since groups are small, this is
- * effectively O(n) for the full tree.
+ * - groupBy "wbs" + sort active → flatten all activities (remove WBS rows), sort globally
+ * - groupBy "resource" → sort within each group-header segment
+ * - groupBy "none" → sort the entire flat list
+ * - Default (no groupBy match) → sort within WBS/group-header segments
  */
-function sortFlatRows(rows: SpreadsheetRow[], sort: SortConfig): SpreadsheetRow[] {
+function sortFlatRows(rows: SpreadsheetRow[], sort: SortConfig, groupBy: GroupByField = "wbs"): SpreadsheetRow[] {
   if (rows.length === 0) return rows;
 
-  // Group consecutive activity/milestone rows under their preceding WBS row.
-  // We walk the flat list and build "segments": a WBS header + its activities.
+  // WBS grouping + sort active → sort activities within each WBS segment
+  if (groupBy === "wbs") {
+    return sortWithinSegments(rows, sort);
+  }
+
+  // "none" grouping → sort entire list globally
+  if (groupBy === "none") {
+    const sorted = [...rows];
+    sorted.sort((a, b) => {
+      const aVal = getSortValue(a, sort.column);
+      const bVal = getSortValue(b, sort.column);
+      return compareValues(aVal, bVal, sort.direction);
+    });
+    return sorted;
+  }
+
+  // "resource" (or any segment-based grouping) → sort within each segment
+  return sortWithinSegments(rows, sort);
+}
+
+/**
+ * Sorts activities within each segment (WBS or group-header boundaries).
+ * Segment boundary rows stay in place; activities between them are sorted.
+ */
+function sortWithinSegments(rows: SpreadsheetRow[], sort: SortConfig): SpreadsheetRow[] {
   const result: SpreadsheetRow[] = [];
-  let currentWbsRow: SpreadsheetRow | null = null;
+  let currentHeaderRow: SpreadsheetRow | null = null;
   let currentActivities: SpreadsheetRow[] = [];
 
   function flushGroup() {
-    if (currentWbsRow) {
-      result.push(currentWbsRow);
+    if (currentHeaderRow) {
+      result.push(currentHeaderRow);
     }
     if (currentActivities.length > 1) {
       currentActivities.sort((a, b) => {
@@ -115,23 +140,19 @@ function sortFlatRows(rows: SpreadsheetRow[], sort: SortConfig): SpreadsheetRow[
       result.push(act);
     }
     currentActivities = [];
-    currentWbsRow = null;
+    currentHeaderRow = null;
   }
 
   for (const row of rows) {
-    if (row.type === "wbs") {
-      // Flush the previous group before starting a new one
+    if (isSegmentBoundary(row)) {
       flushGroup();
-      currentWbsRow = row;
+      currentHeaderRow = row;
     } else {
-      // Activity or milestone — accumulate under current WBS
       currentActivities.push(row);
     }
   }
 
-  // Flush the last group
   flushGroup();
-
   return result;
 }
 
@@ -139,16 +160,18 @@ function sortFlatRows(rows: SpreadsheetRow[], sort: SortConfig): SpreadsheetRow[
 
 /**
  * Returns a memoized sorted copy of flatRows.
- * When sortConfig is null, returns the original rows unchanged (WBS sort order).
+ * When sortConfig is null, returns the original rows unchanged.
+ * groupBy controls how sorting interacts with row grouping.
  */
 function useSortedRows(
   flatRows: SpreadsheetRow[],
   sortConfig: SortConfig | null,
+  groupBy: GroupByField = "wbs",
 ): SpreadsheetRow[] {
   return useMemo(() => {
     if (!sortConfig) return flatRows;
-    return sortFlatRows(flatRows, sortConfig);
-  }, [flatRows, sortConfig]);
+    return sortFlatRows(flatRows, sortConfig, groupBy);
+  }, [flatRows, sortConfig, groupBy]);
 }
 
 export { useSortedRows, sortFlatRows, getSortValue, compareValues };

@@ -10,6 +10,7 @@ import { BreadcrumbBar } from "./_components/breadcrumb-bar";
 import { TopBar } from "./_components/top-bar";
 import { Toolbar } from "./_components/toolbar";
 import { WbsSidebarTree } from "./_components/wbs-sidebar-tree";
+import { ResourceSidebar } from "./_components/resource-sidebar";
 import { ActivitySpreadsheet } from "./_components/activity-spreadsheet";
 import { SplitterHandle } from "./_components/splitter-handle";
 import { WbsIconSettingsModal } from "./_components/wbs-icon-settings-modal";
@@ -29,7 +30,8 @@ import { LayoutsModal } from "./_components/layouts-modal";
 import { DEFAULT_GANTT_SETTINGS, zoomIn, zoomOut } from "./_components/gantt-utils";
 import { useSortedRows } from "./_components/use-sorted-rows";
 import { useAuth } from "@/lib/auth-context";
-import type { ViewMode, DetailTab, GanttSettings, SortConfig, SortableColumn } from "./_components/types";
+import { useGroupedRows } from "./_components/use-grouped-rows";
+import type { ViewMode, DetailTab, GanttSettings, SortConfig, SortableColumn, GroupByField } from "./_components/types";
 
 export default function ProjectPlannerPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -74,6 +76,21 @@ export default function ProjectPlannerPage() {
   });
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [isSortTransitionPending, startSortTransition] = useTransition();
+  const [groupBy, setGroupBy] = useState<GroupByField>("wbs");
+  // Deferred groupBy: sidebar/layout uses groupBy (immediate), data pipeline uses deferredGroupBy
+  const deferredGroupBy = useDeferredValue(groupBy);
+  const isDataPending = groupBy !== deferredGroupBy;
+  // Overlay with minimum 500ms display time — fast fade-in, slow fade-out
+  const [showGroupOverlay, setShowGroupOverlay] = useState(false);
+  const groupOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleGroupByChange = useCallback((field: GroupByField) => {
+    setGroupBy(field);
+    setSortConfig(null);
+    setShowGroupOverlay(true);
+    if (groupOverlayTimerRef.current) clearTimeout(groupOverlayTimerRef.current);
+    groupOverlayTimerRef.current = setTimeout(() => setShowGroupOverlay(false), 500);
+  }, []);
+  const isGroupTransitionPending = showGroupOverlay || isDataPending;
   const iconSettings = useWbsIconSettings();
 
   // Delete confirmation state
@@ -117,8 +134,15 @@ export default function ProjectPlannerPage() {
   const deferredWbsNodes = useDeferredValue(wbsTree.wbsNodes);
   const deferredRelationships = useDeferredValue(wbsTree.relationships);
 
-  // Apply column sort to flat rows — both spreadsheet and gantt see the same order
-  const sortedFlatRows = useSortedRows(wbsTree.flatRows, sortConfig);
+  // Pipeline: flatRows → grouped → sorted (uses deferred groupBy so sidebar animates immediately)
+  const groupedRows = useGroupedRows(
+    wbsTree.flatRows,
+    deferredGroupBy,
+    wbsTree.resources,
+    wbsTree.resourceAssignments,
+    wbsTree.activities,
+  );
+  const sortedFlatRows = useSortedRows(groupedRows, sortConfig, deferredGroupBy);
   const deferredSortedFlatRows = useDeferredValue(sortedFlatRows);
 
   // Toggle sort: click same column → cycle asc → desc → off; click different → asc
@@ -521,46 +545,88 @@ export default function ProjectPlannerPage() {
         onOpenSettings={handleOpenGanttSettings}
         onSaveAsLayout={() => setSaveLayoutOpen(true)}
         onViewLayouts={() => setLayoutsModalOpen(true)}
+        groupBy={groupBy}
+        onGroupByChange={handleGroupByChange}
       />
 
       {/* Body — all views stay mounted, hidden via CSS to avoid remount cost */}
       <div className="relative flex flex-col flex-1 overflow-hidden border-t border-border" style={{ display: viewMode === "gantt" ? "flex" : "none" }}>
+        {/* Group transition overlay — fast fade-in (150ms), slow fade-out (800ms) */}
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center bg-background pointer-events-none ease-[var(--ease-default)]"
+          style={{
+            opacity: isGroupTransitionPending ? 0.85 : 0,
+            transitionProperty: "opacity",
+            transitionDuration: isGroupTransitionPending ? "150ms" : "800ms",
+          }}
+        >
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+
         {/* Gantt area — shrinks when detail panel is open */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Left: WBS sidebar */}
-          <WbsSidebarTree
-            wbsNodes={wbsTree.wbsNodes}
-            selectedWbsId={selectedWbsId}
-            onSelectWbs={wbsTree.selectRow}
-            onRenameWbs={handleRenameWbs}
-            onMoveWbs={wbsTree.moveWbs}
-            width={wbsSidebarWidth}
-            iconOrder={iconSettings.settings.icons}
-            onUpdateIcon={handleUpdateIcon}
-            onUpdateIconColor={handleUpdateIconColor}
-            onOpenIconSettings={handleOpenIconSettings}
-            onDeleteWbs={handleRequestDeleteWbs}
-            hiddenWbsIds={wbsTree.hiddenWbsIds}
-            onToggleVisibility={wbsTree.toggleWbsVisibility}
-            onScrollToWbs={handleScrollToWbs}
-          />
+          {/* Left sidebar — outer clip animates width, inner content stays fixed to avoid reflows */}
+          <div
+            className="shrink-0 overflow-hidden transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-default)] will-change-[width]"
+            style={{ width: groupBy === "none" ? 0 : `${wbsSidebarWidth}px` }}
+          >
+            {/* Fixed-width inner — never changes size, only clipped by outer */}
+            <div style={{ width: `${wbsSidebarWidth}px`, minWidth: `${wbsSidebarWidth}px` }}>
+              {/* WBS sidebar — always mounted to avoid re-render stutter */}
+              <div style={{ display: groupBy === "wbs" ? "block" : "none" }}>
+                <WbsSidebarTree
+                  wbsNodes={wbsTree.wbsNodes}
+                  selectedWbsId={selectedWbsId}
+                  onSelectWbs={wbsTree.selectRow}
+                  onRenameWbs={handleRenameWbs}
+                  onMoveWbs={wbsTree.moveWbs}
+                  width={wbsSidebarWidth}
+                  iconOrder={iconSettings.settings.icons}
+                  onUpdateIcon={handleUpdateIcon}
+                  onUpdateIconColor={handleUpdateIconColor}
+                  onOpenIconSettings={handleOpenIconSettings}
+                  onDeleteWbs={handleRequestDeleteWbs}
+                  hiddenWbsIds={wbsTree.hiddenWbsIds}
+                  onToggleVisibility={wbsTree.toggleWbsVisibility}
+                  onScrollToWbs={handleScrollToWbs}
+                />
+              </div>
+              {/* Resource sidebar — always mounted */}
+              <div style={{ display: groupBy === "resource" ? "block" : "none" }}>
+                <ResourceSidebar
+                  resources={wbsTree.resources}
+                  selectedResourceId={null}
+                  onSelectResource={() => {}}
+                  onAddResource={() => {}}
+                  onUpdateResource={() => {}}
+                  rowHeight={32}
+                  width={wbsSidebarWidth}
+                />
+              </div>
+            </div>
+          </div>
 
-          {/* WBS ↔ Spreadsheet splitter */}
-          <SplitterHandle
-            testId="wbs-splitter-handle"
-            onResizeStart={handleWbsResizeStart}
-            onResize={handleWbsResize}
-          />
-
-          {/* WBS ↔ Spreadsheet splitter */}
-          <SplitterHandle
-            testId="wbs-splitter-handle"
-            onResizeStart={handleWbsResizeStart}
-            onResize={handleWbsResize}
-          />
+          {/* Sidebar ↔ Spreadsheet splitter — always mounted, hidden when no sidebar */}
+          <div className="flex" style={{ display: groupBy !== "none" ? "flex" : "none" }}>
+            <SplitterHandle
+              testId="wbs-splitter-handle"
+              onResizeStart={handleWbsResizeStart}
+              onResize={handleWbsResize}
+            />
+          </div>
 
           {/* Center: Spreadsheet */}
-          <div ref={spreadsheetContainerRef} className="flex flex-col overflow-hidden" style={spreadsheetWidth ? { width: `${spreadsheetWidth}px`, flexShrink: 0 } : { flex: 1 }}>
+          <div
+            ref={spreadsheetContainerRef}
+            className="flex flex-col overflow-hidden"
+            style={{
+              ...(spreadsheetWidth ? { width: `${spreadsheetWidth}px`, flexShrink: 0 } : { flex: 1 }),
+              opacity: isGroupTransitionPending ? 0 : 1,
+              transitionProperty: "opacity",
+              transitionDuration: isGroupTransitionPending ? "150ms" : "600ms",
+              transitionTimingFunction: "var(--ease-default)",
+            }}
+          >
             <ActivitySpreadsheet
               flatRows={sortedFlatRows}
               selectedRowId={wbsTree.selectedRowId}
@@ -591,7 +657,15 @@ export default function ProjectPlannerPage() {
           />
 
           {/* Right: Gantt Chart */}
-          <div className="relative flex flex-col flex-1 overflow-hidden">
+          <div
+            className="relative flex flex-col flex-1 overflow-hidden"
+            style={{
+              opacity: isGroupTransitionPending ? 0 : 1,
+              transitionProperty: "opacity",
+              transitionDuration: isGroupTransitionPending ? "150ms" : "600ms",
+              transitionTimingFunction: "var(--ease-default)",
+            }}
+          >
           <GanttChart
             flatRows={deferredSortedFlatRows}
             activities={deferredActivities}
