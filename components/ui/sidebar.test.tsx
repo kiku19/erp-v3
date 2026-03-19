@@ -136,14 +136,33 @@ describe("useSidebarAutoHide", () => {
     vi.useRealTimers();
   });
 
-  it("starts with visible false", () => {
+  it("starts with visible true and auto-hides after 1 second", () => {
     const { result } = renderHook(() => useSidebarAutoHide());
+    expect(result.current.visible).toBe(true);
+    expect(result.current.isClosing).toBe(false);
+
+    // Starts closing at 1 second (default delay)
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(result.current.isClosing).toBe(true);
+
+    // Fully hidden after animation (300ms)
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
     expect(result.current.visible).toBe(false);
     expect(result.current.isClosing).toBe(false);
   });
 
-  it("show() makes sidebar visible", () => {
+  it("show() makes sidebar visible after it was hidden", () => {
     const { result } = renderHook(() => useSidebarAutoHide());
+    // Wait for auto-hide to complete
+    act(() => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(result.current.visible).toBe(false);
+
     act(() => {
       result.current.show();
     });
@@ -152,9 +171,6 @@ describe("useSidebarAutoHide", () => {
 
   it("hide() sets isClosing and then hides after animation", () => {
     const { result } = renderHook(() => useSidebarAutoHide());
-    act(() => {
-      result.current.show();
-    });
     act(() => {
       result.current.hide();
     });
@@ -169,39 +185,32 @@ describe("useSidebarAutoHide", () => {
     expect(result.current.isClosing).toBe(false);
   });
 
-  it("startHideTimer starts 5-second countdown then hides", () => {
+  it("startHideTimer starts 1-second countdown then hides", () => {
     const { result } = renderHook(() => useSidebarAutoHide());
+    // Cancel the auto-start timer first
     act(() => {
-      result.current.show();
+      result.current.cancelHideTimer();
     });
     act(() => {
       result.current.startHideTimer();
     });
 
-    // Still visible at 4 seconds
+    // Still visible at 500ms
     act(() => {
-      vi.advanceTimersByTime(4000);
+      vi.advanceTimersByTime(500);
     });
     expect(result.current.visible).toBe(true);
 
-    // Starts closing at 5 seconds
+    // Starts closing at 1 second
     act(() => {
-      vi.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(500);
     });
     expect(result.current.isClosing).toBe(true);
   });
 
   it("cancelHideTimer prevents auto-hide", () => {
     const { result } = renderHook(() => useSidebarAutoHide());
-    act(() => {
-      result.current.show();
-    });
-    act(() => {
-      result.current.startHideTimer();
-    });
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
+    // Cancel the auto-start timer immediately
     act(() => {
       result.current.cancelHideTimer();
     });
@@ -216,8 +225,9 @@ describe("useSidebarAutoHide", () => {
 
   it("respects custom delay", () => {
     const { result } = renderHook(() => useSidebarAutoHide(2000));
+    // Cancel auto-start, then manually start
     act(() => {
-      result.current.show();
+      result.current.cancelHideTimer();
     });
     act(() => {
       result.current.startHideTimer();

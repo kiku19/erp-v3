@@ -74,8 +74,8 @@ interface SidebarTriggerProps {
 
 /* ─────────────────────────── Auto-hide hook ─────────────────────── */
 
-function useSidebarAutoHide(autoHideDelay = 5000) {
-  const [visible, setVisible] = useState(false);
+function useSidebarAutoHide(autoHideDelay = 1000) {
+  const [visible, setVisible] = useState(true);
   const [isClosing, setIsClosing] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,12 +116,18 @@ function useSidebarAutoHide(autoHideDelay = 5000) {
     }, autoHideDelay);
   }, [autoHideDelay, hide, cancelHideTimer]);
 
+  // Auto-start hide timer on mount so sidebar dismisses automatically
   useEffect(() => {
+    hideTimerRef.current = setTimeout(() => {
+      hide();
+      hideTimerRef.current = null;
+    }, autoHideDelay);
+
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       if (animTimerRef.current) clearTimeout(animTimerRef.current);
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { visible, isClosing, show, hide, startHideTimer, cancelHideTimer };
 }

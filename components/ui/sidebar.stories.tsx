@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   LayoutDashboard,
@@ -39,11 +38,6 @@ type Story = StoryObj<typeof Sidebar>;
 function AutoHideSidebarComponent() {
   const { visible, isClosing, show, hide, startHideTimer, cancelHideTimer } =
     useSidebarAutoHide();
-
-  // Show sidebar initially for demo
-  useEffect(() => {
-    show();
-  }, [show]);
 
   return (
     <div style={{ height: "100vh", position: "relative" }}>
@@ -125,9 +119,9 @@ function AutoHideSidebarComponent() {
 
       <main style={{ padding: 32, background: "var(--color-background)" }}>
         <p style={{ color: "var(--color-muted-foreground)", fontSize: 14 }}>
-          The sidebar auto-hides after 5 seconds. Move your cursor to the
-          top-left corner to reveal it. Hover over nav icons to see tooltips.
-          Items with sub-menus show flyout menus on hover.
+          The sidebar starts open and auto-hides after 1 second. Move your
+          cursor to the top-left corner to reveal it. Hover over nav icons to
+          see tooltips. Items with sub-menus show flyout menus on hover.
         </p>
       </main>
     </div>
