@@ -951,14 +951,14 @@ describe("useWbsTree", () => {
       // Update a1 duration from 10 to 15
       act(() => result.current.updateRow("a1", { duration: 15 }));
 
-      // a1 should finish at Jan 16 (start=Jan1 + 15 days)
+      // a1 should finish at Jan 22 (start=Jan1 + 15 working days, skipping weekends)
       const a1 = result.current.activities.find((a) => a.id === "a1")!;
-      expect(a1.finishDate).toBe("2026-01-16T00:00:00.000Z");
+      expect(a1.finishDate).toBe("2026-01-22T00:00:00.000Z");
 
-      // a2 should now start at Jan 16 (a1's new finish)
+      // a2 should now start at Jan 22 (a1's new finish) and finish Jan 29 (5 working days)
       const a2 = result.current.activities.find((a) => a.id === "a2")!;
-      expect(a2.startDate).toBe("2026-01-16T00:00:00.000Z");
-      expect(a2.finishDate).toBe("2026-01-21T00:00:00.000Z");
+      expect(a2.startDate).toBe("2026-01-22T00:00:00.000Z");
+      expect(a2.finishDate).toBe("2026-01-29T00:00:00.000Z");
     });
 
     it("predecessors field shows in flatRows", () => {
@@ -1004,8 +1004,8 @@ describe("useWbsTree", () => {
 
       // a2 should now start after a1 finishes
       const a2 = result.current.activities.find((a) => a.id === "a2")!;
-      expect(a2.startDate).toBe("2026-01-11T00:00:00.000Z"); // a1 finishes Jan 11
-      expect(a2.finishDate).toBe("2026-01-16T00:00:00.000Z"); // a2 = 5 days
+      expect(a2.startDate).toBe("2026-01-15T00:00:00.000Z"); // a1 finishes Jan 15 (10 working days from Jan 1)
+      expect(a2.finishDate).toBe("2026-01-22T00:00:00.000Z"); // a2 = 5 working days from Jan 15
     });
   });
 
@@ -1303,8 +1303,8 @@ describe("useWbsTree", () => {
     it("recalculates schedule", () => {
       const { result } = renderWithRels();
 
-      // Before removing: a2 starts at Jan 11 (after a1)
-      expect(result.current.activities.find((a) => a.id === "a2")!.startDate).toBe("2026-01-11T00:00:00.000Z");
+      // Before removing: a2 starts at Jan 15 (after a1's 10 working days from Jan 1)
+      expect(result.current.activities.find((a) => a.id === "a2")!.startDate).toBe("2026-01-15T00:00:00.000Z");
 
       act(() => result.current.removeRelationship("r1"));
 

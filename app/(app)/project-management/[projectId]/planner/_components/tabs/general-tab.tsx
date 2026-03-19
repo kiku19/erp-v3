@@ -3,7 +3,9 @@
 import { memo, useMemo } from "react";
 import { UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import type { SpreadsheetRow, WbsNodeData } from "../types";
+import type { CalendarData } from "@/lib/planner/calendar-types";
 
 /* ─────────────────────── Helpers ───────────────────────────────── */
 
@@ -45,12 +47,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 interface GeneralTabProps {
   activity: SpreadsheetRow;
   wbsNodes: WbsNodeData[];
+  calendars: CalendarData[];
+  defaultCalendarId: string | null;
   onUpdate: (id: string, fields: Record<string, unknown>) => void;
 }
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-const GeneralTab = memo(function GeneralTab({ activity, wbsNodes, onUpdate }: GeneralTabProps) {
+const GeneralTab = memo(function GeneralTab({ activity, wbsNodes, calendars, defaultCalendarId, onUpdate }: GeneralTabProps) {
   const nodeMap = useMemo(
     () => new Map(wbsNodes.map((n) => [n.id, n])),
     [wbsNodes],
@@ -81,8 +85,21 @@ const GeneralTab = memo(function GeneralTab({ activity, wbsNodes, onUpdate }: Ge
           <div className="flex-1">
             <Field label="WBS">{wbsPath}</Field>
           </div>
-          <div className="w-[140px]">
-            <Field label="Calendar">5-Day Work Week</Field>
+          <div className="w-[180px]">
+            <Field label="Calendar">
+              {calendars.length > 0 ? (
+                <Select
+                  value={activity.calendarId ?? defaultCalendarId ?? ""}
+                  onChange={(val) => onUpdate(activity.id, { calendarId: val || null })}
+                  options={[
+                    { label: "Project Default", value: "" },
+                    ...calendars.map((c) => ({ label: c.name, value: c.id })),
+                  ]}
+                />
+              ) : (
+                <span>5-Day Work Week</span>
+              )}
+            </Field>
           </div>
         </div>
         <div className="flex gap-3">

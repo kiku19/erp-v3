@@ -18,6 +18,7 @@ import type {
   ActivityRelationshipData,
   DetailTab,
 } from "./types";
+import type { CalendarData } from "@/lib/planner/calendar-types";
 
 /* ─────────────────────── Props ─────────────────────────────────── */
 
@@ -32,6 +33,8 @@ interface ActivityDetailModalProps {
   onOpenCalendarSettings: () => void;
   onOpenObs: () => void;
   onRemoveRelationship?: (relationshipId: string) => void;
+  calendars: CalendarData[];
+  defaultCalendarId: string | null;
   activeTab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
 }
@@ -49,6 +52,8 @@ const ActivityDetailModal = memo(function ActivityDetailModal({
   onOpenCalendarSettings,
   onOpenObs,
   onRemoveRelationship,
+  calendars,
+  defaultCalendarId,
   activeTab,
   onTabChange,
 }: ActivityDetailModalProps) {
@@ -109,7 +114,7 @@ const ActivityDetailModal = memo(function ActivityDetailModal({
 
           <TabPanels className="flex-1 overflow-auto">
             <TabPanel value="general">
-              <GeneralTab activity={activity} wbsNodes={wbsNodes} onUpdate={onUpdate} />
+              <GeneralTab activity={activity} wbsNodes={wbsNodes} calendars={calendars} defaultCalendarId={defaultCalendarId} onUpdate={onUpdate} />
             </TabPanel>
             <TabPanel value="relationships">
               <RelationshipsTab activityId={activity.id} activities={activities} relationships={relationships} onRemoveRelationship={onRemoveRelationship} />

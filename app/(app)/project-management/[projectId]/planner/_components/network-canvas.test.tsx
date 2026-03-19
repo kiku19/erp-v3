@@ -8,17 +8,17 @@ import type { ActivityData, ActivityRelationshipData } from "./types";
 const mockActivities: ActivityData[] = [
   {
     id: "a1", wbsNodeId: "w1", activityId: "A10", name: "Foundation Work",
-    activityType: "task", duration: 5, startDate: "2024-06-01", finishDate: "2024-06-06",
+    activityType: "task", duration: 5, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-06-01", finishDate: "2024-06-06",
     totalFloat: 0, percentComplete: 50, sortOrder: 0,
   },
   {
     id: "a2", wbsNodeId: "w1", activityId: "A20", name: "Framing",
-    activityType: "task", duration: 10, startDate: "2024-06-06", finishDate: "2024-06-16",
+    activityType: "task", duration: 10, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-06-06", finishDate: "2024-06-16",
     totalFloat: 3, percentComplete: 20, sortOrder: 1,
   },
   {
     id: "m1", wbsNodeId: "w1", activityId: "M10", name: "Design Complete",
-    activityType: "milestone", duration: 0, startDate: "2024-06-16", finishDate: "2024-06-16",
+    activityType: "milestone", duration: 0, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-06-16", finishDate: "2024-06-16",
     totalFloat: 0, percentComplete: 0, sortOrder: 2,
   },
 ];

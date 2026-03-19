@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import type { ProjectData, PlannerEventInput, WbsNodeData, ActivityData, ActivityRelationshipData, ResourceData, ResourceAssignmentData } from "./types";
+import type { CalendarData } from "@/lib/planner/calendar-types";
 import type { SaveStatus } from "@/components/ui/stale-banner";
 
 /* ─────────────────────── Constants ────────────────────────────────────── */
@@ -27,6 +28,7 @@ interface UsePlannerCanvasReturn {
   initialRelationships: ActivityRelationshipData[];
   initialResources: ResourceData[];
   initialResourceAssignments: ResourceAssignmentData[];
+  initialCalendars: CalendarData[];
   queueEvent: (event: PlannerEventInput) => void;
   reload: () => Promise<void>;
 }
@@ -41,6 +43,7 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
   const [initialRelationships, setInitialRelationships] = useState<ActivityRelationshipData[]>([]);
   const [initialResources, setInitialResources] = useState<ResourceData[]>([]);
   const [initialResourceAssignments, setInitialResourceAssignments] = useState<ResourceAssignmentData[]>([]);
+  const [initialCalendars, setInitialCalendars] = useState<CalendarData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
@@ -81,6 +84,7 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
         setInitialRelationships(data.relationships ?? []);
         setInitialResources(data.resources ?? []);
         setInitialResourceAssignments(data.resourceAssignments ?? []);
+        setInitialCalendars(data.calendars ?? []);
         localVersionRef.current = data.version ?? 0;
         setIsStale(false);
         pendingEventsRef.current = [];
@@ -275,6 +279,7 @@ function usePlannerCanvas(projectId: string): UsePlannerCanvasReturn {
     initialRelationships,
     initialResources,
     initialResourceAssignments,
+    initialCalendars,
     queueEvent,
     reload,
   };

@@ -12,9 +12,9 @@ const mockRows: SpreadsheetRow[] = [
 ];
 
 const mockActivities: ActivityData[] = [
-  { id: "a1", wbsNodeId: "w1", activityId: "A10", name: "Site Prep", activityType: "task", duration: 10, startDate: "2024-06-01", finishDate: "2024-06-11", totalFloat: 0, percentComplete: 80, sortOrder: 0 },
-  { id: "a2", wbsNodeId: "w1", activityId: "A20", name: "Foundation", activityType: "task", duration: 20, startDate: "2024-06-11", finishDate: "2024-07-01", totalFloat: 5, percentComplete: 30, sortOrder: 1 },
-  { id: "m1", wbsNodeId: "w1", activityId: "M10", name: "Design Complete", activityType: "milestone", duration: 0, startDate: "2024-07-01", finishDate: "2024-07-01", totalFloat: 0, percentComplete: 0, sortOrder: 2 },
+  { id: "a1", wbsNodeId: "w1", activityId: "A10", name: "Site Prep", activityType: "task", duration: 10, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-06-01", finishDate: "2024-06-11", totalFloat: 0, percentComplete: 80, sortOrder: 0 },
+  { id: "a2", wbsNodeId: "w1", activityId: "A20", name: "Foundation", activityType: "task", duration: 20, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-06-11", finishDate: "2024-07-01", totalFloat: 5, percentComplete: 30, sortOrder: 1 },
+  { id: "m1", wbsNodeId: "w1", activityId: "M10", name: "Design Complete", activityType: "milestone", duration: 0, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-07-01", finishDate: "2024-07-01", totalFloat: 0, percentComplete: 0, sortOrder: 2 },
 ];
 
 const mockRelationships: ActivityRelationshipData[] = [

@@ -79,9 +79,10 @@ describe("generateFromLayout", () => {
     expect(survey.finishDate).toBe("2025-01-11T00:00:00.000Z");
 
     // a2 equivalent: 2 weeks (10 days) after a1
+    // With calendar awareness: a1 finishes Sat Jan 11, a2 starts Mon Jan 13 (next working day)
     const design = result.activities.find((a) => a.activityId === "A20")!;
-    expect(design.startDate).toBe("2025-01-11T00:00:00.000Z");
-    expect(design.finishDate).toBe("2025-01-21T00:00:00.000Z");
+    expect(design.startDate).toBe("2025-01-13T00:00:00.000Z");
+    expect(design.finishDate).toBe("2025-01-25T00:00:00.000Z");
   });
 
   it("preserves structural data (name, duration, durationUnit, etc.)", () => {

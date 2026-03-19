@@ -8,32 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { CalendarExceptionData } from "@/lib/planner/calendar-types";
 
 /* ─────────────────────── Types ────────────────────────────────── */
 
 type ExceptionType = "Holiday" | "Non-Working" | "Half Day";
 
-interface ExistingException {
-  id: string;
-  name: string;
-  date: string;
-  type: ExceptionType;
-}
-
-const SAMPLE_EXCEPTIONS: ExistingException[] = [
-  { id: "e1", name: "New Year's Day", date: "01 Jan 2026", type: "Holiday" },
-  { id: "e2", name: "Republic Day", date: "26 Jan 2026", type: "Holiday" },
-  { id: "e3", name: "Shutdown Period", date: "15-20 Apr 2026", type: "Half Day" },
-  { id: "e4", name: "Independence Day", date: "15 Aug 2026", type: "Holiday" },
-  { id: "e5", name: "Gandhi Jayanti", date: "02 Oct 2026", type: "Holiday" },
-];
-
 /* ─────────────────────── Calendar Grid ──────────────────────── */
 
-function MiniCalendar() {
-  const [month, setMonth] = useState(2); // March 2026 (0-indexed)
-  const [year] = useState(2026);
-  const [selectedDay, setSelectedDay] = useState(15);
+function MiniCalendar({ onSelect }: { onSelect: (date: Date) => void }) {
+  const [month, setMonth] = useState(new Date().getMonth());
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -45,39 +31,42 @@ function MiniCalendar() {
   for (let i = 0; i < firstDay; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
+  const handlePrev = () => {
+    if (month === 0) { setMonth(11); setYear(year - 1); }
+    else setMonth(month - 1);
+  };
+  const handleNext = () => {
+    if (month === 11) { setMonth(0); setYear(year + 1); }
+    else setMonth(month + 1);
+  };
+
   return (
     <div className="flex flex-col gap-2">
-      {/* Month nav */}
       <div className="flex items-center justify-between">
-        <button
-          onClick={() => setMonth((m) => Math.max(0, m - 1))}
-          className="text-muted-foreground hover:text-foreground cursor-pointer"
-        >
+        <button onClick={handlePrev} className="text-muted-foreground hover:text-foreground cursor-pointer">
           <ChevronLeft size={16} />
         </button>
         <span className="text-[13px] font-semibold text-foreground">
           {monthNames[month]} {year}
         </span>
-        <button
-          onClick={() => setMonth((m) => Math.min(11, m + 1))}
-          className="text-muted-foreground hover:text-foreground cursor-pointer"
-        >
+        <button onClick={handleNext} className="text-muted-foreground hover:text-foreground cursor-pointer">
           <ChevronRight size={16} />
         </button>
       </div>
-
-      {/* Day headers */}
       <div className="grid grid-cols-7 gap-1">
         {dayNames.map((d) => (
-          <span key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">
-            {d}
-          </span>
+          <span key={d} className="text-center text-[11px] font-medium text-muted-foreground py-1">{d}</span>
         ))}
         {days.map((day, i) => (
           <button
             key={i}
             disabled={!day}
-            onClick={() => day && setSelectedDay(day)}
+            onClick={() => {
+              if (day) {
+                setSelectedDay(day);
+                onSelect(new Date(Date.UTC(year, month, day)));
+              }
+            }}
             className={cn(
               "flex items-center justify-center h-8 text-[12px] rounded-md cursor-pointer transition-colors duration-[var(--duration-fast)]",
               !day && "invisible",
@@ -99,14 +88,69 @@ function MiniCalendar() {
 interface CalendarExceptionModalProps {
   open: boolean;
   onClose: () => void;
+  calendarId: string;
+  exceptions: CalendarExceptionData[];
+  onSave: () => void;
 }
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
-function CalendarExceptionModal({ open, onClose }: CalendarExceptionModalProps) {
+function CalendarExceptionModal({
+  open,
+  onClose,
+  calendarId,
+  exceptions,
+  onSave,
+}: CalendarExceptionModalProps) {
   const [selectedType, setSelectedType] = useState<ExceptionType>("Holiday");
+  const [name, setName] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [dateInput, setDateInput] = useState("");
 
   const types: ExceptionType[] = ["Holiday", "Non-Working", "Half Day"];
+
+  const handleAdd = useCallback(async () => {
+    const date = selectedDate ?? (dateInput ? new Date(dateInput) : null);
+    if (!name.trim() || !date) return;
+
+    try {
+      const res = await fetch(`/api/planner/calendars/${calendarId}/exceptions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          date: date.toISOString(),
+          exceptionType: selectedType,
+          workHours: selectedType === "Half Day" ? 4 : null,
+        }),
+      });
+      if (res.ok) {
+        setName("");
+        setDateInput("");
+        setSelectedDate(null);
+        onSave();
+      }
+    } catch {
+      // Error handled by caller
+    }
+  }, [calendarId, name, selectedDate, dateInput, selectedType, onSave]);
+
+  const handleDelete = useCallback(async (exceptionId: string) => {
+    try {
+      await fetch(`/api/planner/calendars/${calendarId}/exceptions/${exceptionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDeleted: true }),
+      });
+      onSave();
+    } catch {
+      // Error handled by caller
+    }
+  }, [calendarId, onSave]);
+
+  const displayDate = selectedDate
+    ? selectedDate.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })
+    : null;
 
   return (
     <Modal open={open} onClose={onClose} width={780}>
@@ -131,24 +175,35 @@ function CalendarExceptionModal({ open, onClose }: CalendarExceptionModalProps) 
           <div className="w-[320px] border-r border-border flex flex-col">
             <div className="flex items-center justify-between h-11 px-4 border-b border-border">
               <span className="text-[12px] font-semibold text-foreground">Existing Exceptions</span>
-              <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{SAMPLE_EXCEPTIONS.length}</Badge>
+              <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{exceptions.length}</Badge>
             </div>
             <div className="flex-1 overflow-auto">
-              {SAMPLE_EXCEPTIONS.map((ex) => (
-                <div key={ex.id} className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-0">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full mt-1.5 shrink-0",
-                    ex.type === "Holiday" ? "bg-destructive" : ex.type === "Non-Working" ? "bg-warning" : "bg-info",
-                  )} />
-                  <div className="flex flex-col gap-0.5 flex-1">
-                    <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
-                    <span className="text-[11px] text-muted-foreground">{ex.date} — {ex.type}</span>
-                  </div>
-                  <button className="text-muted-foreground hover:text-destructive cursor-pointer mt-0.5">
-                    <Trash2 size={12} />
-                  </button>
+              {exceptions.length === 0 ? (
+                <div className="px-4 py-6 text-[12px] text-muted-foreground text-center">
+                  No exceptions yet
                 </div>
-              ))}
+              ) : (
+                exceptions.map((ex) => (
+                  <div key={ex.id} className="flex items-start gap-3 px-4 py-3 border-b border-border last:border-0">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full mt-1.5 shrink-0",
+                      ex.exceptionType === "Holiday" ? "bg-destructive" : ex.exceptionType === "Non-Working" ? "bg-warning" : "bg-info",
+                    )} />
+                    <div className="flex flex-col gap-0.5 flex-1">
+                      <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
+                      </span>
+                    </div>
+                    <button
+                      className="text-muted-foreground hover:text-destructive cursor-pointer mt-0.5"
+                      onClick={() => handleDelete(ex.id)}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -179,31 +234,43 @@ function CalendarExceptionModal({ open, onClose }: CalendarExceptionModalProps) 
               </div>
             </div>
 
+            {/* Name */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[12px] font-semibold text-foreground">Name</span>
+              <Input
+                placeholder="e.g. New Year's Day, Company Holiday..."
+                className="h-9 text-[12px]"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
             {/* Date */}
             <div className="flex flex-col gap-1.5">
               <span className="text-[12px] font-semibold text-foreground">Date</span>
-              <Input placeholder="DD / MM / YYYY" className="h-9 text-[12px]" />
+              <Input
+                placeholder="YYYY-MM-DD"
+                className="h-9 text-[12px]"
+                value={dateInput}
+                onChange={(e) => {
+                  setDateInput(e.target.value);
+                  setSelectedDate(null);
+                }}
+              />
               <span className="text-[11px] text-muted-foreground text-center">or pick from calendar</span>
             </div>
 
             {/* Calendar */}
             <div className="border border-border rounded-lg p-4 bg-card">
-              <MiniCalendar />
-            </div>
-
-            {/* Reason */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[12px] font-semibold text-foreground">Reason / Description</span>
-              <Textarea
-                placeholder="e.g. New Year's Day, Company Holiday..."
-                className="h-16 text-[12px] resize-none"
-              />
+              <MiniCalendar onSelect={(d) => { setSelectedDate(d); setDateInput(""); }} />
             </div>
 
             {/* Selected Date Info */}
-            <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
-              <span className="text-[12px] text-muted-foreground">Selected: Sunday, March 15, 2026</span>
-            </div>
+            {displayDate && (
+              <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
+                <span className="text-[12px] text-muted-foreground">Selected: {displayDate}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -212,7 +279,7 @@ function CalendarExceptionModal({ open, onClose }: CalendarExceptionModalProps) 
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" size="sm">
+          <Button variant="default" size="sm" onClick={handleAdd} disabled={!name.trim() || (!selectedDate && !dateInput)}>
             + Add Exception
           </Button>
         </div>

@@ -24,14 +24,21 @@ const mockWbsNodes: WbsNodeData[] = [
   { id: "wbs-2", parentId: "wbs-1", wbsCode: "3.1", name: "Foundation", sortOrder: 0 },
 ];
 
+const defaultProps = {
+  activity: mockActivity,
+  wbsNodes: mockWbsNodes,
+  onUpdate: vi.fn(),
+  calendars: [],
+  defaultCalendarId: null,
+};
+
 describe("GeneralTab", () => {
   afterEach(() => cleanup());
   it("renders activity ID", () => {
     render(
       <GeneralTab
+        {...defaultProps}
         activity={{ ...mockActivity, activityId: "A3010" }}
-        wbsNodes={mockWbsNodes}
-        onUpdate={vi.fn()}
       />,
     );
     expect(screen.getByText("A3010")).toBeDefined();
@@ -40,9 +47,7 @@ describe("GeneralTab", () => {
   it("renders activity type", () => {
     render(
       <GeneralTab
-        activity={mockActivity}
-        wbsNodes={mockWbsNodes}
-        onUpdate={vi.fn()}
+        {...defaultProps}
       />,
     );
     expect(screen.getByText("Activity Type")).toBeDefined();
@@ -51,9 +56,7 @@ describe("GeneralTab", () => {
   it("renders duration fields", () => {
     render(
       <GeneralTab
-        activity={mockActivity}
-        wbsNodes={mockWbsNodes}
-        onUpdate={vi.fn()}
+        {...defaultProps}
       />,
     );
     expect(screen.getByText("Original Duration")).toBeDefined();
@@ -63,9 +66,7 @@ describe("GeneralTab", () => {
   it("renders percent complete with progress bar", () => {
     render(
       <GeneralTab
-        activity={mockActivity}
-        wbsNodes={mockWbsNodes}
-        onUpdate={vi.fn()}
+        {...defaultProps}
       />,
     );
     expect(screen.getByText("% Complete")).toBeDefined();
@@ -76,9 +77,7 @@ describe("GeneralTab", () => {
   it("renders start and finish dates", () => {
     render(
       <GeneralTab
-        activity={mockActivity}
-        wbsNodes={mockWbsNodes}
-        onUpdate={vi.fn()}
+        {...defaultProps}
       />,
     );
     expect(screen.getByText("15-Apr-24")).toBeDefined();
@@ -88,9 +87,8 @@ describe("GeneralTab", () => {
   it("shows dash for null dates", () => {
     render(
       <GeneralTab
+        {...defaultProps}
         activity={{ ...mockActivity, startDate: null, finishDate: null }}
-        wbsNodes={mockWbsNodes}
-        onUpdate={vi.fn()}
       />,
     );
     const dashes = screen.getAllByText("—");
@@ -100,9 +98,7 @@ describe("GeneralTab", () => {
   it("has the correct test id", () => {
     render(
       <GeneralTab
-        activity={mockActivity}
-        wbsNodes={mockWbsNodes}
-        onUpdate={vi.fn()}
+        {...defaultProps}
       />,
     );
     expect(screen.getByTestId("general-tab")).toBeDefined();

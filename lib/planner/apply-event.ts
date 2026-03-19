@@ -88,6 +88,9 @@ async function applyPlannerEvent(
           "totalQuantity",
           "totalWorkHours",
           "percentComplete",
+          "calendarId",
+          "startDate",
+          "finishDate",
           "sortOrder",
         ]),
       });
