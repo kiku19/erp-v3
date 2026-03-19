@@ -16,6 +16,7 @@ interface ResourceSidebarProps {
   onAddResource: (name: string, resourceType: "labor" | "equipment" | "material") => void;
   onUpdateResource: (id: string, fields: Partial<ResourceData>) => void;
   rowHeight: number;
+  width?: number;
 }
 
 /* ─────────────────────── Badge variant map ───────────────────── */
@@ -35,6 +36,7 @@ function ResourceSidebar({
   onAddResource,
   onUpdateResource,
   rowHeight,
+  width = 220,
 }: ResourceSidebarProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [addName, setAddName] = useState("");
@@ -101,8 +103,13 @@ function ResourceSidebar({
     <div
       data-testid="resource-sidebar"
       className="flex flex-col border-r border-border bg-card shrink-0 overflow-hidden"
-      style={{ width: "220px" }}
+      style={{ width: `${width}px` }}
     >
+      {/* Header */}
+      <div className="flex items-center justify-between h-9 px-3 border-b border-border shrink-0 whitespace-nowrap">
+        <span className="text-[12px] font-semibold text-foreground">Resources</span>
+      </div>
+
       {/* Resource rows */}
       <div className="flex-1 overflow-y-auto">
         {resources.map((resource) => {

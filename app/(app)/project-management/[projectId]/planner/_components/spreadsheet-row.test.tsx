@@ -190,4 +190,52 @@ describe("SpreadsheetRowComponent", () => {
     expect(screen.getByDisplayValue("10")).toBeDefined();
     vi.useRealTimers();
   });
+
+  it("renders a group-header row with Users icon and resource name", () => {
+    const groupHeader: SpreadsheetRow = {
+      id: "group-res-r1",
+      type: "group-header",
+      depth: 0,
+      name: "Alice",
+      isExpanded: true,
+      hasChildren: true,
+      groupKey: "r1",
+    };
+    render(<SpreadsheetRowComponent row={groupHeader} {...defaultProps} />);
+    expect(screen.getByText("Alice")).toBeDefined();
+    // Should have bg-muted background
+    const row = screen.getByTestId("spreadsheet-row-group-res-r1");
+    expect(row.className).toContain("bg-muted");
+  });
+
+  it("group-header rows are not draggable", () => {
+    const groupHeader: SpreadsheetRow = {
+      id: "group-res-r1",
+      type: "group-header",
+      depth: 0,
+      name: "Alice",
+      isExpanded: true,
+      hasChildren: true,
+      groupKey: "r1",
+    };
+    render(<SpreadsheetRowComponent row={groupHeader} {...defaultProps} />);
+    const row = screen.getByTestId("spreadsheet-row-group-res-r1");
+    expect(row.getAttribute("draggable")).toBe("false");
+  });
+
+  it("group-header rows do not show duration or float", () => {
+    const groupHeader: SpreadsheetRow = {
+      id: "group-res-r1",
+      type: "group-header",
+      depth: 0,
+      name: "Alice",
+      isExpanded: true,
+      hasChildren: true,
+      groupKey: "r1",
+    };
+    render(<SpreadsheetRowComponent row={groupHeader} {...defaultProps} />);
+    // No "0d" or "0%" should appear
+    expect(screen.queryByText(/\dd$/)).toBeNull();
+    expect(screen.queryByText(/%$/)).toBeNull();
+  });
 });

@@ -2,7 +2,7 @@
 
 import { memo, useState, useRef, useEffect, type DragEvent } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronRight, Folder, Diamond, GripVertical } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, Diamond, GripVertical, Users } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { SpreadsheetRow, LinkModeStatus } from "./types";
 import { WBS_ICON_MAP, DEFAULT_ICON_COLOR } from "./wbs-icon-map";
@@ -116,6 +116,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
 
   const isWbs = row.type === "wbs";
   const isMilestone = row.type === "milestone";
+  const isGroupHeader = row.type === "group-header";
   const addingInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -171,12 +172,14 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
     ? "bg-muted-hover"
     : isSelected
       ? "bg-accent/10 ring-[0.5px] ring-foreground/40"
-      : isWbs
-        ? wbsDepthBg[Math.min(row.depth, wbsDepthBg.length - 1)]
-        : "bg-card";
+      : isGroupHeader
+        ? "bg-muted"
+        : isWbs
+          ? wbsDepthBg[Math.min(row.depth, wbsDepthBg.length - 1)]
+          : "bg-card";
 
   const isLinking = linkMode === "linking";
-  const isActivityRow = !isWbs;
+  const isActivityRow = !isWbs && !isGroupHeader;
   const inChain = linkChainIndex !== null;
 
   /** Returns cell selection props for a given column index */
@@ -230,7 +233,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
       )}
       style={{ height: 32 }}
       onClick={handleRowClick}
-      draggable={!row.isAdding}
+      draggable={!row.isAdding && !isGroupHeader}
       onDragStart={(e) => onDragStart?.(e, row.id)}
       onDragOver={(e) => onDragOver?.(e, row.id)}
       onDragLeave={onDragLeave}
@@ -270,8 +273,8 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
             <GripVertical size={10} />
           </span>
         ) : null}
-        <span className={cn("truncate", isWbs && "font-semibold text-foreground")}>
-          {isWbs ? row.wbsCode : row.activityId}
+        <span className={cn("truncate", (isWbs || isGroupHeader) && "font-semibold text-foreground")}>
+          {isGroupHeader ? "" : isWbs ? row.wbsCode : row.activityId}
         </span>
       </div>
 
@@ -302,7 +305,9 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         ) : null}
 
         {/* Icon */}
-        {isWbs ? (
+        {isGroupHeader ? (
+          <Users size={12} className="shrink-0 text-muted-foreground" />
+        ) : isWbs ? (
           (() => {
             const IconComp = WBS_ICON_MAP[row.icon ?? "Folder"] ?? Folder;
             const colorClass = row.iconColor ?? DEFAULT_ICON_COLOR;
@@ -333,6 +338,8 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
               else onCancelAdd?.();
             }}
           />
+        ) : isGroupHeader ? (
+          <span className="truncate font-semibold text-foreground">{row.name}</span>
         ) : editingField === "name" ? (
           <Input
             ref={inputRef}
@@ -367,7 +374,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         onClick={cellProps(2).onClick}
         onContextMenu={cellProps(2).onContextMenu}
       >
-        {!isWbs && (
+        {!isWbs && !isGroupHeader && (
           editingField === "duration" ? (
             <Input
               ref={inputRef}
@@ -428,7 +435,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         onClick={cellProps(5).onClick}
         onContextMenu={cellProps(5).onContextMenu}
       >
-        {!isWbs && (
+        {!isWbs && !isGroupHeader && (
           <span className="text-muted-foreground">
             {row.totalFloat ?? 0}
           </span>
@@ -444,7 +451,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
         onClick={cellProps(6).onClick}
         onContextMenu={cellProps(6).onContextMenu}
       >
-        {!isWbs && (
+        {!isWbs && !isGroupHeader && (
           <span className="text-muted-foreground">
             {`${Math.round(row.percentComplete ?? 0)}%`}
           </span>
