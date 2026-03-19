@@ -381,14 +381,34 @@ export default function ProjectPlannerPage() {
   const wbsWidthAtDragStartRef = useRef(220);
   const spreadsheetWidthAtDragStartRef = useRef(0);
   const spreadsheetContainerRef = useRef<HTMLDivElement>(null);
+  const wbsClipRef = useRef<HTMLDivElement>(null);
+  const wbsInnerRef = useRef<HTMLDivElement>(null);
+  const wbsSidebarRef = useRef<HTMLDivElement>(null);
 
   const handleWbsResizeStart = useCallback(() => {
     wbsWidthAtDragStartRef.current = wbsSidebarWidth;
+    // Disable CSS transition during drag so width snaps instantly
+    if (wbsClipRef.current) wbsClipRef.current.style.transition = "none";
   }, [wbsSidebarWidth]);
 
   const handleWbsResize = useCallback((delta: number) => {
-    setWbsSidebarWidth(Math.max(120, Math.min(400, wbsWidthAtDragStartRef.current + delta)));
+    const w = Math.max(120, Math.min(400, wbsWidthAtDragStartRef.current + delta));
+    // Direct DOM update — bypasses React for zero-lag resize
+    const px = `${w}px`;
+    if (wbsClipRef.current) wbsClipRef.current.style.width = px;
+    if (wbsInnerRef.current) { wbsInnerRef.current.style.width = px; wbsInnerRef.current.style.minWidth = px; }
+    // Update the WbsSidebarTree root element inside the wrapper
+    const sidebarEl = wbsSidebarRef.current?.querySelector<HTMLElement>("[data-testid='wbs-sidebar']");
+    if (sidebarEl) sidebarEl.style.width = px;
   }, []);
+
+  const handleWbsResizeEnd = useCallback(() => {
+    // Re-enable CSS transition after drag
+    if (wbsClipRef.current) wbsClipRef.current.style.transition = "";
+    // Read final width from DOM and commit to React state (single re-render)
+    const finalWidth = wbsClipRef.current ? parseInt(wbsClipRef.current.style.width) : wbsSidebarWidth;
+    setWbsSidebarWidth(finalWidth);
+  }, [wbsSidebarWidth]);
 
   const handleSplitterResizeStart = useCallback(() => {
     // Capture actual rendered width of spreadsheet container
@@ -567,13 +587,14 @@ export default function ProjectPlannerPage() {
         <div className="flex flex-1 overflow-hidden">
           {/* Left sidebar — outer clip animates width, inner content stays fixed to avoid reflows */}
           <div
+            ref={wbsClipRef}
             className="shrink-0 overflow-hidden transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-default)] will-change-[width]"
             style={{ width: groupBy === "none" ? 0 : `${wbsSidebarWidth}px` }}
           >
             {/* Fixed-width inner — never changes size, only clipped by outer */}
-            <div style={{ width: `${wbsSidebarWidth}px`, minWidth: `${wbsSidebarWidth}px` }}>
+            <div ref={wbsInnerRef} style={{ width: `${wbsSidebarWidth}px`, minWidth: `${wbsSidebarWidth}px` }}>
               {/* WBS sidebar — always mounted to avoid re-render stutter */}
-              <div style={{ display: groupBy === "wbs" ? "block" : "none" }}>
+              <div ref={wbsSidebarRef} style={{ display: groupBy === "wbs" ? "block" : "none" }}>
                 <WbsSidebarTree
                   wbsNodes={wbsTree.wbsNodes}
                   selectedWbsId={selectedWbsId}
@@ -612,6 +633,7 @@ export default function ProjectPlannerPage() {
               testId="wbs-splitter-handle"
               onResizeStart={handleWbsResizeStart}
               onResize={handleWbsResize}
+              onResizeEnd={handleWbsResizeEnd}
             />
           </div>
 
