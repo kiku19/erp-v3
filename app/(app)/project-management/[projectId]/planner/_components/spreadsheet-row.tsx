@@ -2,7 +2,7 @@
 
 import { memo, useState, useRef, useEffect, type DragEvent } from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronRight, Folder, Diamond, GripVertical, Users } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, Diamond, GripVertical, Users, Maximize2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { SpreadsheetRow, LinkModeStatus } from "./types";
 import { WBS_ICON_MAP, DEFAULT_ICON_COLOR } from "./wbs-icon-map";
@@ -82,6 +82,8 @@ interface SpreadsheetRowProps {
   selectedColIndices?: Set<number>;
   onCellClick?: (rowIndex: number, colIndex: number, shiftKey: boolean) => void;
   onCellContextMenu?: (e: React.MouseEvent, rowIndex: number, colIndex: number) => void;
+  /** Opens the activity detail panel (right-click or hover icon) */
+  onOpenDetail?: (id: string) => void;
 }
 
 const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
@@ -108,11 +110,11 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
   selectedColIndices,
   onCellClick,
   onCellContextMenu,
+  onOpenDetail,
 }: SpreadsheetRowProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isWbs = row.type === "wbs";
   const isMilestone = row.type === "milestone";
@@ -135,11 +137,6 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
   }, [row.isAdding]);
 
   const handleDoubleClick = (field: string, value: string) => {
-    // Cancel the pending single-click so onSelect doesn't fire
-    if (clickTimerRef.current) {
-      clearTimeout(clickTimerRef.current);
-      clickTimerRef.current = null;
-    }
     setEditingField(field);
     setEditValue(value);
   };
@@ -210,15 +207,13 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
       onLinkClick(row.id, e.shiftKey);
       return;
     }
-    // Delay selection so double-click can cancel it
-    // (prevents detail panel from opening when user intends to inline-edit)
-    if (clickTimerRef.current) {
-      clearTimeout(clickTimerRef.current);
-    }
-    clickTimerRef.current = setTimeout(() => {
-      clickTimerRef.current = null;
-      onSelect(row.id);
-    }, 200);
+  };
+
+  /** Right-click opens the activity detail panel */
+  const handleRowContextMenu = (e: React.MouseEvent) => {
+    if (!isActivityRow || !onOpenDetail) return;
+    e.preventDefault();
+    onOpenDetail(row.id);
   };
 
   return (
@@ -233,6 +228,7 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
       )}
       style={{ height: 32 }}
       onClick={handleRowClick}
+      onContextMenu={handleRowContextMenu}
       draggable={!row.isAdding && !isGroupHeader}
       onDragStart={(e) => onDragStart?.(e, row.id)}
       onDragOver={(e) => onDragOver?.(e, row.id)}
@@ -473,6 +469,21 @@ const SpreadsheetRowComponent = memo(function SpreadsheetRowComponent({
           </span>
         )}
       </div>
+
+      {/* Hover detail icon — activity/milestone rows only */}
+      {isActivityRow && onOpenDetail && (
+        <button
+          data-testid={`open-detail-btn-${row.id}`}
+          className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 rounded-[4px] bg-muted text-muted-foreground opacity-0 group-hover/row:opacity-100 hover:bg-primary hover:text-primary-foreground transition-all duration-[var(--duration-fast)] cursor-pointer z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDetail(row.id);
+          }}
+          title="Open details"
+        >
+          <Maximize2 size={10} />
+        </button>
+      )}
     </div>
   );
 });

@@ -35,6 +35,8 @@ interface GanttCanvasProps {
   scrollLeft: number;
   rowHeight: number;
   settings: GanttSettings;
+  /** Opens the activity detail panel */
+  onOpenDetail?: (id: string) => void;
 }
 
 /* ─────────────────────── WBS Color Palette ─────────────────────── */
@@ -92,6 +94,7 @@ function GanttCanvas({
   scrollLeft,
   rowHeight,
   settings,
+  onOpenDetail,
 }: GanttCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -464,12 +467,33 @@ function GanttCanvas({
     [flatRows, rowHeight, onSelectRow],
   );
 
+  /* ── Right-click opens detail panel ── */
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      if (!onOpenDetail) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const rowIdx = Math.floor(y / rowHeight);
+      if (rowIdx >= 0 && rowIdx < flatRows.length) {
+        const row = flatRows[rowIdx];
+        if (row.type === "activity" || row.type === "milestone") {
+          e.preventDefault();
+          onOpenDetail(row.id);
+        }
+      }
+    },
+    [flatRows, rowHeight, onOpenDetail],
+  );
+
   return (
     <div ref={containerRef} className="flex-1 overflow-hidden relative">
       <canvas
         ref={canvasRef}
         data-testid="gantt-canvas"
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         className="w-full h-full cursor-pointer"
         style={{ width: "100%", height: totalHeight }}
       />
