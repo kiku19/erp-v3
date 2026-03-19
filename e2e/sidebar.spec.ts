@@ -58,15 +58,15 @@ test.describe("Sidebar Component E2E", () => {
     await expect(page.getByTestId("nav-flyout-header")).toHaveText("Products");
   });
 
-  test("auto-hide sidebar hides after 5 seconds", async ({ page }) => {
+  test("auto-hide sidebar hides after 1 second", async ({ page }) => {
     await page.goto(`${STORY_URL}--auto-hide-sidebar&viewMode=story`);
     const sidebar = page.getByTestId("sidebar");
-    // Sidebar should be visible initially (story calls show() on mount)
+    // Sidebar should be visible initially (starts open)
     await expect(sidebar).toBeVisible();
     // Move cursor away from sidebar
     await page.mouse.move(500, 500);
-    // Wait for 5s auto-hide + 300ms animation
-    await page.waitForTimeout(5500);
+    // Wait for 1s auto-hide + 300ms animation
+    await page.waitForTimeout(1500);
     await expect(sidebar).not.toBeVisible();
   });
 
@@ -74,7 +74,7 @@ test.describe("Sidebar Component E2E", () => {
     await page.goto(`${STORY_URL}--auto-hide-sidebar&viewMode=story`);
     // Wait for sidebar to auto-hide
     await page.mouse.move(500, 500);
-    await page.waitForTimeout(5500);
+    await page.waitForTimeout(1500);
     // Hover top-left corner (trigger zone)
     await page.mouse.move(5, 5);
     const sidebar = page.getByTestId("sidebar");
@@ -87,7 +87,7 @@ test.describe("Sidebar Component E2E", () => {
     await expect(sidebar).toBeVisible();
     // Keep cursor on sidebar
     await page.mouse.move(32, 200);
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(2000);
     // Should still be visible since cursor is on it
     await expect(sidebar).toBeVisible();
   });

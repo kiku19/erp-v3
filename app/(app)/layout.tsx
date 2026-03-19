@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -45,6 +45,7 @@ export default function DashboardLayout({
 }) {
   const { tenant, isAuthenticated, isLoading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const { visible, isClosing, show, hide, startHideTimer, cancelHideTimer } =
     useSidebarAutoHide();
 
@@ -91,41 +92,49 @@ export default function DashboardLayout({
             <NavItem
               icon={<LayoutDashboard />}
               label="Dashboard"
-              active
+              active={pathname === "/dashboard"}
+              href="/dashboard"
             />
           </Tooltip>
           <NavItem
             icon={<ShoppingCart />}
             label="Orders"
+            active={pathname.startsWith("/orders")}
           >
-            <NavSubItem label="All Orders" href="/orders" />
-            <NavSubItem label="Pending" href="/orders/pending" />
-            <NavSubItem label="Fulfilled" href="/orders/fulfilled" />
+            <NavSubItem label="All Orders" href="/orders" active={pathname === "/orders"} />
+            <NavSubItem label="Pending" href="/orders/pending" active={pathname === "/orders/pending"} />
+            <NavSubItem label="Fulfilled" href="/orders/fulfilled" active={pathname === "/orders/fulfilled"} />
           </NavItem>
           <NavItem
             icon={<Package />}
             label="Products"
+            active={pathname.startsWith("/products")}
           >
-            <NavSubItem label="All Products" href="/products" />
-            <NavSubItem label="Categories" href="/products/categories" />
-            <NavSubItem label="Inventory" href="/products/inventory" />
+            <NavSubItem label="All Products" href="/products" active={pathname === "/products"} />
+            <NavSubItem label="Categories" href="/products/categories" active={pathname === "/products/categories"} />
+            <NavSubItem label="Inventory" href="/products/inventory" active={pathname === "/products/inventory"} />
           </NavItem>
           <Tooltip content="Customers" side="right">
             <NavItem
               icon={<Users />}
               label="Customers"
+              active={pathname.startsWith("/customers")}
+              href="/customers"
             />
           </Tooltip>
           <Tooltip content="Reports" side="right">
             <NavItem
               icon={<BarChart3 />}
               label="Reports"
+              active={pathname.startsWith("/reports")}
+              href="/reports"
             />
           </Tooltip>
           <Tooltip content="Project Management" side="right">
             <NavItem
               icon={<FolderKanban />}
               label="Project Management"
+              active={pathname.startsWith("/project-management")}
               href="/project-management"
             />
           </Tooltip>
@@ -134,6 +143,8 @@ export default function DashboardLayout({
             <NavItem
               icon={<Settings />}
               label="Settings"
+              active={pathname.startsWith("/settings")}
+              href="/settings"
             />
           </Tooltip>
           <Tooltip content="Logout" side="right">
