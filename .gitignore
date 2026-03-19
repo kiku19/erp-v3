@@ -6,5 +6,6 @@ app/generated
 *storybook.log
 storybook-static
 .playwright-mcp
+.mcp.json
 .claude/worktrees
 test-results
