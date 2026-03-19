@@ -89,10 +89,20 @@ export async function GET(request: NextRequest) {
       auth.tenantId,
     );
 
-    // Get version + WBS state in parallel
-    const [snapshot, plannerState] = await Promise.all([
+    // Get version + WBS state + calendars in parallel
+    const [snapshot, plannerState, calendars] = await Promise.all([
       prisma.plannerSnapshot.findUnique({ where: { projectId } }),
       buildPlannerState(prisma, auth.tenantId, projectId),
+      prisma.calendar.findMany({
+        where: {
+          tenantId: auth.tenantId,
+          isDeleted: false,
+          OR: [{ projectId: null }, { projectId }],
+        },
+        include: {
+          exceptions: { where: { isDeleted: false } },
+        },
+      }),
     ]);
 
     return NextResponse.json({
@@ -104,6 +114,7 @@ export async function GET(request: NextRequest) {
         percentDone: project.percentDone,
         startDate: project.startDate?.toISOString() ?? null,
         finishDate: project.finishDate?.toISOString() ?? null,
+        defaultCalendarId: project.defaultCalendarId ?? null,
         breadcrumb,
       },
       version: snapshot?.version ?? 0,
@@ -112,6 +123,21 @@ export async function GET(request: NextRequest) {
       relationships: plannerState.relationships,
       resources: plannerState.resources,
       resourceAssignments: plannerState.resourceAssignments,
+      calendars: calendars.map((c) => ({
+        id: c.id,
+        name: c.name,
+        category: c.category,
+        hoursPerDay: c.hoursPerDay,
+        workDays: c.workDays,
+        exceptions: c.exceptions.map((e) => ({
+          id: e.id,
+          name: e.name,
+          date: e.date.toISOString(),
+          endDate: e.endDate?.toISOString() ?? null,
+          exceptionType: e.exceptionType,
+          workHours: e.workHours,
+        })),
+      })),
     });
   } catch (error) {
     console.error("Planner state error:", error);

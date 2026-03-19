@@ -724,6 +724,8 @@ export default function ProjectPlannerPage() {
               onOpenCalendarSettings={handleOpenCalendarSettings}
               onOpenObs={handleOpenObs}
               onRemoveRelationship={wbsTree.removeRelationship}
+              calendars={[]}
+              defaultCalendarId={project?.defaultCalendarId ?? null}
               activeTab={detailTab}
               onTabChange={setDetailTab}
             />
@@ -761,6 +763,8 @@ export default function ProjectPlannerPage() {
         onOpenCalendarSettings={handleOpenCalendarSettings}
         onOpenObs={handleOpenObs}
         onRemoveRelationship={wbsTree.removeRelationship}
+        calendars={[]}
+        defaultCalendarId={project?.defaultCalendarId ?? null}
         activeTab={detailTab}
         onTabChange={setDetailTab}
       />
@@ -769,6 +773,9 @@ export default function ProjectPlannerPage() {
       <CalendarSettingsModal
         open={calendarSettingsOpen}
         onClose={() => setCalendarSettingsOpen(false)}
+        projectId={projectId}
+        calendars={[]}
+        onCalendarChange={() => {}}
       />
 
       {/* OBS modal */}

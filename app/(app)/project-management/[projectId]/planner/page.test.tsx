@@ -25,6 +25,7 @@ const defaultCanvasReturn: UsePlannerCanvasReturn = {
     startDate: "2024-01-01T00:00:00.000Z",
     finishDate: null,
     breadcrumb: ["Energy Division", "Oil & Gas Projects"],
+    defaultCalendarId: null,
   },
   loading: false,
   error: null,
@@ -38,6 +39,7 @@ const defaultCanvasReturn: UsePlannerCanvasReturn = {
   initialRelationships: [],
   initialResources: [],
   initialResourceAssignments: [],
+  initialCalendars: [],
   queueEvent: vi.fn(),
   reload: vi.fn(),
 };

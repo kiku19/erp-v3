@@ -6,34 +6,34 @@ describe("CalendarExceptionModal", () => {
   afterEach(() => cleanup());
 
   it("renders modal with title when open", () => {
-    render(<CalendarExceptionModal open={true} onClose={vi.fn()} />);
+    render(<CalendarExceptionModal open={true} onClose={vi.fn()} calendarId="cal-1" exceptions={[]} onSave={vi.fn()} />);
     expect(screen.getByText("Add Exception")).toBeDefined();
   });
 
   it("renders nothing when closed", () => {
-    render(<CalendarExceptionModal open={false} onClose={vi.fn()} />);
+    render(<CalendarExceptionModal open={false} onClose={vi.fn()} calendarId="cal-1" exceptions={[]} onSave={vi.fn()} />);
     expect(screen.queryByText("Add Exception")).toBeNull();
   });
 
   it("renders exception type options", () => {
-    render(<CalendarExceptionModal open={true} onClose={vi.fn()} />);
+    render(<CalendarExceptionModal open={true} onClose={vi.fn()} calendarId="cal-1" exceptions={[]} onSave={vi.fn()} />);
     expect(screen.getByText("Holiday")).toBeDefined();
     expect(screen.getByText("Non-Working")).toBeDefined();
     expect(screen.getByText("Half Day")).toBeDefined();
   });
 
   it("renders existing exceptions list", () => {
-    render(<CalendarExceptionModal open={true} onClose={vi.fn()} />);
+    render(<CalendarExceptionModal open={true} onClose={vi.fn()} calendarId="cal-1" exceptions={[]} onSave={vi.fn()} />);
     expect(screen.getByText("Existing Exceptions")).toBeDefined();
   });
 
   it("renders reason textarea", () => {
-    render(<CalendarExceptionModal open={true} onClose={vi.fn()} />);
+    render(<CalendarExceptionModal open={true} onClose={vi.fn()} calendarId="cal-1" exceptions={[]} onSave={vi.fn()} />);
     expect(screen.getByPlaceholderText("e.g. New Year's Day, Company Holiday...")).toBeDefined();
   });
 
   it("renders action buttons", () => {
-    render(<CalendarExceptionModal open={true} onClose={vi.fn()} />);
+    render(<CalendarExceptionModal open={true} onClose={vi.fn()} calendarId="cal-1" exceptions={[]} onSave={vi.fn()} />);
     expect(screen.getByText("Cancel")).toBeDefined();
     expect(screen.getByText("+ Add Exception")).toBeDefined();
   });

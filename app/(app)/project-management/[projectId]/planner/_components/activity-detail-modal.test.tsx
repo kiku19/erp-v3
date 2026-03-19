@@ -28,6 +28,8 @@ const defaultProps = {
   onUpdate: vi.fn(),
   onOpenCalendarSettings: vi.fn(),
   onOpenObs: vi.fn(),
+  calendars: [],
+  defaultCalendarId: null,
   activeTab: "general" as DetailTab,
   onTabChange: vi.fn(),
 };

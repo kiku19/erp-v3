@@ -210,7 +210,7 @@ describe("applyPlannerEvent", () => {
     });
   });
 
-  it("strips startDate/finishDate/totalFloat from activity.updated (server-computed)", async () => {
+  it("allows startDate/finishDate in activity.updated (frontend-computed), strips totalFloat", async () => {
     await applyPlannerEvent(tx as never, TENANT_ID, {
       eventType: "activity.updated",
       entityType: "activity",
@@ -220,7 +220,7 @@ describe("applyPlannerEvent", () => {
 
     expect(tx.activity.update).toHaveBeenCalledWith({
       where: { id: "act-1" },
-      data: { duration: 10 },
+      data: { duration: 10, startDate: "2025-01-01", finishDate: "2025-01-11" },
     });
   });
 

@@ -5,10 +5,10 @@ import { RelationshipsTab } from "./relationships-tab";
 import type { ActivityData, ActivityRelationshipData } from "../types";
 
 const mockActivities: ActivityData[] = [
-  { id: "act-1", wbsNodeId: "w1", activityId: "A10", name: "Site Preparation", activityType: "task", duration: 10, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 0 },
-  { id: "act-2", wbsNodeId: "w1", activityId: "A20", name: "Soil Testing", activityType: "task", duration: 5, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 1 },
-  { id: "act-3", wbsNodeId: "w1", activityId: "A30", name: "Concrete Pouring", activityType: "task", duration: 15, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 2 },
-  { id: "act-4", wbsNodeId: "w1", activityId: "A40", name: "Rebar Installation", activityType: "task", duration: 8, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 3 },
+  { id: "act-1", wbsNodeId: "w1", activityId: "A10", name: "Site Preparation", activityType: "task", duration: 10, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 0 },
+  { id: "act-2", wbsNodeId: "w1", activityId: "A20", name: "Soil Testing", activityType: "task", duration: 5, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 1 },
+  { id: "act-3", wbsNodeId: "w1", activityId: "A30", name: "Concrete Pouring", activityType: "task", duration: 15, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 2 },
+  { id: "act-4", wbsNodeId: "w1", activityId: "A40", name: "Rebar Installation", activityType: "task", duration: 8, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: null, finishDate: null, totalFloat: 0, percentComplete: 0, sortOrder: 3 },
 ];
 
 const mockRelationships: ActivityRelationshipData[] = [

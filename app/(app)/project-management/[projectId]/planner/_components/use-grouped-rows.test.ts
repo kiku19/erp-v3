@@ -31,9 +31,9 @@ const milestone: SpreadsheetRow = {
 const flatRows: SpreadsheetRow[] = [wbsRow, actA, actB, milestone];
 
 const activities: ActivityData[] = [
-  { id: "a1", wbsNodeId: "w1", activityId: "A10", name: "Design", activityType: "task", duration: 5, startDate: "2026-01-01T00:00:00.000Z", finishDate: "2026-01-06T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 1 },
-  { id: "a2", wbsNodeId: "w1", activityId: "A20", name: "Build", activityType: "task", duration: 10, startDate: "2026-01-07T00:00:00.000Z", finishDate: "2026-01-17T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 2 },
-  { id: "m1", wbsNodeId: "w1", activityId: "M1", name: "Done", activityType: "milestone", duration: 0, startDate: "2026-01-17T00:00:00.000Z", finishDate: "2026-01-17T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 3 },
+  { id: "a1", wbsNodeId: "w1", activityId: "A10", name: "Design", activityType: "task", duration: 5, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-01T00:00:00.000Z", finishDate: "2026-01-06T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 1 },
+  { id: "a2", wbsNodeId: "w1", activityId: "A20", name: "Build", activityType: "task", duration: 10, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-07T00:00:00.000Z", finishDate: "2026-01-17T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 2 },
+  { id: "m1", wbsNodeId: "w1", activityId: "M1", name: "Done", activityType: "milestone", duration: 0, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2026-01-17T00:00:00.000Z", finishDate: "2026-01-17T00:00:00.000Z", totalFloat: 0, percentComplete: 0, sortOrder: 3 },
 ];
 
 const resources: ResourceData[] = [

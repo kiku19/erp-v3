@@ -22,6 +22,7 @@ const mockPrisma = {
   project: { findFirst: vi.fn() },
   node: { findFirst: vi.fn() },
   plannerSnapshot: { findUnique: vi.fn() },
+  calendar: { findMany: vi.fn().mockResolvedValue([]) },
 };
 
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));

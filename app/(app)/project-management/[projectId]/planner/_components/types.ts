@@ -8,6 +8,7 @@ export interface ProjectData {
   percentDone: number;
   startDate: string | null;
   finishDate: string | null;
+  defaultCalendarId: string | null;
   breadcrumb: string[];
 }
 
@@ -46,6 +47,7 @@ export interface ActivityData {
   finishDate: string | null;
   totalFloat: number;
   percentComplete: number;
+  calendarId?: string;
   sortOrder: number;
 }
 
@@ -162,6 +164,8 @@ export interface SpreadsheetRow {
   finishDate?: string | null;
   totalFloat?: number;
   percentComplete?: number;
+  /** Calendar ID for this activity */
+  calendarId?: string;
   /** Comma-separated predecessor activity IDs (e.g. "A10, A20") */
   predecessors?: string;
 }

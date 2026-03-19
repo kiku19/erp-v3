@@ -9,7 +9,7 @@ const mockRows: SpreadsheetRow[] = [
 ];
 
 const mockActivities: ActivityData[] = [
-  { id: "a1", wbsNodeId: "w1", activityId: "A10", name: "Task 1", activityType: "task", duration: 10, startDate: "2024-06-01", finishDate: "2024-06-11", totalFloat: 0, percentComplete: 50, sortOrder: 0 },
+  { id: "a1", wbsNodeId: "w1", activityId: "A10", name: "Task 1", activityType: "task", duration: 10, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-06-01", finishDate: "2024-06-11", totalFloat: 0, percentComplete: 50, sortOrder: 0 },
 ];
 
 const defaultProps = {

@@ -4,7 +4,7 @@ import { forwardPass } from "./forward-pass";
 
 /* ─── helpers ─── */
 
-const PROJECT_START = "2024-06-01T00:00:00.000Z";
+const PROJECT_START = "2024-06-01T00:00:00.000Z"; // Saturday → adjusted to Mon June 3
 
 function makeActs(...items: { id: string; duration: number }[]) {
   return items.map((a) => ({ id: a.id, duration: a.duration }));
@@ -51,7 +51,7 @@ describe("backwardPass", () => {
   it("computes float for parallel paths", () => {
     // A(5) → C(2)
     // B(3) → C(2)
-    // Critical path: A→C (7 days), B has 2 days float
+    // Critical path: A→C (longer), B has 2 working days float
     const acts = makeActs(
       { id: "A", duration: 5 },
       { id: "B", duration: 3 },
@@ -68,7 +68,6 @@ describe("backwardPass", () => {
 
   it("handles lag correctly", () => {
     // A(5) --FS+2--> B(3)
-    // Project end = 5 + 2 + 3 = 10
     const acts = makeActs({ id: "A", duration: 5 }, { id: "B", duration: 3 });
     const rels = makeRels(["A", "B", 2]);
     const fp = forwardPass(acts, rels, PROJECT_START);
@@ -81,8 +80,7 @@ describe("backwardPass", () => {
   it("computes correct late dates for non-critical activity", () => {
     // A(10) → C(5)
     // B(3)  → C(5)
-    // Project end = 15 days
-    // B: ES=0, EF=3, LS=7, LF=10, TF=7
+    // B has float = 7 working days
     const acts = makeActs(
       { id: "A", duration: 10 },
       { id: "B", duration: 3 },
@@ -100,8 +98,7 @@ describe("backwardPass", () => {
   it("handles multiple terminal activities", () => {
     // A(5) → B(3)
     // A(5) → C(7)
-    // Both B and C are terminal. Project end = max(EF_B=8, EF_C=12) = 12
-    // B float = 12 - 8 = 4
+    // Both B and C are terminal. B has float, A and C are critical.
     const acts = makeActs(
       { id: "A", duration: 5 },
       { id: "B", duration: 3 },
@@ -125,8 +122,8 @@ describe("backwardPass", () => {
     const fp = forwardPass(acts, rels, PROJECT_START);
     const bp = backwardPass(acts, rels, fp);
 
-    // Project end = max(5, 10) = 10
-    // A float = 10 - 5 = 5
+    // Project end = max(A finish, B finish). B is longer.
+    // A has float = 5 working days
     expect(bp.get("A")!.totalFloat).toBe(5);
     expect(bp.get("B")!.totalFloat).toBe(0);
   });

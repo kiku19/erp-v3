@@ -20,7 +20,7 @@ const mockActivity: SpreadsheetRow = {
 };
 
 const mockActivities: ActivityData[] = [
-  { id: "act-1", wbsNodeId: "w1", activityId: "A3010", name: "Excavation & Grading", activityType: "task", duration: 25, startDate: "2024-04-15", finishDate: "2024-05-20", totalFloat: 5, percentComplete: 64, sortOrder: 0 },
+  { id: "act-1", wbsNodeId: "w1", activityId: "A3010", name: "Excavation & Grading", activityType: "task", duration: 25, durationUnit: "days", totalQuantity: 0, totalWorkHours: 0, startDate: "2024-04-15", finishDate: "2024-05-20", totalFloat: 5, percentComplete: 64, sortOrder: 0 },
 ];
 
 const mockWbsNodes: WbsNodeData[] = [
@@ -39,6 +39,8 @@ const defaultProps = {
   onExpandToggle: vi.fn(),
   onOpenCalendarSettings: vi.fn(),
   onOpenObs: vi.fn(),
+  calendars: [],
+  defaultCalendarId: null,
   activeTab: "general" as DetailTab,
   onTabChange: vi.fn(),
 };

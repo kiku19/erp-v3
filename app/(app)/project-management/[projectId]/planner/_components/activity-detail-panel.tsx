@@ -17,6 +17,7 @@ import type {
   ActivityRelationshipData,
   DetailTab,
 } from "./types";
+import type { CalendarData } from "@/lib/planner/calendar-types";
 
 /* ─────────────────────── Props ─────────────────────────────────── */
 
@@ -31,6 +32,8 @@ interface ActivityDetailPanelProps {
   onOpenCalendarSettings: () => void;
   onOpenObs: () => void;
   onRemoveRelationship?: (relationshipId: string) => void;
+  calendars: CalendarData[];
+  defaultCalendarId: string | null;
   activeTab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
 }
@@ -70,6 +73,8 @@ const ActivityDetailPanel = memo(function ActivityDetailPanel({
   onOpenCalendarSettings,
   onOpenObs,
   onRemoveRelationship,
+  calendars,
+  defaultCalendarId,
   activeTab,
   onTabChange,
 }: ActivityDetailPanelProps) {
@@ -124,6 +129,8 @@ const ActivityDetailPanel = memo(function ActivityDetailPanel({
             <GeneralTab
               activity={activity}
               wbsNodes={wbsNodes}
+              calendars={calendars}
+              defaultCalendarId={defaultCalendarId}
               onUpdate={onUpdate}
             />
           </TabPanel>
