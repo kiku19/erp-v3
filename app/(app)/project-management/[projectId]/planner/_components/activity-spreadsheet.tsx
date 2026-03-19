@@ -68,6 +68,8 @@ interface ActivitySpreadsheetProps {
   linkMode?: LinkModeStatus;
   linkChain?: LinkChainEntry[];
   onLinkClick?: (id: string, isShift: boolean) => void;
+  /** Opens the activity detail panel */
+  onOpenDetail?: (id: string) => void;
   /** Current sort configuration */
   sortConfig?: SortConfig | null;
   /** Called when user clicks a column header to sort */
@@ -164,6 +166,7 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
   linkMode = "idle",
   linkChain = [],
   onLinkClick,
+  onOpenDetail,
   sortConfig,
   onSort,
   isSorting = false,
@@ -657,6 +660,7 @@ const ActivitySpreadsheet = memo(function ActivitySpreadsheet({
                     linkChainIndex={chainIdx}
                     isParallelInChain={chainEntry?.isParallel ?? false}
                     onLinkClick={onLinkClick}
+                    onOpenDetail={onOpenDetail}
                     rowIndex={virtualRow.index}
                     selectedColIndices={selectedRowIndices.get(virtualRow.index)}
                     onCellClick={handleCellClick}

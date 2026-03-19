@@ -33,6 +33,8 @@ interface GanttChartProps {
   scrollSyncRef?: MutableRefObject<{ spreadsheet: HTMLElement | null; gantt: HTMLElement | null }>;
   /** Which role this component plays in the scroll sync pair */
   scrollSyncRole?: "spreadsheet" | "gantt";
+  /** Opens the activity detail panel */
+  onOpenDetail?: (id: string) => void;
 }
 
 /* ─────────────────────── Component ─────────────────────────────── */
@@ -51,6 +53,7 @@ const GanttChart = memo(function GanttChart({
   onVerticalScroll,
   scrollSyncRef,
   scrollSyncRole,
+  onOpenDetail,
 }: GanttChartProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isExternalScrollRef = useRef(false);
@@ -161,6 +164,7 @@ const GanttChart = memo(function GanttChart({
             scrollLeft={0}
             rowHeight={rowHeight}
             settings={settings}
+            onOpenDetail={onOpenDetail}
           />
         </div>
       </div>

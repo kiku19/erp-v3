@@ -64,6 +64,8 @@ export default function ProjectPlannerPage() {
   const [iconSettingsOpen, setIconSettingsOpen] = useState(false);
   const [isDetailExpanded, setIsDetailExpanded] = useState(false);
   const [detailTab, setDetailTab] = useState<DetailTab>("general");
+  // Explicitly tracked activity for the detail panel (decoupled from row selection)
+  const [detailActivityId, setDetailActivityId] = useState<string | null>(null);
   const [calendarSettingsOpen, setCalendarSettingsOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
   const [ganttSettings, setGanttSettings] = useState<GanttSettings>({ ...DEFAULT_GANTT_SETTINGS });
@@ -196,7 +198,16 @@ export default function ProjectPlannerPage() {
           wbsTree.exitLinkMode();
           return;
         }
-        if (!iconSettingsOpen && !isDetailExpanded && !calendarSettingsOpen && !obsOpen && !ganttSettingsOpen) {
+        // Close detail panel/modal first, then deselect
+        if (isDetailExpanded) {
+          setIsDetailExpanded(false);
+          return;
+        }
+        if (detailActivityId) {
+          setDetailActivityId(null);
+          return;
+        }
+        if (!iconSettingsOpen && !calendarSettingsOpen && !obsOpen && !ganttSettingsOpen) {
           wbsTree.selectRow(null);
         }
         return;
@@ -228,7 +239,7 @@ export default function ProjectPlannerPage() {
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen, ganttSettingsOpen, handleRequestDeleteWbs]);
+  }, [wbsTree, iconSettingsOpen, isDetailExpanded, calendarSettingsOpen, obsOpen, ganttSettingsOpen, handleRequestDeleteWbs, detailActivityId]);
 
   // Cleanup scroll animation on unmount
   useEffect(() => {
@@ -267,13 +278,13 @@ export default function ProjectPlannerPage() {
     return act?.wbsNodeId ?? null;
   }, [wbsTree.selectedRowId, wbsTree.wbsNodes, wbsTree.activities]);
 
-  // Derive selected activity for the detail panel (only activity/milestone, not WBS)
+  // Derive detail activity from the explicit detailActivityId (decoupled from row selection)
   const selectedActivity = useMemo(
     () =>
       wbsTree.flatRows.find(
-        (r) => r.id === wbsTree.selectedRowId && (r.type === "activity" || r.type === "milestone"),
+        (r) => r.id === detailActivityId && (r.type === "activity" || r.type === "milestone"),
       ) ?? null,
-    [wbsTree.flatRows, wbsTree.selectedRowId],
+    [wbsTree.flatRows, detailActivityId],
   );
 
   // Keep panel mounted after first selection — avoids mount/unmount cost on every click
@@ -283,24 +294,16 @@ export default function ProjectPlannerPage() {
   }
   const panelActivity = lastActivityRef.current;
 
-  // Panel dismissed — track which activity id was dismissed so re-selecting a
-  // *different* activity auto-reopens without a setState-during-render double pass.
-  const dismissedForIdRef = useRef<string | null>(null);
-  const [isPanelDismissed, setIsPanelDismissed] = useState(false);
-  // Auto-reopen when a *new* activity is selected
-  const isPanelEffectivelyDismissed =
-    isPanelDismissed && selectedActivity?.id === dismissedForIdRef.current;
-
   // Stabilize callbacks for detail panel/modal
   const handleDetailClose = useCallback(() => {
-    // Urgent: hide panel immediately (one boolean flip, no heavy re-renders)
-    dismissedForIdRef.current = selectedActivity?.id ?? null;
-    setIsPanelDismissed(true);
-    // Deferred: deselect row (spreadsheet/gantt re-renders happen in background)
-    startTransition(() => {
-      wbsTree.selectRow(null);
-    });
-  }, [wbsTree.selectRow, selectedActivity?.id]);
+    setDetailActivityId(null);
+    setIsDetailExpanded(false);
+  }, []);
+  /** Opens the activity detail panel for a specific activity */
+  const handleOpenDetail = useCallback((id: string) => {
+    setDetailActivityId(id);
+    setIsDetailExpanded(false);
+  }, []);
   const handleExpandToggle = useCallback(() => setIsDetailExpanded(true), []);
   const handleCollapseDetail = useCallback(() => setIsDetailExpanded(false), []);
   const handleOpenCalendarSettings = useCallback(() => setCalendarSettingsOpen(true), []);
@@ -661,6 +664,7 @@ export default function ProjectPlannerPage() {
               linkMode={wbsTree.linkMode}
               linkChain={wbsTree.linkChain}
               onLinkClick={handleLinkClick}
+              onOpenDetail={handleOpenDetail}
               sortConfig={sortConfig}
             onSort={handleSort}
             isSorting={isSortTransitionPending}
@@ -698,6 +702,7 @@ export default function ProjectPlannerPage() {
             projectStartDate={effectiveStartDate}
             projectFinishDate={effectiveFinishDate}
             settings={ganttSettings}
+            onOpenDetail={handleOpenDetail}
             scrollTop={sharedScrollTop}
             onVerticalScroll={setSharedScrollTop}
             scrollSyncRef={scrollSyncRef}
@@ -711,7 +716,7 @@ export default function ProjectPlannerPage() {
           <div
             className="absolute bottom-0 left-0 right-0 z-10 flex flex-col transition-transform duration-[var(--duration-normal)] ease-[var(--ease-default)]"
             style={{
-              transform: selectedActivity && !isDetailExpanded && !isPanelEffectivelyDismissed
+              transform: selectedActivity && !isDetailExpanded
                 ? "translateY(0)"
                 : "translateY(100%)",
             }}
