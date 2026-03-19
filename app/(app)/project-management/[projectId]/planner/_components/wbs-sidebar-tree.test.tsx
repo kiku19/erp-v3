@@ -1,7 +1,40 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { WbsSidebarTree } from "./wbs-sidebar-tree";
 import type { WbsNodeData } from "./types";
+
+/* ─── Mock ResizeObserver + element dimensions for @tanstack/react-virtual ── */
+
+class MockResizeObserver {
+  cb: ResizeObserverCallback;
+  constructor(cb: ResizeObserverCallback) { this.cb = cb; }
+  observe(target: Element) {
+    // Fire immediately with mock dimensions so virtualizer measures the container
+    this.cb(
+      [{ target, contentRect: { height: 800, width: 220 } } as unknown as ResizeObserverEntry],
+      this as unknown as ResizeObserver,
+    );
+  }
+  unobserve() {}
+  disconnect() {}
+}
+
+beforeAll(() => {
+  globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+  // Give scroll containers non-zero dimensions so the virtualizer renders items
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get() { return 800; } });
+  Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get() { return 2000; } });
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", { configurable: true, get() { return 800; } });
+  // Override getBoundingClientRect for virtualizer measurement
+  const origGetBCR = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function () {
+    const rect = origGetBCR.call(this);
+    if (rect.height === 0) {
+      return { ...rect, height: 800, width: 220, bottom: 800 } as DOMRect;
+    }
+    return rect;
+  };
+});
 
 const WBS_NODES: WbsNodeData[] = [
   { id: "w1", parentId: null, wbsCode: "1", name: "Engineering", sortOrder: 0 },
