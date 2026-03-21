@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPUS ERP — Phase 1: OBS & Resource Pool Implementation Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1c1b18;
+    --ink-2: #3d3c38;
+    --ink-3: #6b6a64;
+    --ink-4: #9b9a93;
+    --rule: #e2e0d8;
+    --rule-2: #f0ede4;
+    --surface: #faf9f6;
+    --white: #ffffff;
+    --accent: #1a4d8f;
+    --accent-light: #e8f0fb;
+    --accent-mid: #3066b2;
+    --teal: #0f6e56;
+    --teal-light: #e1f5ee;
+    --amber: #854f0b;
+    --amber-light: #faeeda;
+    --red: #a32d2d;
+    --red-light: #fcebeb;
+    --green: #3b6d11;
+    --green-light: #eaf3de;
+    --purple: #534ab7;
+    --purple-light: #eeedfe;
+    --coral: #c04828;
+    --coral-light: #faece7;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--ink);
+    line-height: 1.65;
+    font-size: 15px;
+  }
+
+  /* ── LAYOUT ── */
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    background: var(--white);
+    border-right: 1px solid var(--rule);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 2rem 0 2rem;
+  }
+
+  .sidebar-brand {
+    padding: 0 1.5rem 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 1.25rem;
+  }
+
+  .sidebar-logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .sidebar-sub {
+    font-size: 11px;
+    color: var(--ink-4);
+    margin-top: 3px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .nav-group { margin-bottom: 0.25rem; }
+
+  .nav-group-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-4);
+    padding: 0.5rem 1.5rem 0.25rem;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 1.5rem;
+    font-size: 13px;
+    color: var(--ink-2);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .nav-item:hover { background: var(--rule-2); color: var(--accent); }
+  .nav-item.active { border-left-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 500; }
+
+  .nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-blue { background: var(--accent); }
+  .dot-teal { background: var(--teal); }
+  .dot-amber { background: var(--amber); }
+  .dot-purple { background: var(--purple); }
+  .dot-green { background: var(--green); }
+  .dot-coral { background: var(--coral); }
+  .dot-gray { background: var(--ink-4); }
+
+  /* ── MAIN CONTENT ── */
+  .main { flex: 1; min-width: 0; }
+
+  /* ── DOC HEADER ── */
+  .doc-header {
+    background: var(--white);
+    border-bottom: 1px solid var(--rule);
+    padding: 3rem 3.5rem 2.5rem;
+  }
+
+  .doc-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .doc-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 36px;
+    color: var(--ink);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+  }
+
+  .doc-desc {
+    font-size: 15px;
+    color: var(--ink-3);
+    max-width: 640px;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+
+  .doc-meta-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .doc-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .doc-meta-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-4);
+  }
+
+  .doc-meta-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+  }
+
+  /* ── PHASE HERO BANNER ── */
+  .phase-banner {
+    padding: 2rem 3.5rem;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .phase-card {
+    flex: 1;
+    min-width: 200px;
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .phase-card.blue::before { background: var(--accent); }
+  .phase-card.teal::before { background: var(--teal); }
+  .phase-card.amber::before { background: var(--amber); }
+  .phase-card.purple::before { background: var(--purple); }
+
+  .phase-card-num {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .phase-card.blue .phase-card-num { color: var(--accent); }
+  .phase-card.teal .phase-card-num { color: var(--teal); }
+  .phase-card.amber .phase-card-num { color: var(--amber); }
+  .phase-card.purple .phase-card-num { color: var(--purple); }
+
+  .phase-card-title { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .phase-card-desc { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+
+  /* ── CONTENT ── */
+  .content { padding: 2.5rem 3.5rem; max-width: 900px; }
+
+  /* ── SECTION ── */
+  .section { margin-bottom: 3rem; }
+
+  .section-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 6px;
+  }
+
+  .eyebrow-blue { color: var(--accent); }
+  .eyebrow-teal { color: var(--teal); }
+  .eyebrow-amber { color: var(--amber); }
+  .eyebrow-purple { color: var(--purple); }
+  .eyebrow-gray { color: var(--ink-4); }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 24px;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .section-lead {
+    font-size: 14px;
+    color: var(--ink-3);
+    max-width: 680px;
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── DIVIDER ── */
+  .divider { border: none; border-top: 1px solid var(--rule); margin: 2.5rem 0; }
+
+  /* ── SUB SECTION ── */
+  .sub-section { margin-bottom: 2rem; }
+
+  .sub-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-4);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 1rem;
+  }
+
+  .sub-title { font-size: 16px; font-weight: 600; color: var(--ink); margin-bottom: 0.5rem; }
+
+  p { font-size: 14px; color: var(--ink-2); line-height: 1.7; margin-bottom: 0.75rem; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── TABLES ── */
+  .table-wrap { border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; margin: 0.75rem 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+  thead tr { background: #f5f4f0; }
+
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule-2);
+    color: var(--ink-2);
+    vertical-align: top;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .tr-highlight { background: #fafaf7; }
+  .tr-highlight td { font-weight: 500; }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: #1c1b18;
+    color: #d4d2c8;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    line-height: 1.8;
+    margin: 0.75rem 0;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .code-block .c-comment { color: #6b6a60; }
+  .code-block .c-key { color: #9ecbf0; }
+  .code-block .c-val { color: #a8d5a2; }
+  .code-block .c-type { color: #f0b86e; }
+  .code-block .c-section { color: #e8a87c; font-weight: 500; }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.65;
+    margin: 0.75rem 0;
+    border-left: 3px solid;
+  }
+
+  .callout strong { font-weight: 600; }
+  .callout-blue { background: var(--accent-light); border-color: var(--accent-mid); color: #0c3a6e; }
+  .callout-teal { background: var(--teal-light); border-color: var(--teal); color: #085041; }
+  .callout-amber { background: var(--amber-light); border-color: #ef9f27; color: var(--amber); }
+  .callout-red { background: var(--red-light); border-color: #e24b4a; color: var(--red); }
+  .callout-green { background: var(--green-light); border-color: #639922; color: var(--green); }
+  .callout-purple { background: var(--purple-light); border-color: #7f77dd; color: var(--purple); }
+  .callout-gray { background: #f5f4f0; border-color: var(--ink-4); color: var(--ink-2); }
+
+  /* ── TAGS ── */
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .tag-must { background: var(--red-light); color: var(--red); }
+  .tag-should { background: var(--amber-light); color: var(--amber); }
+  .tag-nice { background: #f5f4f0; color: var(--ink-3); }
+  .tag-auto { background: var(--purple-light); color: var(--purple); }
+  .tag-sync { background: var(--teal-light); color: var(--teal); }
+  .tag-hrm { background: var(--accent-light); color: var(--accent); }
+
+  /* ── TWO COL ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.75rem 0; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin: 0.75rem 0; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .card-header {
+    padding: 10px 14px;
+    background: #f5f4f0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-body { padding: 14px; }
+
+  .icon-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .icon-blue { background: var(--accent); }
+  .icon-teal { background: var(--teal); }
+  .icon-amber { background: #ef9f27; }
+  .icon-purple { background: var(--purple); }
+  .icon-green { background: #639922; }
+  .icon-coral { background: var(--coral); }
+
+  /* ── PROP CARD ── */
+  .prop-card {
+    background: #f5f4f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .prop-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-4);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .prop-value { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .prop-note { font-size: 12px; color: var(--ink-3); margin-top: 3px; line-height: 1.5; }
+
+  /* ── PHASE BLOCK ── */
+  .phase-block {
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    background: var(--white);
+  }
+
+  .phase-block-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .phase-num-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .badge-blue { background: var(--accent-light); color: var(--accent); }
+  .badge-teal { background: var(--teal-light); color: var(--teal); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); }
+  .badge-purple { background: var(--purple-light); color: var(--purple); }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-coral { background: var(--coral-light); color: var(--coral); }
+
+  .phase-block-title { font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+  .phase-block-sub { font-size: 13px; color: var(--ink-3); }
+
+  .phase-block-body { padding: 1.5rem; }
+
+  /* ── DELIVERABLE LIST ── */
+  .deliverable-list { list-style: none; padding: 0; }
+
+  .deliverable-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--rule-2);
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.55;
+  }
+
+  .deliverable-list li:last-child { border-bottom: none; }
+
+  .d-check {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--rule);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .d-check.blue { border-color: var(--accent); background: var(--accent-light); }
+  .d-check.teal { border-color: var(--teal); background: var(--teal-light); }
+
+  /* ── DEPENDENCY ARROW ── */
+  .dep-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0.75rem 0;
+    padding: 12px 16px;
+    background: #f5f4f0;
+    border-radius: 8px;
+  }
+
+  .dep-box {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+  }
+
+  .dep-box.blue { background: var(--accent-light); color: var(--accent); border-color: #b5d4f4; }
+  .dep-box.teal { background: var(--teal-light); color: var(--teal); border-color: #9fe1cb; }
+  .dep-box.amber { background: var(--amber-light); color: var(--amber); border-color: #fac775; }
+  .dep-box.green { background: var(--green-light); color: var(--green); border-color: #c0dd97; }
+  .dep-box.purple { background: var(--purple-light); color: var(--purple); border-color: #afa9ec; }
+
+  .dep-arrow { color: var(--ink-4); font-size: 16px; }
+
+  /* ── SCREEN INVENTORY ── */
+  .screen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 0.75rem 0; }
+
+  .screen-card {
+    background: var(--white);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+
+  .screen-name { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .screen-desc { font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+  .screen-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+
+  /* ── HRM BLOCK ── */
+  .hrm-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0.75rem 0;
+  }
+
+  .hrm-col { padding: 1.25rem; }
+  .hrm-col:first-child { border-right: 1px solid var(--rule); background: var(--accent-light); }
+  .hrm-col:last-child { background: var(--teal-light); }
+  .hrm-col-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+  .hrm-col:first-child .hrm-col-title { color: var(--accent); }
+  .hrm-col:last-child .hrm-col-title { color: var(--teal); }
+
+  .hrm-item {
+    font-size: 13px;
+    color: var(--ink-2);
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.5;
+  }
+
+  .hrm-item:last-child { border-bottom: none; }
+  .hrm-bullet { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-4); flex-shrink: 0; margin-top: 6px; }
+
+  /* ── FOOTER ── */
+  .doc-footer {
+    border-top: 1px solid var(--rule);
+    padding: 1.5rem 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--white);
+  }
+
+  .footer-brand { font-family: 'DM Serif Display', serif; font-size: 14px; color: var(--ink-3); }
+  .footer-meta { font-size: 12px; color: var(--ink-4); }
+
+  /* ── ANCHOR OFFSET ── */
+  [id] { scroll-margin-top: 24px; }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .content { padding: 2rem 1.5rem; }
+    .doc-header { padding: 2rem 1.5rem; }
+    .phase-banner { padding: 1.5rem; }
+    .two-col, .three-col, .screen-grid, .hrm-compare { grid-template-columns: 1fr; }
+    .hrm-col:first-child { border-right: none; border-bottom: 1px solid var(--rule); }
+    .doc-footer { padding: 1.5rem; flex-direction: column; gap: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ══════════════ SIDEBAR ══════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="sidebar-logo">OPUS ERP</div>
+    <div class="sidebar-sub">Implementation Plan</div>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Overview</div>
+    <a href="#overview" class="nav-item"><span class="nav-dot dot-gray"></span>Executive Summary</a>
+    <a href="#dependency" class="nav-item"><span class="nav-dot dot-gray"></span>Phase Dependencies</a>
+    <a href="#architecture" class="nav-item"><span class="nav-dot dot-gray"></span>Module Architecture</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Phase 1A — OBS</div>
+    <a href="#obs-configure" class="nav-item"><span class="nav-dot dot-blue"></span>What to Configure</a>
+    <a href="#obs-display" class="nav-item"><span class="nav-dot dot-blue"></span>What to Display</a>
+    <a href="#obs-screens" class="nav-item"><span class="nav-dot dot-blue"></span>Screen Inventory</a>
+    <a href="#obs-data" class="nav-item"><span class="nav-dot dot-blue"></span>Data Model</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Phase 1B — Resource Pool</div>
+    <a href="#res-person" class="nav-item"><span class="nav-dot dot-teal"></span>Person Record</a>
+    <a href="#res-equipment" class="nav-item"><span class="nav-dot dot-teal"></span>Equipment Record</a>
+    <a href="#res-material" class="nav-item"><span class="nav-dot dot-teal"></span>Material Catalogue</a>
+    <a href="#res-display" class="nav-item"><span class="nav-dot dot-teal"></span>What to Display</a>
+    <a href="#res-screens" class="nav-item"><span class="nav-dot dot-teal"></span>Screen Inventory</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">HRM Integration</div>
+    <a href="#hrm-boundary" class="nav-item"><span class="nav-dot dot-purple"></span>Ownership Boundary</a>
+    <a href="#hrm-scenarios" class="nav-item"><span class="nav-dot dot-purple"></span>Integration Scenarios</a>
+    <a href="#hrm-config" class="nav-item"><span class="nav-dot dot-purple"></span>Configuration Settings</a>
+    <a href="#hrm-decision" class="nav-item"><span class="nav-dot dot-purple"></span>The Key Decision</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Reference</div>
+    <a href="#validation" class="nav-item"><span class="nav-dot dot-amber"></span>Validation Rules</a>
+    <a href="#priorities" class="nav-item"><span class="nav-dot dot-amber"></span>Build Priorities</a>
+  </div>
+</nav>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main class="main">
+
+  <!-- DOC HEADER -->
+  <div class="doc-header">
+    <div class="doc-eyebrow">OPUS ERP · Product Engineering</div>
+    <h1 class="doc-title">Phase 1 — OBS &amp;<br>Resource Pool</h1>
+    <p class="doc-desc">Complete implementation specification covering what to configure, what to display, what data to gather, and how HRM integration changes the architecture. This document is the team reference for building Phase 1A (OBS) and Phase 1B (Resource Pool) as a single cohesive phase.</p>
+    <div class="doc-meta-row">
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Module</span>
+        <span class="doc-meta-value">OBS + Resource Pool</span>
+      </div>
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Phase</span>
+        <span class="doc-meta-value">Phase 1 of 6</span>
+      </div>
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Depends on</span>
+        <span class="doc-meta-value">Nothing — foundation phase</span>
+      </div>
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Required by</span>
+        <span class="doc-meta-value">Phase 2 (EPS/WBS), Phase 4 (Activity Planning)</span>
+      </div>
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Product</span>
+        <span class="doc-meta-value">OPUS ERP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE BANNER -->
+  <div class="phase-banner">
+    <div class="phase-card blue">
+      <div class="phase-card-num">1A · OBS Foundation</div>
+      <div class="phase-card-title">Organisational Backbone</div>
+      <div class="phase-card-desc">Tree structure, role definitions, rate cards, cost centre mapping, approval chains, working hours policy</div>
+    </div>
+    <div class="phase-card teal">
+      <div class="phase-card-num">1B · Resource Pool</div>
+      <div class="phase-card-title">People, Equipment, Materials</div>
+      <div class="phase-card-desc">Person records with pay type + productivity, equipment assets with billing type, material catalogue</div>
+    </div>
+    <div class="phase-card purple">
+      <div class="phase-card-num">HRM Integration</div>
+      <div class="phase-card-title">If Applicable</div>
+      <div class="phase-card-desc">Field ownership boundaries, sync configuration, leave and attendance integration, standalone fallback</div>
+    </div>
+  </div>
+
+  <!-- ══ CONTENT ══ -->
+  <div class="content">
+
+    <!-- ── OVERVIEW ── -->
+    <div id="overview" class="section">
+      <div class="section-eyebrow eyebrow-gray">Overview</div>
+      <h2 class="section-title">Executive Summary</h2>
+      <p class="section-lead">OBS and Resource Pool are the foundation layer — every other module depends on them. Without OBS, resources have no organisational home. Without Resource Pool, activities have no one to assign. These two are combined into a single phase because they are tightly coupled and cannot deliver independently.</p>
+
+      <div class="three-col">
+        <div class="prop-card">
+          <div class="prop-label">OBS gives you</div>
+          <div class="prop-value">Structure</div>
+          <div class="prop-note">Departments, roles, hierarchies, rate cards, approval chains, cost centre mapping</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-label">Resource Pool gives you</div>
+          <div class="prop-value">People &amp; Assets</div>
+          <div class="prop-note">Persons, equipment, materials — populated into the OBS structure</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-label">Together they give you</div>
+          <div class="prop-value">Living Workforce Model</div>
+          <div class="prop-note">Scoped resource pickers, auto-rates, approval routing, cross-project conflict detection</div>
+        </div>
+      </div>
+
+      <div class="callout callout-blue" style="margin-top:1rem">
+        <strong>Mental model:</strong> OBS is the empty org chart. Resource Pool is filling that chart with real people and assets. One without the other is useless.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── DEPENDENCIES ── -->
+    <div id="dependency" class="section">
+      <div class="section-eyebrow eyebrow-gray">Dependencies</div>
+      <h2 class="section-title">Phase Dependencies</h2>
+      <p class="section-lead">Why Phase 1 must be completed before everything else can be built.</p>
+
+      <div class="dep-flow">
+        <div class="dep-box blue">Phase 1 · OBS + Resource Pool</div>
+        <span class="dep-arrow">→</span>
+        <div class="dep-box teal">Phase 2 · EPS + WBS</div>
+        <span class="dep-arrow">→</span>
+        <div class="dep-box amber">Phase 3 · Activity Planning</div>
+        <span class="dep-arrow">→</span>
+        <div class="dep-box green">Phase 4 · Execution</div>
+        <span class="dep-arrow">→</span>
+        <div class="dep-box purple">Phase 5 · EVM + Reporting</div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:1rem">
+        <table>
+          <thead><tr><th>What needs Phase 1</th><th>Specifically needs</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Activity resource assignment</td><td>Resource Pool (persons, equipment, materials)</td><td>PM needs a pool to pick from when assigning resources to activities</td></tr>
+            <tr><td>WBS responsibility assignment</td><td>OBS nodes</td><td>Each WBS node is assigned to an OBS department — defines who is accountable</td></tr>
+            <tr><td>Timesheet approval routing</td><td>OBS approval chain</td><td>Hours submitted by Ravi auto-route to his OBS node head for approval</td></tr>
+            <tr><td>Cost centre tagging</td><td>OBS cost centre mapping</td><td>When Ravi logs hours, cost auto-tags to Civil Division cost centre — no manual entry</td></tr>
+            <tr><td>Rate auto-population</td><td>OBS role rate card</td><td>When a Senior Painter is assigned, ₹200/hr is pulled from OBS — PM doesn't type it</td></tr>
+            <tr><td>Cross-project conflict detection</td><td>Resource Pool availability</td><td>Ravi's allocation on Project A must be visible before PM2 assigns him to Project B</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── ARCHITECTURE ── -->
+    <div id="architecture" class="section">
+      <div class="section-eyebrow eyebrow-gray">Architecture</div>
+      <h2 class="section-title">Module Architecture</h2>
+
+      <div class="code-block"><span class="c-section">OBS MODULE</span>
+<span class="c-comment">  └── Admin-managed, setup once, evolves slowly</span>
+  <span class="c-key">OBS Tree</span>           → nodes (Company → Division → Dept → Team)
+  <span class="c-key">Role Definitions</span>   → per node (role name, level, pay type default)
+  <span class="c-key">Rate Card</span>          → per role per node (₹/hr or ₹/month)
+  <span class="c-key">Cost Centre Map</span>    → per node → finance module
+  <span class="c-key">Approval Chain</span>     → per node → timesheet + expense routing
+  <span class="c-key">Working Hours Policy</span> → per node → overtime rules
+
+<span class="c-section">RESOURCE POOL MODULE</span>
+<span class="c-comment">  └── Operational, changes as people join/leave/move</span>
+  <span class="c-key">Person Records</span>    → linked to OBS node + role
+  <span class="c-key">Equipment Records</span> → linked to OBS node (owner division)
+  <span class="c-key">Material Catalogue</span>→ linked to OBS node (stocking division)
+
+<span class="c-section">DATA FLOW</span>
+  OBS Role Rate Card  <span class="c-comment">→ auto-fills rate on resource assignment</span>
+  OBS Node Head       <span class="c-comment">→ auto-routes timesheet approval</span>
+  OBS Cost Centre     <span class="c-comment">→ auto-tags AC entries</span>
+  Resource Pool       <span class="c-comment">→ scoped list in activity resource picker</span>
+  Resource Availability <span class="c-comment">→ conflict detection across projects</span></div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══════════════════════════════════════ -->
+    <!-- PHASE 1A — OBS                        -->
+    <!-- ══════════════════════════════════════ -->
+
+    <div id="obs-configure" class="section">
+      <div class="section-eyebrow eyebrow-blue">Phase 1A · OBS Foundation</div>
+      <h2 class="section-title">What to Configure</h2>
+      <p class="section-lead">Admin-level settings configured once during company setup. These become the structural backbone that every subsequent module reads from.</p>
+
+      <!-- 1. OBS Tree -->
+      <div class="sub-section">
+        <div class="sub-label">1.1 — OBS Tree Structure</div>
+        <p>The hierarchy itself — mirrors how the company is actually organised. Admin builds this during initial setup.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Node name</strong></td><td>Text</td><td><span class="tag tag-must">Must</span></td><td>e.g., "Civil Division", "Electrical Department"</td></tr>
+              <tr><td><strong>Node code</strong></td><td>Text</td><td><span class="tag tag-must">Must</span></td><td>Short identifier — e.g., CIVIL-01. Used in cost tagging.</td></tr>
+              <tr><td><strong>Node type</strong></td><td>Enum</td><td><span class="tag tag-must">Must</span></td><td>Company Root / Division / Department / Team</td></tr>
+              <tr><td><strong>Parent node</strong></td><td>Ref</td><td><span class="tag tag-must">Must</span></td><td>Establishes hierarchy. Root has no parent.</td></tr>
+              <tr><td><strong>Node head</strong></td><td>Person ref</td><td><span class="tag tag-must">Must</span></td><td>Receives approvals and escalations for this node</td></tr>
+              <tr><td>Is active</td><td>Boolean</td><td><span class="tag tag-should">Should</span></td><td>Soft delete — inactive nodes hidden from pickers but retained for history</td></tr>
+              <tr><td>Description</td><td>Text</td><td><span class="tag tag-nice">Nice</span></td><td>What this division does — for new team members</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout callout-gray">
+          <strong>Example tree:</strong> Kishore Constructions → Civil Division → Painting Team / Structural Team · Electrical Division → Wiring Team / Testing Team · PMO → Project Managers
+        </div>
+      </div>
+
+      <!-- 2. Role Definitions -->
+      <div class="sub-section">
+        <div class="sub-label">1.2 — Role Definitions per OBS Node</div>
+        <p>Roles are not global — "Senior Engineer" in Civil carries different rates and meaning than "Senior Engineer" in Electrical. Each node defines its own role list.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Role name</strong></td><td>Text</td><td><span class="tag tag-must">Must</span></td><td>e.g., "Senior Painter", "Junior Electrician"</td></tr>
+              <tr><td><strong>Role code</strong></td><td>Text</td><td><span class="tag tag-must">Must</span></td><td>e.g., CIVIL-PNTR-SR — used for reporting</td></tr>
+              <tr><td><strong>Role level</strong></td><td>Enum</td><td><span class="tag tag-must">Must</span></td><td>Junior / Mid / Senior / Lead / Manager</td></tr>
+              <tr><td><strong>Default pay type</strong></td><td>Enum</td><td><span class="tag tag-must">Must</span></td><td>Hourly / Salaried / Contract — default for new persons in this role</td></tr>
+              <tr><td><strong>Standard rate</strong></td><td>Number</td><td><span class="tag tag-must">Must</span></td><td>₹/hr if Hourly, ₹/month if Salaried. Auto-fills resource assignment.</td></tr>
+              <tr><td>Overtime rate</td><td>Number</td><td><span class="tag tag-should">Should</span></td><td>Required if overtime eligibility = Yes</td></tr>
+              <tr><td>Overtime eligibility</td><td>Boolean</td><td><span class="tag tag-should">Should</span></td><td>Drives whether OT rate field appears in resource assignment UI</td></tr>
+              <tr><td>Skill / competency tags</td><td>Tag list</td><td><span class="tag tag-should">Should</span></td><td>e.g., ["exterior painting", "scaffolding"]. Used to suggest relevant resources when assigning to activity types.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 3. Rate Card -->
+      <div class="sub-section">
+        <div class="sub-label">1.3 — Rate Card Structure</div>
+        <p>Rate cards live on OBS roles and are the source of truth for all cost planning. When a resource is assigned to an activity, the rate is pulled from here — not typed by the PM.</p>
+        <div class="code-block">OBS Node: Civil Division
+  Role: Senior Painter (CIVIL-PNTR-SR)
+    <span class="c-key">Standard Rate</span>:      <span class="c-val">₹200/hr</span>
+    <span class="c-key">Overtime Rate</span>:      <span class="c-val">₹300/hr</span>  <span class="c-comment">(1.5× standard)</span>
+    <span class="c-key">Holiday Rate</span>:       <span class="c-val">₹400/hr</span>  <span class="c-comment">(2× standard)</span>
+    <span class="c-key">Effective From</span>:     <span class="c-val">01-Apr-2025</span>
+    <span class="c-key">Effective To</span>:       <span class="c-val">31-Mar-2026</span>
+
+  Role: Junior Painter (CIVIL-PNTR-JR)
+    <span class="c-key">Standard Rate</span>:      <span class="c-val">₹150/hr</span>
+    <span class="c-key">Overtime Rate</span>:      <span class="c-val">₹225/hr</span>
+
+<span class="c-comment">Rate card is date-ranged — rates can change by financial year.
+Past activity costs use the rate card valid at the time of execution.</span></div>
+      </div>
+
+      <!-- 4. Cost Centre Mapping -->
+      <div class="sub-section">
+        <div class="sub-label">1.4 — Cost Centre Mapping</div>
+        <p>Each OBS node maps to cost centres in the finance module. When any resource from this node logs work, OPUS auto-tags the AC entry — no manual finance entry needed.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Primary cost centre</strong></td><td><span class="tag tag-must">Must</span></td><td>Labour costs from this node → e.g., CC-CIVIL-001</td></tr>
+              <tr><td>Equipment cost centre</td><td><span class="tag tag-should">Should</span></td><td>Equipment usage costs → e.g., CC-CIVIL-EQUIP. Separate if finance requires it.</td></tr>
+              <tr><td>Material cost centre</td><td><span class="tag tag-should">Should</span></td><td>Material consumption costs → e.g., CC-CIVIL-MAT</td></tr>
+              <tr><td>Overhead cost centre</td><td><span class="tag tag-nice">Nice</span></td><td>For LOE / support activities under this node</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 5. Approval Chain -->
+      <div class="sub-section">
+        <div class="sub-label">1.5 — Approval Chain Configuration</div>
+        <p>This is what routes timesheets and expense approvals correctly without manual wiring per person.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Setting</th><th>Required</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Timesheet approver</strong></td><td><span class="tag tag-must">Must</span></td><td>Defaults to OBS node head. Can be overridden per node.</td></tr>
+              <tr><td><strong>Approval levels</strong></td><td><span class="tag tag-must">Must</span></td><td>Level 1: Immediate supervisor (OBS parent) → Level 2: Division head → Level 3: Finance (expenses above threshold)</td></tr>
+              <tr><td><strong>Escalation days</strong></td><td><span class="tag tag-must">Must</span></td><td>If not approved within N days → auto-escalate to next level</td></tr>
+              <tr><td>Delegation</td><td><span class="tag tag-should">Should</span></td><td>Node head can delegate to another person for a date range (leave cover)</td></tr>
+              <tr><td>Expense threshold — Level 1</td><td><span class="tag tag-should">Should</span></td><td>Below ₹5,000 → supervisor approves</td></tr>
+              <tr><td>Expense threshold — Level 2</td><td><span class="tag tag-should">Should</span></td><td>₹5,000–₹50,000 → division head approves</td></tr>
+              <tr><td>Expense threshold — Level 3</td><td><span class="tag tag-should">Should</span></td><td>Above ₹50,000 → finance approves</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6. Working Hours Policy -->
+      <div class="sub-section">
+        <div class="sub-label">1.6 — Working Hours Policy per OBS Node</div>
+        <p>Different divisions may have different working patterns. Civil field teams often work 6-day weeks; back-office teams work 5-day weeks.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Setting</th><th>Required</th><th>Default</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Standard hours/day</strong></td><td><span class="tag tag-must">Must</span></td><td>8 hours</td></tr>
+              <tr><td><strong>Working days/week</strong></td><td><span class="tag tag-must">Must</span></td><td>5-day (Mon–Fri)</td></tr>
+              <tr><td>Max overtime hours/day</td><td><span class="tag tag-should">Should</span></td><td>4 hours</td></tr>
+              <tr><td>Max overtime hours/week</td><td><span class="tag tag-should">Should</span></td><td>12 hours</td></tr>
+              <tr><td>Overtime multiplier — weekday</td><td><span class="tag tag-should">Should</span></td><td>1.5×</td></tr>
+              <tr><td>Overtime multiplier — holiday</td><td><span class="tag tag-should">Should</span></td><td>2.0×</td></tr>
+              <tr><td>Holiday calendar</td><td><span class="tag tag-should">Should</span></td><td>National + company-specific holidays. Blocks those dates in resource availability.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- OBS DISPLAY -->
+    <div id="obs-display" class="section">
+      <div class="section-eyebrow eyebrow-blue">Phase 1A · OBS Foundation</div>
+      <h2 class="section-title">What to Display</h2>
+
+      <div class="sub-section">
+        <div class="sub-label">Main OBS View — Split Panel</div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header"><div class="icon-dot icon-blue">L</div>Left Panel — Tree</div>
+            <div class="card-body">
+              <ul style="list-style:none; font-size:13px; line-height:2; color:var(--ink-2)">
+                <li>Collapsible OBS hierarchy tree</li>
+                <li>Node headcount badge (e.g., "12 people")</li>
+                <li>Active / inactive indicator per node</li>
+                <li>Expand / collapse all control</li>
+                <li>Search / filter nodes by name</li>
+                <li>Add child node button per node</li>
+              </ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="icon-dot icon-blue">R</div>Right Panel — Selected Node Detail</div>
+            <div class="card-body">
+              <ul style="list-style:none; font-size:13px; line-height:2; color:var(--ink-2)">
+                <li>Node name, code, type, head</li>
+                <li>Role list with rate card</li>
+                <li>People in this node (count + list)</li>
+                <li>Equipment owned by this node</li>
+                <li>Cost centre mapping</li>
+                <li>Active projects this node is responsible for</li>
+                <li>Utilisation % (people allocated vs available)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-label">Summary Cards at Top of OBS Screen</div>
+        <div class="three-col">
+          <div class="prop-card">
+            <div class="prop-label">Total Headcount</div>
+            <div class="prop-value">Active people</div>
+            <div class="prop-note">Across entire OBS tree</div>
+          </div>
+          <div class="prop-card">
+            <div class="prop-label">Equipment Assets</div>
+            <div class="prop-value">Total registered</div>
+            <div class="prop-note">Available + deployed + maintenance</div>
+          </div>
+          <div class="prop-card">
+            <div class="prop-label">Active Projects</div>
+            <div class="prop-value">Currently running</div>
+            <div class="prop-note">That have OBS nodes assigned to WBS</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- OBS SCREENS -->
+    <div id="obs-screens" class="section">
+      <div class="section-eyebrow eyebrow-blue">Phase 1A · OBS Foundation</div>
+      <h2 class="section-title">Screen Inventory</h2>
+
+      <div class="screen-grid">
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--accent)">Admin · Settings</div>
+          <div class="screen-name">OBS Tree Manager</div>
+          <div class="screen-desc">Create / edit / reorder OBS nodes. Split panel — tree left, detail right. Drag to reorder nodes.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--accent)">Admin · Settings</div>
+          <div class="screen-name">Role &amp; Rate Card Editor</div>
+          <div class="screen-desc">Per OBS node — define roles, set standard and overtime rates, set effective date ranges.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--accent)">Admin · Settings</div>
+          <div class="screen-name">Approval Chain Configurator</div>
+          <div class="screen-desc">Set approvers, levels, escalation rules, expense thresholds, and delegation per node.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--accent)">Admin · Settings</div>
+          <div class="screen-name">Working Hours Policy</div>
+          <div class="screen-desc">Standard hours, OT rules, holiday calendar per OBS node. Applies to all resources in that node.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--accent)">Admin · Settings</div>
+          <div class="screen-name">Cost Centre Mapping</div>
+          <div class="screen-desc">Map OBS nodes to finance cost centres. Labour / Equipment / Material / Overhead buckets per node.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--ink-3)">Read-only · Reports</div>
+          <div class="screen-name">OBS Utilisation View</div>
+          <div class="screen-desc">Per node — how many people are currently allocated vs available. Colour-coded utilisation bars.</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- OBS DATA MODEL -->
+    <div id="obs-data" class="section">
+      <div class="section-eyebrow eyebrow-blue">Phase 1A · OBS Foundation</div>
+      <h2 class="section-title">Data Model</h2>
+
+      <div class="code-block"><span class="c-section">OBSNode</span> {
+  id, parent_id, name, code
+  <span class="c-key">type</span>:              <span class="c-type">COMPANY_ROOT | DIVISION | DEPARTMENT | TEAM</span>
+  node_head_person_id
+  is_active:         <span class="c-type">Boolean</span>
+
+  <span class="c-comment">// Cost Centre Mapping</span>
+  cost_centre_labour:    String  <span class="c-comment">// e.g., CC-CIVIL-001</span>
+  cost_centre_equipment: String
+  cost_centre_material:  String
+
+  <span class="c-comment">// Approval Chain</span>
+  timesheet_approver_id
+  approval_escalation_days: Int
+  expense_threshold_l1: Float
+  expense_threshold_l2: Float
+
+  <span class="c-comment">// Working Hours Policy</span>
+  standard_hours_day: Float     <span class="c-comment">// default 8</span>
+  working_days_week: Int        <span class="c-comment">// 5 or 6</span>
+  max_overtime_day: Float
+  overtime_multiplier_weekday: Float
+  overtime_multiplier_holiday: Float
+}
+
+<span class="c-section">OBSRole</span> {
+  id, obs_node_id
+  name, code
+  <span class="c-key">level</span>:             <span class="c-type">JUNIOR | MID | SENIOR | LEAD | MANAGER</span>
+  <span class="c-key">default_pay_type</span>:  <span class="c-type">HOURLY | SALARIED | CONTRACT</span>
+  overtime_eligible: Boolean
+  skill_tags:        String[]
+}
+
+<span class="c-section">OBSRateCard</span> {
+  id, obs_role_id
+  standard_rate: Float
+  overtime_rate: Float
+  holiday_rate: Float
+  effective_from: Date
+  effective_to: Date
+}</div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══════════════════════════════════════ -->
+    <!-- PHASE 1B — RESOURCE POOL              -->
+    <!-- ══════════════════════════════════════ -->
+
+    <div id="res-person" class="section">
+      <div class="section-eyebrow eyebrow-teal">Phase 1B · Resource Pool</div>
+      <h2 class="section-title">Person Record</h2>
+      <p class="section-lead">The most detailed record in the system. It is the intersection of HR identity and project management capability. Fields are grouped into permission tiers — not everyone can see compensation data.</p>
+
+      <!-- Identity -->
+      <div class="sub-section">
+        <div class="sub-label">Group A — Identity (visible to all)</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>HRM source?</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Full name</strong></td><td><span class="tag tag-must">Must</span></td><td><span class="tag tag-sync">Sync</span></td><td>Primary identifier</td></tr>
+              <tr><td><strong>Employee ID</strong></td><td><span class="tag tag-must">Must</span></td><td><span class="tag tag-sync">Sync</span></td><td>Unique. Links HRM record to OPUS record.</td></tr>
+              <tr><td><strong>OBS node</strong></td><td><span class="tag tag-must">Must</span></td><td><span class="tag tag-sync">Sync</span></td><td>Which department they belong to. Drives rate card, approval chain, cost centre.</td></tr>
+              <tr><td><strong>Role</strong></td><td><span class="tag tag-must">Must</span></td><td><span class="tag tag-sync">Sync</span></td><td>Must match a role defined in that OBS node's role list.</td></tr>
+              <tr><td><strong>Employment type</strong></td><td><span class="tag tag-must">Must</span></td><td><span class="tag tag-sync">Sync</span></td><td>Full-time / Part-time / Contract / Consultant</td></tr>
+              <tr><td>Profile photo</td><td><span class="tag tag-nice">Nice</span></td><td><span class="tag tag-sync">Sync</span></td><td>Shown in resource pickers and timesheets</td></tr>
+              <tr><td>Join date</td><td><span class="tag tag-should">Should</span></td><td><span class="tag tag-sync">Sync</span></td><td>Needed for tenure calculations and rate history</td></tr>
+              <tr><td>Reporting manager</td><td><span class="tag tag-should">Should</span></td><td><span class="tag tag-sync">Sync</span></td><td>Should match OBS node head, but can differ</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Compensation -->
+      <div class="sub-section">
+        <div class="sub-label">Group B — Compensation (permission-restricted)</div>
+        <div class="callout callout-amber">
+          <strong>Sensitive data.</strong> Only HR admins and finance roles should see actual salary figures. Project managers see only the derived rate (₹/hr or ₹/day). Never expose monthly salary to PMs.
+        </div>
+        <div class="table-wrap" style="margin-top:0.75rem">
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>Conditional on</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Pay type</strong></td><td><span class="tag tag-must">Must</span></td><td>—</td><td>Hourly / Salaried / Contract. Drives all downstream cost logic.</td></tr>
+              <tr><td><strong>Hourly rate</strong></td><td><span class="tag tag-must">Must</span></td><td>Pay type = Hourly</td><td>Auto-filled from OBS role rate card. PM can override per activity.</td></tr>
+              <tr><td><strong>Overtime rate</strong></td><td><span class="tag tag-must">Must</span></td><td>Hourly + OT eligible</td><td>Auto-filled from OBS rate card.</td></tr>
+              <tr><td><strong>Monthly salary</strong></td><td><span class="tag tag-must">Must</span></td><td>Pay type = Salaried</td><td>HR admin view only. System converts to daily_allocation = salary / working_days.</td></tr>
+              <tr><td><strong>Daily allocation</strong></td><td><span class="tag tag-auto">Auto</span></td><td>Salaried</td><td>Derived: monthly salary / working days per month. This is what PM sees.</td></tr>
+              <tr><td>Contract amount</td><td><span class="tag tag-must">Must</span></td><td>Pay type = Contract</td><td>Fixed fee for the activity or period.</td></tr>
+              <tr><td>Overtime pay flag</td><td><span class="tag tag-must">Must</span></td><td>—</td><td>For salaried = false (locked). For hourly = configurable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Availability -->
+      <div class="sub-section">
+        <div class="sub-label">Group C — Availability</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>HRM source?</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Base calendar</strong></td><td><span class="tag tag-must">Must</span></td><td>—</td><td>Mon–Fri / Mon–Sat / custom. Inherits from OBS working hours policy, overridable.</td></tr>
+              <tr><td><strong>Default hours/day</strong></td><td><span class="tag tag-must">Must</span></td><td>—</td><td>Default 8. Override for part-time workers.</td></tr>
+              <tr><td>Max allocation %</td><td><span class="tag tag-should">Should</span></td><td>—</td><td>e.g., 80% → 20% reserved for non-project admin work. Prevents over-allocation.</td></tr>
+              <tr><td>Leave balance</td><td><span class="tag tag-should">Should</span></td><td><span class="tag tag-sync">Sync</span></td><td>From HRM if integrated. Used to show realistic future availability.</td></tr>
+              <tr><td>Known unavailability</td><td><span class="tag tag-should">Should</span></td><td><span class="tag tag-sync">Sync</span></td><td>Approved leaves block the availability calendar. PM is alerted if person was allocated.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="sub-section">
+        <div class="sub-label">Group D — Skills &amp; Productivity</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>Source</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Skill tags</td><td><span class="tag tag-should">Should</span></td><td>Manual / HRM</td><td>Matches OBS role competency tags. Used to surface relevant people in resource picker.</td></tr>
+              <tr><td>Certifications</td><td><span class="tag tag-should">Should</span></td><td>Manual / HRM</td><td>e.g., Scaffold Safety, Welding Grade A. Shown as badges in resource picker.</td></tr>
+              <tr><td>Productivity rates</td><td><span class="tag tag-should">Should</span></td><td><span class="tag tag-auto">Auto-computed</span></td><td>Per activity type: e.g., Painting → 11.8 m²/hr. Built automatically from execution history.</td></tr>
+              <tr><td>Productivity source</td><td><span class="tag tag-auto">Auto</span></td><td>System</td><td>HISTORICAL / MANUAL / COMPUTED. Shown in resource assignment so PM knows how reliable the rate is.</td></tr>
+              <tr><td>Overtime frequency flag</td><td><span class="tag tag-auto">Auto</span></td><td>System</td><td>Auto-flagged if person logs OT on more than N activities. Signals planning assumption needs review.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Person Data Model -->
+      <div class="sub-section">
+        <div class="sub-label">Person Data Model</div>
+        <div class="code-block"><span class="c-section">Person</span> {
+  <span class="c-comment">// Identity</span>
+  id, employee_id, name, photo_url
+  obs_node_id, obs_role_id
+  employment_type: <span class="c-type">FULL_TIME | PART_TIME | CONTRACT | CONSULTANT</span>
+  join_date, reporting_manager_id, is_active
+
+  <span class="c-comment">// Compensation (HR-visible only)</span>
+  <span class="c-key">pay_type</span>:           <span class="c-type">HOURLY | SALARIED | CONTRACT</span>
+  hourly_rate:         Float  <span class="c-comment">// if HOURLY — from OBS rate card, overridable</span>
+  overtime_rate:       Float  <span class="c-comment">// if HOURLY + OT eligible</span>
+  monthly_salary:      Float  <span class="c-comment">// if SALARIED — restricted field</span>
+  daily_allocation:    Float  <span class="c-comment">// SALARIED: auto = monthly_salary / working_days</span>
+  contract_amount:     Float  <span class="c-comment">// if CONTRACT</span>
+  overtime_pay:        Boolean
+
+  <span class="c-comment">// Availability</span>
+  base_calendar:         CalendarRef
+  default_hours_day:     Float
+  max_allocation_pct:    Float     <span class="c-comment">// default 100</span>
+
+  <span class="c-comment">// Skills</span>
+  skill_tags:            String[]
+  certifications:        Certification[]
+
+  <span class="c-comment">// Productivity (auto-built, read-only)</span>
+  productivity_rates: [{
+    activity_type: String,       <span class="c-comment">// e.g., "exterior_painting"</span>
+    rate: Float,                 <span class="c-comment">// e.g., 11.8 m²/hr</span>
+    source: <span class="c-type">HISTORICAL | MANUAL | COMPUTED</span>,
+    sample_count: Int,           <span class="c-comment">// how many activities contributed to this</span>
+    last_updated: Date
+  }]
+}</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- EQUIPMENT -->
+    <div id="res-equipment" class="section">
+      <div class="section-eyebrow eyebrow-teal">Phase 1B · Resource Pool</div>
+      <h2 class="section-title">Equipment Record</h2>
+
+      <div class="sub-section">
+        <div class="sub-label">Fields to Gather</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Field</th><th>Required</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Equipment name</strong></td><td><span class="tag tag-must">Must</span></td><td>e.g., "Ladder — 6m Aluminium", "Tower Crane TC-01"</td></tr>
+              <tr><td><strong>Equipment code</strong></td><td><span class="tag tag-must">Must</span></td><td>Asset tag number. Unique across company.</td></tr>
+              <tr><td><strong>Category</strong></td><td><span class="tag tag-must">Must</span></td><td>Safety / Power tool / Hand tool / Machinery / Vehicle</td></tr>
+              <tr><td><strong>OBS node (owner)</strong></td><td><span class="tag tag-must">Must</span></td><td>Which division owns / manages this asset.</td></tr>
+              <tr><td><strong>Ownership type</strong></td><td><span class="tag tag-must">Must</span></td><td>Owned / Rented / Leased. Drives whether mobilization costs apply.</td></tr>
+              <tr><td><strong>Billing type</strong></td><td><span class="tag tag-must">Must</span></td><td>Daily Rental / Hourly / Pay-per-use / Owned (depreciation) / Fixed Hire. Determines when AC ticks.</td></tr>
+              <tr><td><strong>Standard rate</strong></td><td><span class="tag tag-must">Must</span></td><td>₹/day or ₹/hr depending on billing type. Auto-fills activity assignment.</td></tr>
+              <tr><td><strong>Planned deployment</strong></td><td><span class="tag tag-must">Must</span></td><td>Set per activity assignment — how many days/hours planned on site.</td></tr>
+              <tr><td>Idle rate</td><td><span class="tag tag-should">Should</span></td><td>For equipment with different idle vs active cost (e.g., generator with/without fuel)</td></tr>
+              <tr><td>Mobilization cost</td><td><span class="tag tag-should">Should</span></td><td>One-time cost to bring to site — added to activity expense when equipment is deployed</td></tr>
+              <tr><td>Current status</td><td><span class="tag tag-should">Should</span></td><td>Available / Deployed / Under maintenance / Retired</td></tr>
+              <tr><td>Maintenance schedule</td><td><span class="tag tag-nice">Nice</span></td><td>Next service due date — blocks availability if maintenance overlaps with project dates</td></tr>
+              <tr><td>Rental contract dates</td><td><span class="tag tag-should">Should</span></td><td>For rented equipment — start and end date of rental contract</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-label">Billing Type Impact on AC</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Billing Type</th><th>When AC Ticks</th><th>Idle Equipment</th><th>Example</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Daily Rental</strong></td><td>Every deployed day</td><td>Still charged — you pay whether used or not</td><td>Hired scaffolding ₹500/day</td></tr>
+              <tr><td><strong>Hourly Rental</strong></td><td>Hours of active use only</td><td>No charge when idle</td><td>Crane hire ₹2,000/hr when operating</td></tr>
+              <tr><td><strong>Pay per Use</strong></td><td>Only when producing output</td><td>No charge</td><td>Generator — pay only when running</td></tr>
+              <tr><td><strong>Owned (Internal)</strong></td><td>Depreciation per day on site</td><td>Depreciation still ticks (asset is deployed)</td><td>Company ladder ₹50/day depreciation</td></tr>
+              <tr><td><strong>Fixed Hire</strong></td><td>Lump sum when confirmed</td><td>N/A — flat fee regardless</td><td>Pumping machine ₹15,000 for the job</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- MATERIAL -->
+    <div id="res-material" class="section">
+      <div class="section-eyebrow eyebrow-teal">Phase 1B · Resource Pool</div>
+      <h2 class="section-title">Material Catalogue</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Required</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Material name</strong></td><td><span class="tag tag-must">Must</span></td><td>e.g., "Exterior Wall Paint — White", "Cement OPC 53"</td></tr>
+            <tr><td><strong>Material code (SKU)</strong></td><td><span class="tag tag-must">Must</span></td><td>Unique identifier. Links to procurement and inventory modules.</td></tr>
+            <tr><td><strong>Category</strong></td><td><span class="tag tag-must">Must</span></td><td>Consumable / Raw material / Component / Chemical</td></tr>
+            <tr><td><strong>OBS node (stocking division)</strong></td><td><span class="tag tag-must">Must</span></td><td>Which store/division holds stock and raises purchase requests.</td></tr>
+            <tr><td><strong>Unit of Measure (UOM)</strong></td><td><span class="tag tag-must">Must</span></td><td>Litres, kg, bags, pieces, m², m³. Without UOM, quantity is meaningless.</td></tr>
+            <tr><td><strong>Standard cost per unit</strong></td><td><span class="tag tag-must">Must</span></td><td>₹/litre, ₹/bag etc. Auto-fills activity assignment. Cannot be blank.</td></tr>
+            <tr><td><strong>Cost basis</strong></td><td><span class="tag tag-must">Must</span></td><td>Fixed / Market-rate (fluctuates) / Contract-rate. Determines whether PM can override.</td></tr>
+            <tr><td>Wastage standard %</td><td><span class="tag tag-should">Should</span></td><td>Industry-standard spill/rework allowance. e.g., Paint = 5%. Planned qty auto-increases by this %.</td></tr>
+            <tr><td>Preferred vendor</td><td><span class="tag tag-should">Should</span></td><td>Links to procurement module for purchase requests.</td></tr>
+            <tr><td>Lead time (days)</td><td><span class="tag tag-should">Should</span></td><td>Days to procure. Used to raise alerts before stock runs out.</td></tr>
+            <tr><td>Current stock level</td><td><span class="tag tag-should">Should</span></td><td>From inventory module if integrated, else manual.</td></tr>
+            <tr><td>Reorder point</td><td><span class="tag tag-should">Should</span></td><td>Below this quantity → alert procurement team before activity runs short.</td></tr>
+            <tr><td>Minimum order quantity</td><td><span class="tag tag-nice">Nice</span></td><td>For purchase order generation.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout callout-teal" style="margin-top:0.75rem">
+        <strong>Consumption Rate</strong> is not stored in the catalogue — it is set per activity assignment. The catalogue holds the standard cost and UOM. The activity holds the planned consumption rate for that specific job.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- RESOURCE POOL DISPLAY -->
+    <div id="res-display" class="section">
+      <div class="section-eyebrow eyebrow-teal">Phase 1B · Resource Pool</div>
+      <h2 class="section-title">What to Display</h2>
+
+      <div class="sub-section">
+        <div class="sub-label">People — Availability Heatmap</div>
+        <p>The most important view in the resource pool. PM looks here before assigning someone to an activity.</p>
+        <div class="code-block">Person view — Availability Heatmap (week grid)
+
+  Ravi Kumar        ████████  ████████  ████░░░░  ████████  ████████
+                    Mon        Tue        Wed(50%) Thu        Fri
+                    <span class="c-val">Green = available</span>  <span class="c-type">Amber = partial</span>  <span class="c-comment">Red = fully booked</span>
+
+  Hover on any cell → shows:
+    Which project/activity this person is allocated to
+    % allocation on that day
+    Who the approving manager is</div>
+
+        <div class="three-col">
+          <div class="prop-card">
+            <div class="prop-label">Person Card Shows</div>
+            <div class="prop-value">Current allocation</div>
+            <div class="prop-note">"100% Project Alpha Day 1–5, 50% Project Beta Day 6–10"</div>
+          </div>
+          <div class="prop-card">
+            <div class="prop-label">Person Card Shows</div>
+            <div class="prop-value">Productivity rates</div>
+            <div class="prop-note">Per activity type — e.g., Painting 11.8 m²/hr (from 3 activities)</div>
+          </div>
+          <div class="prop-card">
+            <div class="prop-label">Person Card Shows</div>
+            <div class="prop-value">Overtime flag</div>
+            <div class="prop-note">Warning if consistently over-allocated in recent activities</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-label">Equipment — Deployment Calendar</div>
+        <div class="two-col">
+          <div class="prop-card">
+            <div class="prop-label">Shows per equipment asset</div>
+            <div class="prop-value">Where it is right now</div>
+            <div class="prop-note">Current project + activity + expected return date</div>
+          </div>
+          <div class="prop-card">
+            <div class="prop-label">Shows per equipment asset</div>
+            <div class="prop-value">Utilisation %</div>
+            <div class="prop-note">Productive days / total deployed days. Idle equipment on daily rental = wasted cost signal.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-label">Material — Stock Dashboard</div>
+        <div class="two-col">
+          <div class="prop-card">
+            <div class="prop-label">Shows</div>
+            <div class="prop-value">Stock vs reorder point</div>
+            <div class="prop-note">Progress bar: current stock / reorder point. Red when below threshold.</div>
+          </div>
+          <div class="prop-card">
+            <div class="prop-label">Shows</div>
+            <div class="prop-value">Consumption trend</div>
+            <div class="prop-note">How fast material is being used across active projects. Projects with high consumption rates flagged.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- RESOURCE POOL SCREENS -->
+    <div id="res-screens" class="section">
+      <div class="section-eyebrow eyebrow-teal">Phase 1B · Resource Pool</div>
+      <h2 class="section-title">Screen Inventory</h2>
+
+      <div class="screen-grid">
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--teal)">Admin + HR</div>
+          <div class="screen-name">People List &amp; Record</div>
+          <div class="screen-desc">Master list with filters by OBS node, role, pay type, availability. Detail view per person with all groups (identity, comp, availability, skills).</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--teal)">Admin + HR</div>
+          <div class="screen-name">Availability Heatmap</div>
+          <div class="screen-desc">Week/month grid per person. Shows allocation %, project assignments per day, leave blocks. Primary view for capacity planning.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--teal)">Admin</div>
+          <div class="screen-name">Equipment Asset List</div>
+          <div class="screen-desc">All equipment with status badges (available / deployed / maintenance). Deployment calendar per asset.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--teal)">Admin</div>
+          <div class="screen-name">Material Catalogue</div>
+          <div class="screen-desc">Searchable catalogue by category, UOM, stocking division. Stock level indicators per material. Reorder alerts surface here.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--ink-3)">Read-only · PM</div>
+          <div class="screen-name">Cross-Project Allocation View</div>
+          <div class="screen-desc">Shows every resource and their current allocation across all projects. Primary tool for detecting conflicts before assigning to a new activity.</div>
+        </div>
+        <div class="screen-card">
+          <div class="screen-tag" style="color:var(--ink-3)">Read-only · Reports</div>
+          <div class="screen-name">Productivity Rate History</div>
+          <div class="screen-desc">Per person, per activity type — historical productivity rates from completed activities. Shows trend over time.</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ══════════════════════════════════════ -->
+    <!-- HRM INTEGRATION                       -->
+    <!-- ══════════════════════════════════════ -->
+
+    <div id="hrm-boundary" class="section">
+      <div class="section-eyebrow eyebrow-purple">HRM Integration</div>
+      <h2 class="section-title">Ownership Boundary</h2>
+      <p class="section-lead">The most important design decision. HRM and OPUS must never fight over the same data. Every field must have one clear owner.</p>
+
+      <div class="hrm-compare">
+        <div class="hrm-col">
+          <div class="hrm-col-title">HRM Owns (Source of Truth)</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Employee master — name, ID, join date, employment type</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Org hierarchy → maps to OBS nodes</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Compensation — salary, pay type</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Leave balances and approved leaves</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Certifications and training records</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Attendance / check-in check-out records</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Exits and deactivations</div>
+        </div>
+        <div class="hrm-col">
+          <div class="hrm-col-title">OPUS Owns (Project Layer on Top)</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Productivity rates per activity type</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Project allocation calendar</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Activity-level timesheet entries</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Skill tags relevant to project work</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Rate overrides for specific projects</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Equipment records (HRM never touches these)</div>
+          <div class="hrm-item"><span class="hrm-bullet"></span>Material catalogue (OPUS + procurement)</div>
+        </div>
+      </div>
+
+      <div class="callout callout-purple" style="margin-top:0.75rem">
+        <strong>Conflict resolution rule:</strong> If HRM and OPUS data conflict — HRM is master for people data. OPUS is master for project data. Never let OPUS overwrite HRM records.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- HRM SCENARIOS -->
+    <div id="hrm-scenarios" class="section">
+      <div class="section-eyebrow eyebrow-purple">HRM Integration</div>
+      <h2 class="section-title">Integration Scenarios</h2>
+
+      <div class="phase-block">
+        <div class="phase-block-header">
+          <span class="phase-num-badge badge-teal">Scenario A</span>
+          <div>
+            <div class="phase-block-title">Full HRM Integration — Real-time API Sync</div>
+            <div class="phase-block-sub">Best option when HRM system has an API. OPUS is a consumer of HRM data, not a recorder.</div>
+          </div>
+        </div>
+        <div class="phase-block-body">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Event in HRM</th><th>Effect in OPUS</th></tr></thead>
+              <tbody>
+                <tr><td>New employee added</td><td>Auto-appears in OPUS Resource Pool. OBS node mapped from HRM department code.</td></tr>
+                <tr><td>Employee exits</td><td>Person deactivated in OPUS. Past assignments retained for history. Cannot be assigned to new activities.</td></tr>
+                <tr><td>Org change (Ravi moves Civil → Electrical)</td><td>OBS node updated. Future assignments route to Electrical. Past assignments retain Civil node for historical reporting.</td></tr>
+                <tr><td>Leave approved in HRM</td><td>OPUS marks person as unavailable on those dates. If allocated to an activity — PM receives alert.</td></tr>
+                <tr><td>Attendance logged (biometric/app)</td><td>OPUS pre-fills timesheet for that day. Worker only confirms activity — does not re-enter check-in/out.</td></tr>
+                <tr><td>Salary revision in HRM</td><td>Daily allocation updated in OPUS. New rate applies to future activities. Past activities retain old rate.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase-block">
+        <div class="phase-block-header">
+          <span class="phase-num-badge badge-amber">Scenario B</span>
+          <div>
+            <div class="phase-block-title">Partial Integration — Periodic CSV/Excel Import</div>
+            <div class="phase-block-sub">When HRM system has no API. Manual export-import cycle.</div>
+          </div>
+        </div>
+        <div class="phase-block-body">
+          <ul class="deliverable-list">
+            <li><div class="d-check teal"></div>HR exports employee list as CSV/Excel periodically (weekly or monthly)</li>
+            <li><div class="d-check teal"></div>OPUS imports and reconciles — new employees added, exits deactivated, changes updated</li>
+            <li><div class="d-check teal"></div>Leave data: manual entry in OPUS availability calendar (HR sends approved leave report)</li>
+            <li><div class="d-check teal"></div>Attendance: fully manual — workers submit timesheets without pre-fill</li>
+            <li><div class="d-check teal"></div>Salary changes: imported in the same periodic cycle</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="phase-block">
+        <div class="phase-block-header">
+          <span class="phase-num-badge badge-purple">Scenario C</span>
+          <div>
+            <div class="phase-block-title">Standalone — No HRM System</div>
+            <div class="phase-block-sub">OPUS Resource Pool is the system of record. Designed for this from day one — HRM integration is an upgrade later.</div>
+          </div>
+        </div>
+        <div class="phase-block-body">
+          <ul class="deliverable-list">
+            <li><div class="d-check teal"></div>Admin creates person records manually in OPUS Resource Pool</li>
+            <li><div class="d-check teal"></div>Pay type, rate, and role configured directly in OPUS</li>
+            <li><div class="d-check teal"></div>Leave managed within OPUS availability calendar</li>
+            <li><div class="d-check teal"></div>Timesheet is the only attendance record</li>
+            <li><div class="d-check teal"></div>HRM fields are clearly tagged internally so integration can replace them cleanly later</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- HRM CONFIG -->
+    <div id="hrm-config" class="section">
+      <div class="section-eyebrow eyebrow-purple">HRM Integration</div>
+      <h2 class="section-title">Configuration Settings</h2>
+      <p class="section-lead">Settings available in OPUS Admin → Integrations → HRM. Appears when integration is configured.</p>
+
+      <div class="sub-section">
+        <div class="sub-label">Connection Settings</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Setting</th><th>Options</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Integration type</strong></td><td>API real-time / CSV import / None</td><td>Drives which other settings appear</td></tr>
+              <tr><td><strong>Sync frequency</strong></td><td>Real-time / Daily / Weekly</td><td>For API mode only</td></tr>
+              <tr><td><strong>HRM field mapping</strong></td><td>Configurable per field</td><td>See mapping table below</td></tr>
+              <tr><td><strong>Conflict resolution</strong></td><td>HRM master / OPUS master / Manual review</td><td>Recommendation: HRM master for people, OPUS master for project data</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-label">Field Mapping Configuration</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>HRM Field</th><th>Maps to OPUS Field</th><th>Transform</th></tr></thead>
+            <tbody>
+              <tr><td>department_code</td><td>OBS node</td><td>Lookup: HRM dept code → OBS node ID</td></tr>
+              <tr><td>designation / job_title</td><td>OBS role</td><td>Lookup: title → nearest matching OBS role</td></tr>
+              <tr><td>basic_salary</td><td>monthly_salary → daily_allocation</td><td>salary / working_days_month</td></tr>
+              <tr><td>employee_type</td><td>pay_type</td><td>Permanent → SALARIED, Contract → CONTRACT, Daily wage → HOURLY</td></tr>
+              <tr><td>reporting_manager_id</td><td>reporting_manager_id</td><td>Direct — must be a valid Person ID in OPUS</td></tr>
+              <tr><td>leave_balance</td><td>available_leave_days</td><td>Direct — updates availability calendar</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-label">Leave &amp; Attendance Sync Settings</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Setting</th><th>Options</th><th>Default</th></tr></thead>
+            <tbody>
+              <tr><td>Sync approved leaves from HRM</td><td>Yes / No</td><td>Yes (if HRM integrated)</td></tr>
+              <tr><td>Leave types to block in OPUS</td><td>Casual / Sick / Earned / All</td><td>All approved leaves</td></tr>
+              <tr><td>Auto-alert PM when allocated resource takes leave</td><td>Yes / No</td><td>Yes</td></tr>
+              <tr><td>Use HRM attendance to pre-fill timesheets</td><td>Yes / No</td><td>Yes (if attendance API available)</td></tr>
+              <tr><td>Pre-fill tolerance</td><td>N minutes from shift start</td><td>15 minutes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- HRM DECISION -->
+    <div id="hrm-decision" class="section">
+      <div class="section-eyebrow eyebrow-purple">HRM Integration</div>
+      <h2 class="section-title">The Key Decision</h2>
+
+      <div class="callout callout-blue" style="margin-bottom:1rem">
+        <strong>Before building Phase 1, decide:</strong> Is OPUS the system of record for people data — or is OPUS a consumer of HRM data?
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header" style="background:var(--accent-light); color:var(--accent)"><div class="icon-dot icon-blue">A</div>OPUS is system of record</div>
+          <div class="card-body">
+            <p style="font-size:13px">Build full person record management in OPUS. HRM integration is additive later.</p>
+            <ul style="font-size:13px; padding-left:1rem; line-height:1.9; color:var(--ink-2); margin-top:0.5rem">
+              <li>Works on day one — no HRM dependency</li>
+              <li>More fields to maintain manually</li>
+              <li>HRM integration replaces/locks fields when added</li>
+              <li>Best for companies without an existing HRM</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header" style="background:var(--teal-light); color:var(--teal)"><div class="icon-dot icon-teal">B</div>OPUS consumes HRM data</div>
+          <div class="card-body">
+            <p style="font-size:13px">Build a thin person record in OPUS — project-relevant fields only. HRM holds the rest.</p>
+            <ul style="font-size:13px; padding-left:1rem; line-height:1.9; color:var(--ink-2); margin-top:0.5rem">
+              <li>Integration is a hard dependency before go-live</li>
+              <li>Less maintenance in OPUS long-term</li>
+              <li>Best for companies with existing HRM (SAP, Darwinbox, etc.)</li>
+              <li>OPUS-specific fields always stay in OPUS regardless</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout-green" style="margin-top:1rem">
+        <strong>Recommendation:</strong> Build OPUS as system of record first (Scenario C — standalone). Tag every field that would be owned by HRM so integration can cleanly replace it later. This way OPUS ships without waiting for HRM, and HRM becomes a clean upgrade — not a rebuild.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- VALIDATION RULES -->
+    <div id="validation" class="section">
+      <div class="section-eyebrow eyebrow-amber">Reference</div>
+      <h2 class="section-title">Validation Rules</h2>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Scenario</th><th>Validation</th><th>OPUS Action</th></tr></thead>
+          <tbody>
+            <tr><td>Person added without OBS node</td><td>OBS node is mandatory</td><td>Block save — person cannot exist outside the org structure</td></tr>
+            <tr><td>Person added without Pay Type</td><td>Pay type is mandatory</td><td>Block save — all downstream cost logic depends on this</td></tr>
+            <tr><td>Person's role not in OBS node's role list</td><td>Role must match node definition</td><td>Block save — rates cannot be pulled from an undefined role</td></tr>
+            <tr><td>Salaried person — overtime pay = true</td><td>Salaried workers cannot have OT pay</td><td>Lock overtime_pay to false. Hide OT rate field.</td></tr>
+            <tr><td>Equipment added without billing type</td><td>Billing type mandatory</td><td>Block save — system cannot compute AC without knowing when it ticks</td></tr>
+            <tr><td>Material added without UOM</td><td>UOM mandatory</td><td>Block save — quantity is meaningless without unit</td></tr>
+            <tr><td>OBS node deleted that has active people</td><td>Cannot delete a node with active resources</td><td>Block delete. Show count of affected people. Must reassign or deactivate first.</td></tr>
+            <tr><td>Rate card with no effective date</td><td>Effective from date mandatory</td><td>Block save — rates must be date-ranged for historical accuracy</td></tr>
+            <tr><td>Resource allocated beyond max_allocation_%</td><td>Cross-project allocation check</td><td>Warn PM — "Ravi is already 80% allocated on Project A. Adding this allocation will exceed their capacity."</td></tr>
+            <tr><td>Person's planned hours exceed activity duration</td><td>planned_hours / hours_per_day > activity duration</td><td>Warn PM — "60 hrs / 8 hrs/day = 7.5 days but activity is only 5 days. Resource over-allocated."</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- BUILD PRIORITIES -->
+    <div id="priorities" class="section">
+      <div class="section-eyebrow eyebrow-amber">Reference</div>
+      <h2 class="section-title">Build Priorities</h2>
+      <p class="section-lead">Not everything needs to be built in the first release. This table tells the team what to build first, what can wait, and what is Phase 2+.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Feature</th><th>Priority</th><th>Reason</th></tr></thead>
+          <tbody>
+            <tr><td>OBS tree (nodes, hierarchy)</td><td><span class="tag tag-must">Release 1</span></td><td>Everything depends on this</td></tr>
+            <tr><td>Role definitions + rate card</td><td><span class="tag tag-must">Release 1</span></td><td>Resource assignment cannot auto-populate rate without this</td></tr>
+            <tr><td>Approval chain configuration</td><td><span class="tag tag-must">Release 1</span></td><td>Timesheet workflow blocked without this</td></tr>
+            <tr><td>Person record (identity + pay type + rate + calendar)</td><td><span class="tag tag-must">Release 1</span></td><td>Core of resource assignment</td></tr>
+            <tr><td>Equipment record (name, billing type, rate)</td><td><span class="tag tag-must">Release 1</span></td><td>Activities need equipment assigned in planning</td></tr>
+            <tr><td>Material catalogue (name, UOM, cost)</td><td><span class="tag tag-must">Release 1</span></td><td>Activities need material assigned in planning</td></tr>
+            <tr><td>Cost centre mapping</td><td><span class="tag tag-should">Release 1</span></td><td>Finance integration needs this from day one</td></tr>
+            <tr><td>Working hours policy</td><td><span class="tag tag-should">Release 1</span></td><td>Needed for calendar validation during resource assignment</td></tr>
+            <tr><td>Availability heatmap (people)</td><td><span class="tag tag-should">Release 1</span></td><td>PMs need this before assigning to activities</td></tr>
+            <tr><td>Cross-project allocation view</td><td><span class="tag tag-should">Release 1</span></td><td>Conflict detection is a core PM pain point</td></tr>
+            <tr><td>Pay type — Salaried model + overtime tracking</td><td><span class="tag tag-should">Release 1</span></td><td>Most field resources are salaried — hourly-only model is insufficient</td></tr>
+            <tr><td>Productivity rate — manual entry</td><td><span class="tag tag-should">Release 1</span></td><td>Needed for plan feasibility validation before baseline</td></tr>
+            <tr><td>Productivity rate — historical auto-compute</td><td><span class="tag tag-nice">Release 2</span></td><td>Requires completed activity execution data to exist first</td></tr>
+            <tr><td>HRM API integration</td><td><span class="tag tag-nice">Release 2</span></td><td>Build standalone first. HRM integration is a clean upgrade.</td></tr>
+            <tr><td>Equipment utilisation reporting</td><td><span class="tag tag-nice">Release 2</span></td><td>Valuable but not blocking planning or execution</td></tr>
+            <tr><td>Material stock alerts + reorder triggers</td><td><span class="tag tag-nice">Release 2</span></td><td>Needs inventory integration. Phase 2+ feature.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- end .content -->
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <div class="footer-brand">OPUS ERP</div>
+    <div class="footer-meta">Phase 1 · OBS &amp; Resource Pool · Implementation Plan · For internal team use</div>
+  </div>
+
+</main>
+</div>
+
+<script>
+  const navItems = document.querySelectorAll('.nav-item');
+  const sections = document.querySelectorAll('[id]');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navItems.forEach(item => item.classList.remove('active'));
+        const active = document.querySelector(`.nav-item[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0% -75% 0%' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
