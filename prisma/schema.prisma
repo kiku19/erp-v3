@@ -99,19 +99,22 @@ model Project {
   budget             Float     @default(0)
   actualCost         Float     @default(0)
   eac                Float     @default(0)
-  sortOrder          Int       @default(0)
-  isDeleted          Boolean   @default(false)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  sortOrder            Int       @default(0)
+  defaultCalendarId    String?
+  isDeleted            Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   eps                   Eps                    @relation(fields: [epsId], references: [id])
   node                  Node?                  @relation(fields: [nodeId], references: [id])
+  defaultCalendar       Calendar?              @relation("ProjectDefaultCalendar", fields: [defaultCalendarId], references: [id])
   plannerEvents         PlannerEvent[]
   wbsNodes              WbsNode[]
   activities            Activity[]
   activityRelationships ActivityRelationship[]
   resources             Resource[]
   resourceAssignments   ResourceAssignment[]
+  calendars             Calendar[]             @relation("ProjectCalendars")
 
   @@unique([tenantId, projectId])
   @@index([tenantId, isDeleted])
@@ -185,6 +188,7 @@ model Activity {
   startDate       DateTime?
   finishDate      DateTime?
   percentComplete Float     @default(0)
+  calendarId      String?
   sortOrder       Int       @default(0)
   isDeleted       Boolean   @default(false)
   createdAt       DateTime  @default(now())
@@ -192,6 +196,7 @@ model Activity {
 
   project             Project                @relation(fields: [projectId], references: [id])
   wbsNode             WbsNode                @relation(fields: [wbsNodeId], references: [id])
+  calendar            Calendar?              @relation(fields: [calendarId], references: [id])
   predecessorRels     ActivityRelationship[] @relation("SuccessorRels")
   successorRels       ActivityRelationship[] @relation("PredecessorRels")
   resourceAssignments ResourceAssignment[]
@@ -199,6 +204,45 @@ model Activity {
   @@unique([tenantId, projectId, activityId])
   @@index([tenantId, projectId, isDeleted])
   @@index([wbsNodeId, isDeleted])
+}
+
+model Calendar {
+  id          String    @id @default(cuid())
+  tenantId    String
+  projectId   String?
+  name        String
+  category    String    @default("global")
+  hoursPerDay Float     @default(8)
+  workDays    Json
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project            Project?              @relation("ProjectCalendars", fields: [projectId], references: [id])
+  defaultForProjects Project[]             @relation("ProjectDefaultCalendar")
+  exceptions         CalendarException[]
+  activities         Activity[]
+
+  @@index([tenantId, isDeleted])
+  @@index([tenantId, projectId, isDeleted])
+}
+
+model CalendarException {
+  id            String    @id @default(cuid())
+  tenantId      String
+  calendarId    String
+  name          String
+  date          DateTime
+  endDate       DateTime?
+  exceptionType String    @default("Holiday")
+  workHours     Float?
+  isDeleted     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  calendar Calendar @relation(fields: [calendarId], references: [id])
+
+  @@index([tenantId, calendarId, isDeleted])
 }
 
 model PlannerEvent {

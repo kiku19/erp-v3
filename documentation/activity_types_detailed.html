@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPUS ERP — Activity Types: Detailed Reference</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a18; line-height: 1.6; }
+
+  .page { max-width: 860px; margin: 0 auto; padding: 2.5rem 2rem; }
+
+  /* Typography */
+  h1 { font-size: 26px; font-weight: 700; color: #1a1a18; }
+  h2 { font-size: 19px; font-weight: 700; color: #1a1a18; margin-bottom: 0.5rem; }
+  h3 { font-size: 14px; font-weight: 600; color: #1a1a18; margin-bottom: 0.5rem; }
+  p { font-size: 14px; color: #3d3d3a; line-height: 1.7; margin-bottom: 0.75rem; }
+  p:last-child { margin-bottom: 0; }
+  strong { font-weight: 600; color: #1a1a18; }
+
+  /* Doc header */
+  .doc-header { margin-bottom: 2.5rem; border-bottom: 1px solid #d3d1c7; padding-bottom: 1.5rem; }
+  .doc-meta { display: flex; gap: 1.5rem; margin-top: 0.75rem; }
+  .doc-meta-item { font-size: 12px; color: #888780; }
+  .doc-meta-item span { font-weight: 500; color: #5f5e5a; }
+
+  /* TOC */
+  .toc { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 2.5rem; }
+  .toc-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #888780; margin-bottom: 0.75rem; }
+  .toc-list { list-style: none; }
+  .toc-list li { padding: 4px 0; font-size: 13px; border-bottom: 0.5px solid #f0ede4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a { color: #185FA5; text-decoration: none; }
+  .toc-num { color: #b4b2a9; margin-right: 8px; font-size: 12px; }
+
+  /* Activity type sections */
+  .activity-section { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 12px; margin-bottom: 2.5rem; overflow: hidden; }
+  .activity-header { padding: 1.5rem; border-bottom: 0.5px solid #e8e6de; }
+  .activity-header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 0.75rem; }
+  .type-badge { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.03em; }
+  .badge-blue { background: #E6F1FB; color: #185FA5; }
+  .badge-teal { background: #E1F5EE; color: #0F6E56; }
+  .badge-purple { background: #EEEDFE; color: #534AB7; }
+  .badge-amber { background: #FAEEDA; color: #854F0B; }
+  .use-tag { font-size: 11px; color: #888780; background: #f5f4f0; padding: 2px 8px; border-radius: 4px; }
+  .core-rule { font-size: 13px; color: #3d3d3a; background: #f5f4f0; border-radius: 6px; padding: 10px 14px; line-height: 1.6; }
+
+  /* Section body */
+  .activity-body { padding: 1.5rem; }
+  .sub-section { margin-bottom: 1.75rem; }
+  .sub-section:last-child { margin-bottom: 0; }
+  .sub-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888780; margin-bottom: 0.75rem; border-bottom: 0.5px solid #e8e6de; padding-bottom: 6px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #888780; padding: 8px 12px; background: #f5f4f0; border-bottom: 1px solid #d3d1c7; }
+  td { padding: 9px 12px; border-bottom: 0.5px solid #f0ede4; color: #3d3d3a; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .highlight-row { background: #FAEEDA44; }
+  .highlight-row td { font-weight: 500; }
+  .total-row { background: #f5f4f0; }
+  .total-row td { font-weight: 600; color: #1a1a18; border-top: 1px solid #d3d1c7; }
+  .bad-row { background: #FCEBEB44; }
+  .bad-row td { color: #A32D2D; }
+  .good-row { background: #EAF3DE44; }
+  .good-row td { color: #3B6D11; }
+
+  /* Call out boxes */
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 0.75rem 0; font-size: 13px; line-height: 1.6; }
+  .callout-blue { background: #E6F1FB; border-left: 3px solid #378ADD; color: #0C447C; }
+  .callout-teal { background: #E1F5EE; border-left: 3px solid #1D9E75; color: #085041; }
+  .callout-purple { background: #EEEDFE; border-left: 3px solid #7F77DD; color: #3C3489; }
+  .callout-amber { background: #FAEEDA; border-left: 3px solid #EF9F27; color: #633806; }
+  .callout-red { background: #FCEBEB; border-left: 3px solid #E24B4A; color: #791F1F; }
+  .callout-green { background: #EAF3DE; border-left: 3px solid #639922; color: #27500A; }
+  .callout-gray { background: #f5f4f0; border-left: 3px solid #888780; color: #3d3d3a; }
+
+  /* Formula box */
+  .formula { font-family: 'SF Mono', 'Courier New', monospace; font-size: 12px; background: #f0ede4; color: #534AB7; padding: 10px 14px; border-radius: 6px; margin: 0.5rem 0; display: block; line-height: 1.7; }
+
+  /* Two column */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.75rem 0; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin: 0.75rem 0; }
+
+  /* Prop cards */
+  .prop-card { background: #f5f4f0; border-radius: 8px; padding: 12px 14px; }
+  .prop-card-label { font-size: 11px; color: #888780; font-weight: 600; margin-bottom: 4px; }
+  .prop-card-value { font-size: 14px; font-weight: 600; color: #1a1a18; }
+  .prop-card-note { font-size: 11px; color: #888780; margin-top: 3px; }
+
+  /* Status tags */
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+  .tag-green { background: #EAF3DE; color: #3B6D11; }
+  .tag-red { background: #FCEBEB; color: #A32D2D; }
+  .tag-amber { background: #FAEEDA; color: #854F0B; }
+  .tag-blue { background: #E6F1FB; color: #185FA5; }
+  .tag-gray { background: #f0ede4; color: #5f5e5a; }
+  .tag-purple { background: #EEEDFE; color: #534AB7; }
+
+  /* Flow diagram */
+  .flow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0.75rem 0; }
+  .flow-box { background: #f5f4f0; border: 0.5px solid #d3d1c7; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 500; color: #3d3d3a; }
+  .flow-box.blue { background: #E6F1FB; border-color: #378ADD; color: #185FA5; }
+  .flow-box.teal { background: #E1F5EE; border-color: #1D9E75; color: #0F6E56; }
+  .flow-box.red { background: #FCEBEB; border-color: #E24B4A; color: #A32D2D; }
+  .flow-box.green { background: #EAF3DE; border-color: #639922; color: #3B6D11; }
+  .flow-box.amber { background: #FAEEDA; border-color: #EF9F27; color: #854F0B; }
+  .flow-arrow { color: #b4b2a9; font-size: 16px; font-weight: 300; }
+
+  /* Example scenario box */
+  .scenario { background: #fff; border: 1px solid #d3d1c7; border-radius: 8px; overflow: hidden; margin: 0.75rem 0; }
+  .scenario-header { background: #f5f4f0; padding: 8px 14px; font-size: 12px; font-weight: 600; color: #5f5e5a; border-bottom: 0.5px solid #d3d1c7; display: flex; align-items: center; gap: 8px; }
+  .scenario-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .scenario-icon.blue { background: #378ADD; }
+  .scenario-icon.teal { background: #1D9E75; }
+  .scenario-icon.purple { background: #7F77DD; }
+  .scenario-body { padding: 14px; }
+
+  /* Day progress visual */
+  .progress-bar-wrap { background: #f0ede4; border-radius: 4px; height: 10px; margin: 4px 0; overflow: hidden; }
+  .progress-bar { height: 10px; border-radius: 4px; }
+  .bar-blue { background: #378ADD; }
+  .bar-teal { background: #1D9E75; }
+  .bar-red { background: #E24B4A; }
+  .bar-green { background: #639922; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid #e8e6de; margin: 2rem 0; }
+
+  /* Comparison section */
+  .compare-section { background: #fff; border: 0.5px solid #d3d1c7; border-radius: 12px; margin-bottom: 2.5rem; overflow: hidden; }
+  .compare-header { padding: 1.25rem 1.5rem; border-bottom: 0.5px solid #e8e6de; }
+
+  /* Footer */
+  .doc-footer { text-align: center; font-size: 11px; color: #b4b2a9; padding-top: 1.5rem; border-top: 0.5px solid #d3d1c7; }
+
+  /* Sticky section label */
+  .section-num { font-size: 11px; font-weight: 700; color: #b4b2a9; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+
+  @media (max-width: 640px) {
+    .two-col, .three-col { grid-template-columns: 1fr; }
+    .doc-meta { flex-direction: column; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<div class="doc-header">
+  <h1>Activity Types in OPUS ERP</h1>
+  <p style="margin-top:6px; font-size:14px; color:#888780;">Project Planning Module — Team Reference Guide with Examples</p>
+  <div class="doc-meta">
+    <div class="doc-meta-item">Module: <span>Project Management</span></div>
+    <div class="doc-meta-item">Scope: <span>Activity Lifecycle, EVM, Progress Tracking</span></div>
+    <div class="doc-meta-item">Prepared by: <span>OPUS Product Team</span></div>
+  </div>
+</div>
+
+<!-- ═══════════════════ TOC ═══════════════════ -->
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <ul class="toc-list">
+    <li><span class="toc-num">01</span><a href="#fundamentals">Fundamentals — What is an Activity?</a></li>
+    <li><span class="toc-num">02</span><a href="#task-dependent">Task Dependent Activity</a></li>
+    <li><span class="toc-num">03</span><a href="#resource-dependent">Resource Dependent Activity</a></li>
+    <li><span class="toc-num">04</span><a href="#key-difference">The Key Difference — Task vs Resource Dependent</a></li>
+    <li><span class="toc-num">05</span><a href="#loe">Level of Effort (LOE)</a></li>
+    <li><span class="toc-num">06</span><a href="#milestone">Milestone Activities</a></li>
+    <li><span class="toc-num">07</span><a href="#comparison">Master Comparison Table</a></li>
+    <li><span class="toc-num">08</span><a href="#evm">EVM Metrics Reference</a></li>
+    <li><span class="toc-num">09</span><a href="#resource-types">Resource Types — Overview</a></li>
+    <li><span class="toc-num">10</span><a href="#resource-planning">Planning to Execution — Full Flow</a></li>
+    <li><span class="toc-num">11</span><a href="#resource-mandatory">Mandatory Fields per Resource Type</a></li>
+    <li><span class="toc-num">12</span><a href="#labour-advanced">Labour — Pay Type, Overtime &amp; Productivity Rate</a></li>
+  </ul>
+</div>
+
+
+<!-- ═══════════════════ SECTION 1: FUNDAMENTALS ═══════════════════ -->
+<div id="fundamentals" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">01</div>
+    <h2>Fundamentals — What is an Activity?</h2>
+    <p style="margin-top:6px; font-size:13px; color:#888780;">The building block of every project plan in OPUS ERP</p>
+  </div>
+  <div class="activity-body">
+
+    <div class="sub-section">
+      <div class="sub-label">What an Activity Contains</div>
+      <p>Every activity in OPUS carries three core dimensions that together allow us to measure whether the work is done, how much it should cost, and whether we are on track.</p>
+      <div class="three-col" style="margin-top:0.75rem">
+        <div class="prop-card">
+          <div class="prop-card-label">Quantity</div>
+          <div class="prop-card-value">The Deliverable</div>
+          <div class="prop-card-note">e.g., 1,000 m² of wall, 500 bags of cement, 80 man-hours of code</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-card-label">Total Work Hours</div>
+          <div class="prop-card-value">The Effort</div>
+          <div class="prop-card-note">How many man-hours are planned for this activity</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-card-label">Cost / UOM</div>
+          <div class="prop-card-value">The Unit Cost</div>
+          <div class="prop-card-note">Cost per unit of measure → drives Budget at Completion (BAC)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">How "Done or Not" is Measured</div>
+      <p>OPUS supports four methods to measure completion. The right method depends on the nature of the work:</p>
+      <table>
+        <thead><tr><th>Method</th><th>Formula</th><th>Best For</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Physical Quantity</strong></td><td><code style="font-size:12px; color:#534AB7">Actual Qty / Planned Qty × 100</code></td><td>Field work, construction, manufacturing</td></tr>
+          <tr><td><strong>Work Hours</strong></td><td><code style="font-size:12px; color:#534AB7">Actual Hours / Planned Hours × 100</code></td><td>Labor-driven tasks</td></tr>
+          <tr><td><strong>Milestone / Steps</strong></td><td><code style="font-size:12px; color:#534AB7">Sum of completed milestone weights</code></td><td>Design, approval, document tasks</td></tr>
+          <tr><td><strong>Manual Entry</strong></td><td>PM directly enters %</td><td>Ambiguous tasks, override</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">Activity Status Logic</div>
+      <div class="flow">
+        <div class="flow-box">0% → <strong>Not Started</strong></div>
+        <div class="flow-arrow">·</div>
+        <div class="flow-box">1–99% → <strong>In Progress</strong></div>
+        <div class="flow-arrow">·</div>
+        <div class="flow-box">100% → <strong>Completed</strong></div>
+        <div class="flow-arrow">·</div>
+        <div class="flow-box red">% &lt; 100% AND Planned Finish &lt; Today → <strong>Overdue</strong></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 2: TASK DEPENDENT ═══════════════════ -->
+<div id="task-dependent" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">02</div>
+    <div class="activity-header-top">
+      <span class="type-badge badge-blue">Task Dependent</span>
+      <span class="use-tag">~80% of all project activities</span>
+    </div>
+    <h2>Task Dependent Activity</h2>
+    <div class="core-rule" style="margin-top:0.75rem">
+      <strong>Core rule:</strong> Duration is fixed by the work itself. Adding or removing resources does NOT change the end date. Resources work within the fixed window — they don't control it.
+    </div>
+  </div>
+  <div class="activity-body">
+
+    <!-- Example Setup -->
+    <div class="sub-section">
+      <div class="sub-label">Example — Paint Exterior Walls, Building A</div>
+      <div class="two-col">
+        <div>
+          <h3>Activity Setup</h3>
+          <table style="margin-top:6px">
+            <tbody>
+              <tr><td style="color:#888780">Type</td><td><strong>Task Dependent</strong></td></tr>
+              <tr><td style="color:#888780">Planned Duration</td><td><strong>5 days</strong> (fixed)</td></tr>
+              <tr><td style="color:#888780">Planned Quantity</td><td>1,000 m² of wall</td></tr>
+              <tr><td style="color:#888780">Cost / UOM</td><td>₹50 per m²</td></tr>
+              <tr><td style="color:#888780">BAC</td><td>₹50,000 (1,000 × ₹50)</td></tr>
+              <tr><td style="color:#888780">% Complete Method</td><td>Physical Quantity</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Resources Assigned</h3>
+          <table style="margin-top:6px">
+            <thead><tr><th>Resource</th><th>Role</th><th>Rate</th><th>Planned Hrs</th></tr></thead>
+            <tbody>
+              <tr><td>Ravi</td><td>Senior Painter</td><td>₹200/hr</td><td>40 hrs</td></tr>
+              <tr><td>Suresh</td><td>Junior Painter</td><td>₹150/hr</td><td>40 hrs</td></tr>
+              <tr class="total-row"><td colspan="3">Total Planned Hours</td><td>80 hrs</td></tr>
+            </tbody>
+          </table>
+          <div class="callout callout-blue" style="margin-top:0.75rem">
+            They work <strong>in parallel</strong> for 5 days. The duration stays 5 days — resources don't change that.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day by Day Progress -->
+    <div class="sub-section">
+      <div class="sub-label">Day-by-Day Progress (Normal Execution)</div>
+      <p>The field supervisor logs total m² painted each day. OPUS computes % complete automatically.</p>
+      <table>
+        <thead><tr><th>Day</th><th>Ravi (m²)</th><th>Suresh (m²)</th><th>Cumulative m²</th><th>% Complete</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Day 1</td><td>100</td><td>100</td><td>200</td><td>20%</td><td><span class="tag tag-blue">In Progress</span></td></tr>
+          <tr><td>Day 2</td><td>110</td><td>90</td><td>400</td><td>40%</td><td><span class="tag tag-blue">In Progress</span></td></tr>
+          <tr class="highlight-row"><td>Day 3</td><td>100</td><td>100</td><td>600</td><td>60%</td><td><span class="tag tag-blue">In Progress</span></td></tr>
+          <tr><td>Day 4</td><td>95</td><td>105</td><td>800</td><td>80%</td><td><span class="tag tag-blue">In Progress</span></td></tr>
+          <tr class="good-row"><td>Day 5</td><td>100</td><td>100</td><td>1,000</td><td>100%</td><td><span class="tag tag-green">Completed ✓</span></td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-gray" style="margin-top:0.75rem">
+        <strong>At Day 3:</strong> % Complete = 600 / 1,000 × 100 = <strong>60%</strong>. Ravi and Suresh's outputs are summed. OPUS doesn't track who painted which wall — just total quantity done per day.
+      </div>
+    </div>
+
+    <!-- EVM at Day 3 -->
+    <div class="sub-section">
+      <div class="sub-label">EVM Snapshot at End of Day 3</div>
+      <p>Resources log hours in the timesheet. This feeds Actual Cost (AC). The quantity feeds Earned Value (EV).</p>
+      <div class="two-col">
+        <div>
+          <h3>Daily Labor Cost (Day 3)</h3>
+          <table style="margin-top:6px">
+            <tbody>
+              <tr><td>Ravi</td><td>8 hrs × ₹200 = ₹1,600</td></tr>
+              <tr><td>Suresh</td><td>8 hrs × ₹150 = ₹1,200</td></tr>
+              <tr class="total-row"><td>Day 3 AC</td><td>₹2,800</td></tr>
+              <tr><td style="color:#888780">Cumulative AC (3 days)</td><td>₹8,400</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>EVM Metrics</h3>
+          <table style="margin-top:6px">
+            <tbody>
+              <tr><td>BAC</td><td>₹50,000</td></tr>
+              <tr><td>EV (60% × ₹50,000)</td><td>₹30,000</td></tr>
+              <tr><td>AC (hours logged)</td><td>₹8,400</td></tr>
+              <tr><td>PV (planned 60% by Day 3)</td><td>₹30,000</td></tr>
+              <tr class="good-row"><td>CV (EV − AC)</td><td><strong>+₹21,600 ← Under budget</strong></td></tr>
+              <tr class="good-row"><td>SV (EV − PV)</td><td><strong>₹0 ← On schedule</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="callout callout-teal" style="margin-top:0.75rem">
+        CV is highly positive because labor cost (₹8,400) is much lower than EV (₹30,000). The ₹50/m² UOM covers materials + overhead too — not just labor.
+      </div>
+    </div>
+
+    <!-- Behind Schedule Scenario -->
+    <div class="sub-section">
+      <div class="sub-label">Scenario — Suresh is Absent on Day 4</div>
+      <p>Only Ravi works on Day 4. Suresh contributes 0 m².</p>
+      <table>
+        <thead><tr><th>Day</th><th>Ravi</th><th>Suresh</th><th>Cumulative m²</th><th>% Complete</th><th>Planned %</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Day 1</td><td>100</td><td>100</td><td>200</td><td>20%</td><td>20%</td><td><span class="tag tag-green">On Track</span></td></tr>
+          <tr><td>Day 2</td><td>110</td><td>90</td><td>400</td><td>40%</td><td>40%</td><td><span class="tag tag-green">On Track</span></td></tr>
+          <tr><td>Day 3</td><td>100</td><td>100</td><td>600</td><td>60%</td><td>60%</td><td><span class="tag tag-green">On Track</span></td></tr>
+          <tr class="bad-row"><td><strong>Day 4</strong></td><td>95</td><td><strong>0 (absent)</strong></td><td>695</td><td><strong>69.5%</strong></td><td>80%</td><td><span class="tag tag-red">Behind Schedule</span></td></tr>
+        </tbody>
+      </table>
+      <span class="formula">SV = EV − PV = (69.5% × ₹50,000) − (80% × ₹50,000) = ₹34,750 − ₹40,000 = −₹5,250 (Behind Schedule)</span>
+      <p>Resource absence shows up <strong>automatically</strong> through schedule variance — without the PM manually flagging it. The quantity data tells the truth.</p>
+    </div>
+
+    <!-- Recovery Mode -->
+    <div class="sub-section">
+      <div class="sub-label">Recovery — Adding Resources on Day 5</div>
+      <p>To finish 305 m² remaining in 1 day, Ravi alone can only do ~100 m². The PM decides to <strong>crash the resources</strong> — adding 3 extra painters.</p>
+
+      <div class="callout callout-amber" style="margin-bottom:0.75rem">
+        This is called <strong>Resource Crashing</strong> — a deliberate recovery decision made by the PM. The system doesn't do this automatically. OPUS should surface the alert and let the PM decide.
+      </div>
+
+      <table>
+        <thead><tr><th>Resource</th><th>Day 5 Output</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>Ravi (existing)</td><td>100 m²</td><td>Permanent</td></tr>
+          <tr><td>Painter 2 (new)</td><td>75 m²</td><td>Temporary (recovery)</td></tr>
+          <tr><td>Painter 3 (new)</td><td>75 m²</td><td>Temporary (recovery)</td></tr>
+          <tr><td>Painter 4 (new)</td><td>60 m²</td><td>Temporary (recovery)</td></tr>
+          <tr class="total-row"><td>Total Day 5</td><td><strong>310 m²</strong></td><td>695 + 310 = 1,005 m² ✓</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:1rem">Cost Consequence of Crashing</h3>
+      <table style="margin-top:6px">
+        <thead><tr><th></th><th>Planned</th><th>Actual (with crash)</th></tr></thead>
+        <tbody>
+          <tr><td>Day 5 resources</td><td>2 painters</td><td>5 painters</td></tr>
+          <tr><td>Day 5 labor cost</td><td>₹2,800</td><td>₹6,400 (+3 painters × ₹150 × 8hrs)</td></tr>
+          <tr><td>Total AC (5 days)</td><td>₹14,000</td><td>₹17,600</td></tr>
+          <tr><td>EV at completion</td><td>₹50,000</td><td>₹50,000</td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-amber" style="margin-top:0.75rem">
+        You saved the <strong>schedule</strong> but paid a <strong>cost premium</strong>. This is the classic time-cost tradeoff. The project manager must explicitly decide: is the deadline worth the extra cost?
+      </div>
+
+      <h3 style="margin-top:1rem">If No Recovery Resources Are Added</h3>
+      <p>If Day 5 ends and the activity is not complete, OPUS marks it <strong>Overdue</strong> and cascades the impact downstream:</p>
+      <div class="flow" style="flex-direction:column; align-items:flex-start; gap:4px">
+        <div class="flow-box red">Activity A: Paint Walls → slips from Day 5 to Day 6</div>
+        <div style="font-size:20px; color:#d3d1c7; padding-left:16px">↓</div>
+        <div class="flow-box red">Activity B: Install Fixtures → pushed from Day 6 to Day 7</div>
+        <div style="font-size:20px; color:#d3d1c7; padding-left:16px">↓</div>
+        <div class="flow-box red">Activity C: Final Inspection → pushed from Day 8 to Day 9</div>
+        <div style="font-size:20px; color:#d3d1c7; padding-left:16px">↓</div>
+        <div class="flow-box red">Project completion date slips by 1 day</div>
+      </div>
+      <div class="callout callout-red" style="margin-top:0.75rem">
+        One unrecovered activity creates a <strong>cascade</strong> through all dependent successors. OPUS should identify all impacted activities and notify the PM immediately.
+      </div>
+    </div>
+
+    <!-- Task Dependent Summary -->
+    <div class="sub-section">
+      <div class="sub-label">Summary — Task Dependent Recovery Options</div>
+      <table>
+        <thead><tr><th>Option</th><th>Duration</th><th>Cost</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr class="good-row"><td><strong>Add resources (crash)</strong></td><td>Holds at planned</td><td>Goes up</td><td>Hard deadline, client contractual</td></tr>
+          <tr><td><strong>Extend duration</strong></td><td>Slips by N days</td><td>Stays same</td><td>Float available in schedule</td></tr>
+          <tr class="bad-row"><td><strong>Do nothing</strong></td><td>Breaks — Overdue</td><td>Wasted</td><td>Never — triggers cascade</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 3: RESOURCE DEPENDENT ═══════════════════ -->
+<div id="resource-dependent" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">03</div>
+    <div class="activity-header-top">
+      <span class="type-badge badge-teal">Resource Dependent</span>
+      <span class="use-tag">Labor-intensive work</span>
+    </div>
+    <h2>Resource Dependent Activity</h2>
+    <div class="core-rule" style="margin-top:0.75rem">
+      <strong>Core rule:</strong> Duration is a <em>computed output</em>, not a stored value. It is always derived as Total Work ÷ Daily Resource Capacity. Add resources → system shortens duration. Remove resources → system extends it automatically.
+    </div>
+  </div>
+  <div class="activity-body">
+
+    <!-- Example Setup -->
+    <div class="sub-section">
+      <div class="sub-label">Example — Paint Interior Rooms (Resource Dependent)</div>
+      <div class="two-col">
+        <div>
+          <h3>Activity Setup</h3>
+          <table style="margin-top:6px">
+            <tbody>
+              <tr><td style="color:#888780">Type</td><td><strong>Resource Dependent</strong></td></tr>
+              <tr><td style="color:#888780">Total Work</td><td>80 man-hours (fixed)</td></tr>
+              <tr><td style="color:#888780">Resources</td><td>Ravi + Suresh</td></tr>
+              <tr><td style="color:#888780">Daily capacity</td><td>8 + 8 = 16 hrs/day</td></tr>
+              <tr><td style="color:#888780">Planned Duration</td><td>80 ÷ 16 = <strong>5 days</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <div class="callout callout-teal" style="height:100%">
+            <strong>Key insight:</strong> Duration is not entered — it is calculated. If you change resources, OPUS recalculates the finish date instantly. The PM never types a duration here.
+          </div>
+        </div>
+      </div>
+      <span class="formula">Duration = Total Planned Hours / Daily Resource Capacity = 80 hrs / 16 hrs/day = 5 days</span>
+    </div>
+
+    <!-- Suresh absent -->
+    <div class="sub-section">
+      <div class="sub-label">Scenario — Suresh is Absent on Day 4</div>
+      <p>Same absence as before — but watch how Resource Dependent behaves differently from Task Dependent.</p>
+      <table>
+        <thead><tr><th>Day</th><th>Capacity</th><th>Hours Done</th><th>Cumulative Hours</th><th>Remaining</th></tr></thead>
+        <tbody>
+          <tr><td>Day 1</td><td>16 hrs</td><td>16</td><td>16</td><td>64 hrs</td></tr>
+          <tr><td>Day 2</td><td>16 hrs</td><td>16</td><td>32</td><td>48 hrs</td></tr>
+          <tr><td>Day 3</td><td>16 hrs</td><td>16</td><td>48</td><td>32 hrs</td></tr>
+          <tr class="bad-row"><td><strong>Day 4</strong></td><td><strong>8 hrs</strong> (Suresh absent)</td><td>8</td><td>56</td><td><strong>24 hrs</strong></td></tr>
+        </tbody>
+      </table>
+      <span class="formula">Remaining after Day 4 = 80 − 56 = 24 hrs
+Ravi alone = 8 hrs/day → Days needed = 24 / 8 = 3 more days
+New Finish = Day 4 + 3 = Day 7 (was Day 5)
+→ Duration auto-extends from 5 days to 7 days</span>
+      <div class="callout callout-teal">
+        <strong>The system recalculates the finish date automatically.</strong> No PM intervention needed to reflect reality. The Gantt bar stretches on its own.
+      </div>
+    </div>
+
+    <!-- Recovery for Resource Dependent -->
+    <div class="sub-section">
+      <div class="sub-label">Recovery Options for Resource Dependent</div>
+      <div class="two-col">
+        <div class="scenario">
+          <div class="scenario-header"><div class="scenario-icon teal">A</div>Accept the extension</div>
+          <div class="scenario-body">
+            <p>Duration extends from 5 to 7 days. Cost stays the same — still 80 total hours at same rates. No extra spend.</p>
+            <div class="callout callout-gray" style="margin-top:0.5rem; font-size:12px">Choose when the deadline has float or buffer. Client impact is manageable.</div>
+          </div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-header"><div class="scenario-icon blue">B</div>Add resource to recover</div>
+          <div class="scenario-body">
+            <p>Add Painter 3 + 4 from Day 5. New capacity = 8 + 8 + 8 = 24 hrs/day. Remaining 24 hrs ÷ 24 = 1 day. Duration recovers to 5 days.</p>
+            <div class="callout callout-amber" style="margin-top:0.5rem; font-size:12px">Choose when deadline is hard. System recalculates finish date backward to Day 5 automatically.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 4: KEY DIFFERENCE ═══════════════════ -->
+<div id="key-difference" class="compare-section">
+  <div class="compare-header">
+    <div class="section-num">04</div>
+    <h2>The Key Difference — Task vs Resource Dependent</h2>
+    <p style="margin-top:6px; font-size:13px; color:#888780;">This is the most important concept to understand before building or using the planning module.</p>
+  </div>
+  <div style="padding:1.5rem">
+
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px; font-weight:700; color:#185FA5; margin-bottom:8px; padding-bottom:6px; border-bottom:2px solid #E6F1FB">Task Dependent</div>
+        <p style="font-size:13px">Duration is a <strong>fixed input</strong> entered by the PM. Resources work within that window. The work must fit the time.</p>
+        <ul style="font-size:13px; color:#3d3d3a; padding-left:1.25rem; margin-top:0.5rem; line-height:1.8">
+          <li>Adding resources → duration <strong>unchanged</strong></li>
+          <li>Resource absent → SV goes negative</li>
+          <li>Behind schedule → PM must manually crash or extend</li>
+          <li>Gantt bar is <strong>fixed width</strong>, progress fill moves inside</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:700; color:#0F6E56; margin-bottom:8px; padding-bottom:6px; border-bottom:2px solid #E1F5EE">Resource Dependent</div>
+        <p style="font-size:13px">Duration is a <strong>computed output</strong> — never stored. Resources are the input. The time fits the work.</p>
+        <ul style="font-size:13px; color:#3d3d3a; padding-left:1.25rem; margin-top:0.5rem; line-height:1.8">
+          <li>Adding resources → finish date <strong>moves earlier</strong></li>
+          <li>Resource absent → finish date <strong>auto-extends</strong></li>
+          <li>Behind schedule → system auto-reflects the slip</li>
+          <li>Gantt bar <strong>stretches or shrinks</strong> as resources change</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout callout-gray" style="margin-top:1.25rem">
+      <strong>It's not just a UI lock.</strong> The difference is architectural. In Resource Dependent, duration doesn't exist as a field — it is always a live calculation. You can't "unlock" it. In Task Dependent, duration is a stored value that the PM owns.
+    </div>
+
+    <h3 style="margin-top:1.25rem; margin-bottom:0.5rem">Same Scenario, Different Outcome</h3>
+    <table>
+      <thead><tr><th>Event</th><th>Task Dependent Behavior</th><th>Resource Dependent Behavior</th></tr></thead>
+      <tbody>
+        <tr><td>Suresh absent Day 4</td><td>SV = −₹5,250. Duration still 5 days. Alert: behind schedule.</td><td>Finish date moves from Day 5 → Day 7 automatically.</td></tr>
+        <tr><td>PM adds 3 painters Day 5</td><td>Hours increase, more work done, duration holds at 5.</td><td>System recalculates: finish moves back to Day 5.</td></tr>
+        <tr><td>No recovery action</td><td>Activity overdue. Cascade to successors.</td><td>Finish simply slips. No manual correction needed.</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 5: LOE ═══════════════════ -->
+<div id="loe" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">05</div>
+    <div class="activity-header-top">
+      <span class="type-badge badge-purple">Level of Effort (LOE)</span>
+      <span class="use-tag">PM overhead, supervision, support</span>
+    </div>
+    <h2>Level of Effort (LOE)</h2>
+    <div class="core-rule" style="margin-top:0.75rem">
+      <strong>Core rule:</strong> LOE does not produce anything measurable. It exists as long as the activities it governs exist. Duration is borrowed. % complete is purely time-based and automatic. No quantity. No deliverable. Only continuous presence and cost accumulation.
+    </div>
+  </div>
+  <div class="activity-body">
+
+    <!-- How it works -->
+    <div class="sub-section">
+      <div class="sub-label">How LOE Duration is Derived</div>
+      <span class="formula">LOE Start  = min (Earliest Start of all governed activities)
+LOE Finish = max (Latest Finish of all governed activities)
+LOE Duration = auto-calculated between these two dates</span>
+      <div class="callout callout-purple" style="margin-top:0.5rem">The PM never enters a start date, end date, or duration for an LOE activity. These are always computed from the governed activity list.</div>
+    </div>
+
+    <!-- LOE Example -->
+    <div class="sub-section">
+      <div class="sub-label">Example — Office Renovation Project</div>
+      <table>
+        <thead><tr><th>Activity</th><th>Planned Start</th><th>Planned Finish</th><th>Calendar</th></tr></thead>
+        <tbody>
+          <tr><td>A — Demolition work</td><td>Day 1</td><td>Day 5</td><td>6-day (Mon–Sat)</td></tr>
+          <tr><td>B — Electrical wiring</td><td>Day 3</td><td>Day 10</td><td>5-day (Mon–Fri)</td></tr>
+          <tr><td>C — Painting</td><td>Day 8</td><td>Day 15</td><td>6-day (Mon–Sat)</td></tr>
+          <tr><td>D — Final inspection</td><td>Day 14</td><td>Day 16</td><td>5-day (Mon–Fri)</td></tr>
+          <tr class="highlight-row"><td><strong>LOE — Site Supervisor</strong></td><td><strong>Day 1</strong> (from A)</td><td><strong>Day 16</strong> (from D)</td><td><strong>Own calendar</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-purple" style="margin-top:0.75rem">
+        The supervisor governs all four activities. LOE automatically spans Day 1 → Day 16 = 16 working days. As activities A, B, C, D change, the LOE bar stretches or shrinks with them.
+      </div>
+    </div>
+
+    <!-- % Complete -->
+    <div class="sub-section">
+      <div class="sub-label">How % Complete is Measured in LOE</div>
+      <span class="formula">% Complete = Working Days Elapsed / Total Working Days × 100</span>
+      <p style="margin-top:0.5rem">At Day 8 of 16 working days:</p>
+      <span class="formula">% Complete = 8 / 16 × 100 = 50%  ← advances automatically with the calendar</span>
+      <div class="callout callout-gray">Nobody logs progress. Nobody enters quantities. The clock advances % complete on its own every working day.</div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="sub-section">
+      <div class="sub-label">Why LOE Has Its Own Calendar (Not Inherited)</div>
+      <p>Activities A and C use a 6-day calendar. Activities B and D use a 5-day calendar. Which does the LOE inherit?</p>
+      <div class="callout callout-red" style="margin-bottom:0.75rem">
+        <strong>Neither.</strong> Inheriting from governed activities doesn't work — it cannot decide which calendar to follow when they conflict.
+      </div>
+      <p><strong>The answer:</strong> LOE uses its own calendar, which <strong>defaults to the assigned resource's calendar</strong>.</p>
+      <div class="two-col">
+        <div class="prop-card">
+          <div class="prop-card-label">What governed activities control</div>
+          <div class="prop-card-value">Span (boundaries)</div>
+          <div class="prop-card-note">Start = Day 1, Finish = Day 16. That's all they contribute to LOE.</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-card-label">What LOE's own calendar controls</div>
+          <div class="prop-card-value">Heartbeat</div>
+          <div class="prop-card-note">How many working days tick within that span. Drives cost and % complete.</div>
+        </div>
+      </div>
+      <div class="scenario" style="margin-top:0.75rem">
+        <div class="scenario-header"><div class="scenario-icon purple">Ex</div>Calendar Impact Example</div>
+        <div class="scenario-body">
+          <table>
+            <thead><tr><th>LOE Calendar</th><th>Working days in span</th><th>Supervisor cost</th><th>% at Day 8</th></tr></thead>
+            <tbody>
+              <tr><td>6-day (resource calendar)</td><td>17 working days</td><td>17 × ₹500 = ₹8,500</td><td>9/17 = 52.9%</td></tr>
+              <tr><td>5-day (wrong calendar)</td><td>14 working days</td><td>14 × ₹500 = ₹7,000</td><td>8/14 = 57.1%</td></tr>
+            </tbody>
+          </table>
+          <div class="callout callout-amber" style="margin-top:0.75rem; font-size:12px">Wrong calendar = wrong cost and wrong % complete. This is why the calendar must be explicitly set and defaults to the resource's calendar.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- When governed activities slip -->
+    <div class="sub-section">
+      <div class="sub-label">What Happens When a Governed Activity Slips</div>
+      <p>Activity C (Painting) slips from Day 15 to Day 18 due to delayed materials.</p>
+      <div class="two-col">
+        <div class="prop-card">
+          <div class="prop-card-label">Before slip</div>
+          <div class="prop-card-value">LOE: Day 1 – Day 16</div>
+          <div class="prop-card-note">Supervisor cost = 16 working days × ₹500 = ₹8,000</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-card-label">After Activity C slips</div>
+          <div class="prop-card-value">LOE: Day 1 – Day 18</div>
+          <div class="prop-card-note">Supervisor cost = 18 working days × ₹500 = ₹9,000</div>
+        </div>
+      </div>
+      <div class="callout callout-red" style="margin-top:0.75rem">
+        <strong>Schedule slippage automatically creates cost overrun in LOE.</strong> The supervisor works 2 extra days = ₹1,000 extra AC. This is how PM overhead cost gets captured honestly in the project EAC.
+      </div>
+    </div>
+
+    <!-- EVM exclusion -->
+    <div class="sub-section">
+      <div class="sub-label">LOE and EVM — Critical Rule</div>
+      <p>LOE always reports exactly on schedule because % complete = time elapsed. This creates a misleading picture if included in EVM:</p>
+      <span class="formula">At any point in time for LOE:
+EV = PV (always — because % complete = time elapsed)
+SV = EV − PV = 0 (always zero — misleadingly "on schedule")
+CV = EV − AC  (only this matters for LOE)</span>
+      <div class="callout callout-red">
+        <strong>LOE must be excluded from project-level SV and SPI.</strong> Including it inflates EV and makes the project look healthier than it is. LOE only contributes to total project Actual Cost (AC) and EAC.
+      </div>
+    </div>
+
+    <!-- Mandatory Fields -->
+    <div class="sub-section">
+      <div class="sub-label">Mandatory Fields When Creating an LOE Activity</div>
+      <table>
+        <thead><tr><th>Field</th><th>Required?</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr class="good-row"><td><strong>Governing activities</strong></td><td><span class="tag tag-green">Required</span></td><td>At least 1. Must exist in the same project. Cannot govern another LOE (circular).</td></tr>
+          <tr class="good-row"><td><strong>Resource + rate</strong></td><td><span class="tag tag-green">Required</span></td><td>Without this, LOE has no purpose — it produces nothing and costs nothing.</td></tr>
+          <tr class="good-row"><td><strong>Calendar</strong></td><td><span class="tag tag-green">Required</span></td><td>Defaults to resource's calendar. PM can override. Determines cost and % complete.</td></tr>
+          <tr class="good-row"><td><strong>Activity type = LOE</strong></td><td><span class="tag tag-green">Required</span></td><td>Locks field behavior. Disables manual duration, start/finish, quantity, % type.</td></tr>
+          <tr><td>Planned Start / Finish / Duration</td><td><span class="tag tag-gray">Auto</span></td><td>Derived from governed activities. Never manually entered.</td></tr>
+          <tr><td>Quantity / UOM / Cost per UOM</td><td><span class="tag tag-gray">Hidden</span></td><td>LOE has no deliverable. These fields are not shown.</td></tr>
+          <tr><td>% Complete Method</td><td><span class="tag tag-gray">Locked</span></td><td>Always time-based. PM cannot change this.</td></tr>
+          <tr><td>Dependencies (FS/SS/FF)</td><td><span class="tag tag-gray">Disabled</span></td><td>LOE does not participate in critical path logic.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 6: MILESTONE ═══════════════════ -->
+<div id="milestone" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">06</div>
+    <div class="activity-header-top">
+      <span class="type-badge badge-amber">Milestone</span>
+      <span class="use-tag">Zero duration — marks events, not work</span>
+    </div>
+    <h2>Milestone Activities</h2>
+    <div class="core-rule" style="margin-top:0.75rem">
+      <strong>Core rule:</strong> Milestones represent the beginning or end of a significant event. They have zero duration, no resources, and no quantity. They are purely binary — either achieved (100%) or not (0%).
+    </div>
+  </div>
+  <div class="activity-body">
+    <div class="sub-section">
+      <div class="sub-label">Two Types of Milestones</div>
+      <div class="two-col">
+        <div class="scenario">
+          <div class="scenario-header" style="background:#FAEEDA; color:#854F0B">Start Milestone</div>
+          <div class="scenario-body">
+            <p>Marks the <strong>beginning</strong> of a phase or event. Has only a start date.</p>
+            <ul style="font-size:13px; padding-left:1.1rem; margin-top:0.5rem; line-height:1.8">
+              <li>Site Handover Received</li>
+              <li>Client Kickoff Completed</li>
+              <li>Materials Delivered</li>
+              <li>Design Approval Received</li>
+            </ul>
+          </div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-header" style="background:#FAEEDA; color:#854F0B">Finish Milestone</div>
+          <div class="scenario-body">
+            <p>Marks the <strong>completion</strong> of a phase or deliverable. Has only a finish date.</p>
+            <ul style="font-size:13px; padding-left:1.1rem; margin-top:0.5rem; line-height:1.8">
+              <li>Foundation Work Complete</li>
+              <li>Factory Acceptance Test Passed</li>
+              <li>System Go Live</li>
+              <li>Client Handover Signed Off</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sub-section">
+      <div class="sub-label">Milestone Rules in OPUS</div>
+      <table>
+        <thead><tr><th>Property</th><th>Behavior</th></tr></thead>
+        <tbody>
+          <tr><td>Duration</td><td>Zero — always</td></tr>
+          <tr><td>Resources</td><td>None assigned</td></tr>
+          <tr><td>Quantity / Cost</td><td>Not applicable — hidden in UI</td></tr>
+          <tr><td>% Complete</td><td>Binary: 0% (not achieved) or 100% (achieved)</td></tr>
+          <tr><td>Contractual flag</td><td>Can be flagged as contractual for client reporting</td></tr>
+          <tr><td>On Gantt</td><td>Shown as a diamond ◆ not a bar</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 7: COMPARISON TABLE ═══════════════════ -->
+<div id="comparison" class="compare-section">
+  <div class="compare-header">
+    <div class="section-num">07</div>
+    <h2>Master Comparison Table</h2>
+  </div>
+  <div style="padding:1.5rem">
+    <table>
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th style="color:#185FA5">Task Dependent</th>
+          <th style="color:#0F6E56">Resource Dependent</th>
+          <th style="color:#534AB7">LOE</th>
+          <th style="color:#854F0B">Milestone</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:600">Duration</td>
+          <td>Fixed input (PM sets)</td>
+          <td>Computed output (Total Hrs ÷ Capacity)</td>
+          <td>Borrowed from governed activities</td>
+          <td>Zero — always</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Has deliverable</td>
+          <td><span class="tag tag-green">Yes</span></td>
+          <td><span class="tag tag-green">Yes</span></td>
+          <td><span class="tag tag-red">No</span></td>
+          <td><span class="tag tag-red">No</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">% Complete method</td>
+          <td>Qty / Hours / Milestone / Manual</td>
+          <td>Hours burned</td>
+          <td>Time elapsed (auto)</td>
+          <td>Binary 0% or 100%</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Resources drive duration</td>
+          <td><span class="tag tag-red">No</span></td>
+          <td><span class="tag tag-green">Yes</span></td>
+          <td><span class="tag tag-red">No</span></td>
+          <td>N/A</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Resource absent → effect</td>
+          <td>SV goes negative, duration holds</td>
+          <td>Finish date auto-extends</td>
+          <td>Cost accumulates less that day</td>
+          <td>N/A</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Governed by activities</td>
+          <td><span class="tag tag-red">No</span></td>
+          <td><span class="tag tag-red">No</span></td>
+          <td><span class="tag tag-green">Yes — mandatory</span></td>
+          <td><span class="tag tag-red">No</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">EVM — SV / SPI</td>
+          <td><span class="tag tag-green">Included</span></td>
+          <td><span class="tag tag-green">Included</span></td>
+          <td><span class="tag tag-red">Excluded</span></td>
+          <td>N/A</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">EVM — AC / EAC</td>
+          <td><span class="tag tag-green">Included</span></td>
+          <td><span class="tag tag-green">Included</span></td>
+          <td><span class="tag tag-green">Included</span></td>
+          <td><span class="tag tag-red">None</span></td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Gantt bar style</td>
+          <td>Fixed width, fill moves inside</td>
+          <td>Bar width stretches/shrinks</td>
+          <td>Dashed bar, spans governed range</td>
+          <td>Diamond ◆ marker</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Typical examples</td>
+          <td>Painting, concrete, wiring, testing</td>
+          <td>Welding, coding, data entry</td>
+          <td>PM, supervision, QA monitoring</td>
+          <td>Go live, handover, approval</td>
+        </tr>
+        <tr>
+          <td style="font-weight:600">Build priority for OPUS</td>
+          <td><span class="tag tag-green">Priority 1</span></td>
+          <td><span class="tag tag-blue">Priority 4</span></td>
+          <td><span class="tag tag-amber">Priority 3</span></td>
+          <td><span class="tag tag-green">Priority 2</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 8: EVM REFERENCE ═══════════════════ -->
+<div id="evm" class="compare-section">
+  <div class="compare-header">
+    <div class="section-num">08</div>
+    <h2>EVM Metrics Reference</h2>
+    <p style="font-size:13px; color:#888780; margin-top:4px">Earned Value Management — how OPUS measures project health from activity data</p>
+  </div>
+  <div style="padding:1.5rem">
+
+    <div class="three-col">
+      <div class="prop-card"><div class="prop-card-label">BAC — Budget at Completion</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">Qty × Cost/UOM</div><div class="prop-card-note">Total planned cost for activity</div></div>
+      <div class="prop-card"><div class="prop-card-label">EV — Earned Value</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">% Complete × BAC</div><div class="prop-card-note">Value of work "earned" so far</div></div>
+      <div class="prop-card"><div class="prop-card-label">AC — Actual Cost</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">Hours × Rate + Materials</div><div class="prop-card-note">What you've actually spent</div></div>
+      <div class="prop-card"><div class="prop-card-label">PV — Planned Value</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">Expected % by today × BAC</div><div class="prop-card-note">What should have been earned by now</div></div>
+      <div class="prop-card"><div class="prop-card-label">SV — Schedule Variance</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">EV − PV</div><div class="prop-card-note">+ ahead of schedule / − behind</div></div>
+      <div class="prop-card"><div class="prop-card-label">CV — Cost Variance</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">EV − AC</div><div class="prop-card-note">+ under budget / − over budget</div></div>
+      <div class="prop-card"><div class="prop-card-label">EAC — Estimate at Completion</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">AC + (BAC − EV)</div><div class="prop-card-note">Projected final cost → feeds EPS P&amp;L</div></div>
+      <div class="prop-card"><div class="prop-card-label">EPS P&amp;L (per project)</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">Budget − EAC</div><div class="prop-card-note">Profit/Loss indicator on EPS screen</div></div>
+      <div class="prop-card"><div class="prop-card-label">Rollup weight</div><div style="font-family:monospace; font-size:12px; color:#534AB7; margin-top:6px">BAC or Planned Hours</div><div class="prop-card-note">Always weight by this — never equal weight</div></div>
+    </div>
+
+    <div class="callout callout-gray" style="margin-top:1rem">
+      <strong>Rollup chain:</strong> Activity % Complete → (weighted by BAC) → WBS Node % → Project % → EPS P&L dashboard badge
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 9: RESOURCE TYPES OVERVIEW ═══════════════════ -->
+<div id="resource-types" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">09</div>
+    <h2>Resource Types — Overview</h2>
+    <p style="margin-top:6px; font-size:13px; color:#888780;">Every cost that hits an activity falls into one of four buckets. Each type has a different cost accumulation mechanism.</p>
+  </div>
+  <div class="activity-body">
+
+    <div class="sub-section">
+      <div class="sub-label">The Four Resource Types</div>
+      <table>
+        <thead><tr><th>Type</th><th>What it is</th><th>Cost Driver</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Labour</strong></td><td>People — time based</td><td>Hours × Rate</td><td>Ravi (Senior Painter), Suresh (Junior Painter)</td></tr>
+          <tr><td><strong>Material</strong></td><td>Consumables — quantity based</td><td>Qty consumed × Unit cost</td><td>Paint (litres), Thinner (litres)</td></tr>
+          <tr><td><strong>Equipment</strong></td><td>Machinery — usage based</td><td>Days/Hours of use × Rental rate</td><td>Rope (₹200/day), Ladder (₹500/day)</td></tr>
+          <tr><td><strong>Expense</strong></td><td>Lump sum / miscellaneous</td><td>Fixed amount at a point in time</td><td>Safety permit (₹2,000 on Day 1)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">How Each Type Accumulates into AC Differently</div>
+      <div class="callout callout-gray">
+        The critical distinction — they don't all tick the same way:
+      </div>
+      <div class="two-col" style="margin-top:0.75rem">
+        <div class="prop-card"><div class="prop-card-label">Labour</div><div class="prop-card-value">Ticks with TIME</div><div class="prop-card-note">Hours logged in timesheet each day</div></div>
+        <div class="prop-card"><div class="prop-card-label">Material</div><div class="prop-card-value">Ticks with CONSUMPTION</div><div class="prop-card-note">Litres / kg / bags used logged in progress entry</div></div>
+        <div class="prop-card"><div class="prop-card-label">Equipment</div><div class="prop-card-value">Ticks with USAGE / DEPLOYMENT</div><div class="prop-card-note">Days or hours the equipment is on site</div></div>
+        <div class="prop-card"><div class="prop-card-label">Expense</div><div class="prop-card-value">Ticks at a POINT</div><div class="prop-card-note">One-time charge logged when incurred</div></div>
+      </div>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">Full BAC Breakdown — Paint Exterior Walls Example</div>
+      <p>Earlier we computed BAC using only ₹50/m² UOM. Here is where that number actually comes from — the fully loaded cost across all four resource types.</p>
+      <table>
+        <thead><tr><th>Resource</th><th>Type</th><th>Quantity</th><th>Rate</th><th>Planned Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Ravi</td><td>Labour</td><td>40 hrs</td><td>₹200/hr</td><td>₹8,000</td></tr>
+          <tr><td>Suresh</td><td>Labour</td><td>40 hrs</td><td>₹150/hr</td><td>₹6,000</td></tr>
+          <tr><td>Paint</td><td>Material</td><td>100 litres</td><td>₹300/litre</td><td>₹30,000</td></tr>
+          <tr><td>Thinner</td><td>Material</td><td>20 litres</td><td>₹150/litre</td><td>₹3,000</td></tr>
+          <tr><td>Ladder</td><td>Equipment</td><td>5 days</td><td>₹500/day</td><td>₹2,500</td></tr>
+          <tr><td>Rope</td><td>Equipment</td><td>5 days</td><td>₹200/day</td><td>₹1,000</td></tr>
+          <tr><td>Safety permit</td><td>Expense</td><td>1 (lump sum)</td><td>—</td><td>₹2,000</td></tr>
+          <tr class="total-row"><td colspan="4"><strong>Total BAC</strong></td><td><strong>₹52,500</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-blue" style="margin-top:0.75rem">
+        ₹52,500 / 1,000 m² = <strong>₹52.5 per m²</strong> — this is what the Cost/UOM field holds at activity level. It is always a fully loaded number covering all four resource types, not just labour.
+      </div>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">How CV and SV Get Affected by Each Resource Type</div>
+      <table>
+        <thead><tr><th>Resource Type</th><th>Affects CV?</th><th>Affects SV?</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Labour</strong></td><td><span class="tag tag-green">Yes</span></td><td><span class="tag tag-green">Yes</span></td><td>Extra hours → CV bleeds. Absent → less quantity done → SV negative.</td></tr>
+          <tr><td><strong>Material</strong></td><td><span class="tag tag-green">Yes</span></td><td><span class="tag tag-green">Yes</span></td><td>Wastage → extra AC → CV bleeds. Shortage → work stops → SV negative.</td></tr>
+          <tr><td><strong>Equipment</strong></td><td><span class="tag tag-amber">Conditional</span></td><td><span class="tag tag-green">Yes</span></td><td>If daily rental and idle → CV bleeds. If missing → can't access work → SV negative.</td></tr>
+          <tr><td><strong>Expense</strong></td><td><span class="tag tag-green">Yes</span></td><td><span class="tag tag-gray">Rarely</span></td><td>Unplanned expense → AC spike → CV negative. Rarely blocks physical output directly.</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">Material Wastage Example — Day 3</h3>
+      <p>Painters use 28 litres of paint instead of planned 20 litres due to rough surface and rework.</p>
+      <span class="formula">Planned paint cost Day 3  = 20L × ₹300 = ₹6,000
+Actual paint cost Day 3   = 28L × ₹300 = ₹8,400
+Material overrun          = ₹2,400
+
+EV (60% × ₹52,500) = ₹31,500  ← unchanged, wall doesn't know about wastage
+AC (cumulative with wastage) = ₹34,250
+CV = ₹31,500 − ₹34,250 = −₹2,750  ← Over budget
+SV = ₹0                             ← Still on schedule</span>
+
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">Equipment Missing — Ladder not available Day 2</h3>
+      <p>Painters can only reach the lower 4 feet of the wall. Upper portion inaccessible.</p>
+      <span class="formula">Planned output Day 2  = 200 m²
+Actual output Day 2   = 80 m²  (lower portion only)
+Cumulative            = 280 m² (was planned 400 m²)
+
+SV = (28% × ₹52,500) − (40% × ₹52,500) = ₹14,700 − ₹21,000 = −₹6,300 ← Behind</span>
+      <div class="callout callout-amber" style="margin-top:0.5rem">
+        <strong>Equipment billing type matters here.</strong> If Ladder is daily rental → AC still ticks ₹500 even though it wasn't there (you're paying for equipment that blocked your progress). If pay-per-use → ₹0 that day. OPUS tracks this at the equipment resource level via Billing Type.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 10: PLANNING TO EXECUTION FLOW ═══════════════════ -->
+<div id="resource-planning" class="compare-section">
+  <div class="compare-header">
+    <div class="section-num">10</div>
+    <h2>Planning to Execution — Full Flow</h2>
+    <p style="font-size:13px; color:#888780; margin-top:4px">How each resource type is set up in planning and logged during execution, with Day 1 full walkthrough</p>
+  </div>
+  <div style="padding:1.5rem">
+
+    <div class="sub-section">
+      <div class="sub-label">Phase 1 — Planning</div>
+
+      <h3 style="margin-bottom:0.5rem">Step 1 — Activity Shell Created</h3>
+      <p>PM creates the activity with fundamentals. No resources yet. BAC = ₹0.</p>
+      <span class="formula">Activity: Paint Exterior Walls — Building A
+  Type: Task Dependent | Duration: 5 days | Qty: 1,000 m²
+  % Complete Method: Physical Quantity | Planned Start: Day 1 | Planned Finish: Day 5</span>
+
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">Step 2 — Resources Assigned</h3>
+      <div class="two-col">
+        <div>
+          <p style="font-size:13px; font-weight:600; color:#185FA5">Labour Planning</p>
+          <table style="margin-top:4px">
+            <tbody>
+              <tr><td style="color:#888780">Person / Role</td><td>Ravi — Senior Painter</td></tr>
+              <tr><td style="color:#888780">Planned Hours</td><td>40 hrs</td></tr>
+              <tr><td style="color:#888780">Rate per Hour</td><td>₹200/hr</td></tr>
+              <tr><td style="color:#888780">Calendar</td><td>Mon–Sat</td></tr>
+              <tr class="total-row"><td>Planned Cost</td><td>₹8,000</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:12px; color:#888780; margin-top:6px">Validation: 40 hrs / 8 hrs/day = 5 days = activity duration ✓</p>
+        </div>
+        <div>
+          <p style="font-size:13px; font-weight:600; color:#1D9E75">Material Planning</p>
+          <table style="margin-top:4px">
+            <tbody>
+              <tr><td style="color:#888780">Material</td><td>Paint</td></tr>
+              <tr><td style="color:#888780">UOM</td><td>Litres</td></tr>
+              <tr><td style="color:#888780">Planned Qty</td><td>100 litres</td></tr>
+              <tr><td style="color:#888780">Rate/Unit</td><td>₹300/litre</td></tr>
+              <tr><td style="color:#888780">Consumption Rate</td><td>20 litres/day</td></tr>
+              <tr class="total-row"><td>Planned Cost</td><td>₹30,000</td></tr>
+            </tbody>
+          </table>
+          <p style="font-size:12px; color:#888780; margin-top:6px">Validation: 20L/day × 5 days = 100L ✓</p>
+        </div>
+      </div>
+      <div class="two-col" style="margin-top:0.75rem">
+        <div>
+          <p style="font-size:13px; font-weight:600; color:#854F0B">Equipment Planning</p>
+          <table style="margin-top:4px">
+            <tbody>
+              <tr><td style="color:#888780">Equipment</td><td>Ladder</td></tr>
+              <tr><td style="color:#888780">Billing Type</td><td>Daily Rental</td></tr>
+              <tr><td style="color:#888780">Rate</td><td>₹500/day</td></tr>
+              <tr><td style="color:#888780">Planned Days</td><td>5 days</td></tr>
+              <tr class="total-row"><td>Planned Cost</td><td>₹2,500</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <p style="font-size:13px; font-weight:600; color:#534AB7">Expense Planning</p>
+          <table style="margin-top:4px">
+            <tbody>
+              <tr><td style="color:#888780">Description</td><td>Safety permit</td></tr>
+              <tr><td style="color:#888780">Expense Type</td><td>Permit / Regulatory</td></tr>
+              <tr><td style="color:#888780">Planned Amount</td><td>₹2,000</td></tr>
+              <tr><td style="color:#888780">Expected Date</td><td>Day 1</td></tr>
+              <tr class="total-row"><td>Planned Cost</td><td>₹2,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1.25rem; margin-bottom:0.5rem">Step 3 — BAC Computed and Baseline Frozen</h3>
+      <span class="formula">Labour:    Ravi ₹8,000 + Suresh ₹6,000        = ₹14,000
+Material:  Paint ₹30,000 + Thinner ₹3,000  = ₹33,000
+Equipment: Ladder ₹2,500 + Rope ₹1,000     =  ₹3,500
+Expense:   Safety permit                   =  ₹2,000
+                                           ─────────
+TOTAL BAC                                  = ₹52,500  ← Baseline frozen</span>
+      <div class="callout callout-gray" style="margin-top:0.5rem">Once PM approves, the baseline is frozen. Planned Start, Finish, BAC, Qty, Hours, and all resource quantities are locked as ground truth for all future variance reporting.</div>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">Phase 2 — Execution (Who Logs What)</div>
+      <table>
+        <thead><tr><th>Role</th><th>What They Log</th><th>Frequency</th><th>Feeds</th></tr></thead>
+        <tbody>
+          <tr><td>Field Supervisor</td><td>Actual quantity done (m² painted)</td><td>Daily</td><td>% Complete → EV</td></tr>
+          <tr><td>Workers (Ravi, Suresh)</td><td>Hours worked per activity</td><td>Daily / Weekly</td><td>Labour AC</td></tr>
+          <tr><td>Storekeeper / Supervisor</td><td>Material consumed (litres, kg)</td><td>Daily</td><td>Material AC</td></tr>
+          <tr><td>Equipment Manager</td><td>Equipment deployed (yes/no, hours)</td><td>Daily</td><td>Equipment AC</td></tr>
+          <tr><td>PM / Finance</td><td>Expense incurred (amount)</td><td>When incurred</td><td>Expense AC</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">Day 1 — Complete Walkthrough</div>
+      <div class="two-col">
+        <div>
+          <h3>Quantity (Supervisor)</h3>
+          <span class="formula" style="font-size:11px">m² painted = 200
+% Complete = 200 / 1,000 × 100 = 20%</span>
+          <h3 style="margin-top:0.75rem">Labour (Timesheet)</h3>
+          <span class="formula" style="font-size:11px">Ravi:   8 hrs × ₹200 = ₹1,600
+Suresh: 8 hrs × ₹150 = ₹1,200
+Labour AC = ₹2,800</span>
+        </div>
+        <div>
+          <h3>Material (Consumption log)</h3>
+          <span class="formula" style="font-size:11px">Paint:   20L × ₹300 = ₹6,000
+Thinner:  4L × ₹150 =   ₹600
+Material AC = ₹6,600</span>
+          <h3 style="margin-top:0.75rem">Equipment + Expense</h3>
+          <span class="formula" style="font-size:11px">Ladder deployed: ₹500
+Rope deployed:   ₹200
+Safety permit:  ₹2,000
+Equipment + Expense AC = ₹2,700</span>
+        </div>
+      </div>
+      <table style="margin-top:0.75rem">
+        <thead><tr><th>Resource Type</th><th>Day 1 AC</th></tr></thead>
+        <tbody>
+          <tr><td>Labour</td><td>₹2,800</td></tr>
+          <tr><td>Material</td><td>₹6,600</td></tr>
+          <tr><td>Equipment</td><td>₹700</td></tr>
+          <tr><td>Expense</td><td>₹2,000</td></tr>
+          <tr class="total-row"><td><strong>Total AC Day 1</strong></td><td><strong>₹12,100</strong></td></tr>
+        </tbody>
+      </table>
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">EVM at End of Day 1</h3>
+      <span class="formula">BAC = ₹52,500
+EV  = 20% × ₹52,500 = ₹10,500
+AC  = ₹12,100
+PV  = 20% × ₹52,500 = ₹10,500  (planned 20% by Day 1)
+
+CV  = EV − AC = ₹10,500 − ₹12,100 = −₹1,600  ← Over budget
+SV  = EV − PV = ₹10,500 − ₹10,500 = ₹0        ← On schedule
+EAC = ₹12,100 + (₹52,500 − ₹10,500) = ₹54,100</span>
+      <div class="callout callout-amber" style="margin-top:0.5rem">
+        CV is already negative on Day 1 — the ₹2,000 safety permit hit upfront. This is <strong>expected and planned</strong>. The PM should know this is a front-loaded expense, not a real overrun signal. This is why Expense Type and Expected Date are mandatory — so OPUS can contextualise the CV dip.
+      </div>
+    </div>
+
+    <div class="sub-section">
+      <div class="sub-label">CV and SV Variance Attribution — Drill-Down Logic</div>
+      <p>When CV or SV goes negative, OPUS should tell the PM <em>exactly why</em>:</p>
+      <div class="two-col">
+        <div class="scenario">
+          <div class="scenario-header" style="background:#FCEBEB; color:#A32D2D">CV is negative — root cause drill-down</div>
+          <div class="scenario-body">
+            <ul style="font-size:13px; line-height:1.9; padding-left:1.1rem">
+              <li>Labour overrun → someone logged excess hours vs planned</li>
+              <li>Material wastage → consumption rate exceeds baseline rate</li>
+              <li>Equipment idle → deployed but not productive (daily rental still ticking)</li>
+              <li>Expense surprise → unplanned expense hit</li>
+            </ul>
+          </div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-header" style="background:#FAEEDA; color:#854F0B">SV is negative — root cause drill-down</div>
+          <div class="scenario-body">
+            <ul style="font-size:13px; line-height:1.9; padding-left:1.1rem">
+              <li>Labour absent → fewer hours → less quantity done</li>
+              <li>Material shortage → ran out mid-day → work stopped</li>
+              <li>Equipment missing → couldn't access area → output reduced</li>
+              <li>Rework → quantity counted, then redone → net zero output</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 11: MANDATORY FIELDS PER RESOURCE TYPE ═══════════════════ -->
+<div id="resource-mandatory" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">11</div>
+    <h2>Mandatory Fields per Resource Type</h2>
+    <p style="margin-top:6px; font-size:13px; color:#888780;">Mandatory fields differ by resource type because the cost accumulation mechanism is different for each.</p>
+  </div>
+  <div class="activity-body">
+
+    <!-- Labour -->
+    <div class="sub-section">
+      <div class="sub-label">Resource Type 1 — Labour</div>
+      <table>
+        <thead><tr><th>Field</th><th>Required?</th><th>Why Mandatory</th></tr></thead>
+        <tbody>
+          <tr class="good-row"><td><strong>Person / Role</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Identifies who is doing the work. Ties to the resource pool (OBS). Without this, you don't know whose hours to track.</td></tr>
+          <tr class="good-row"><td><strong>Pay Type</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Determines how AC is computed. Hourly, Salaried, or Contract — changes the entire cost formula downstream.</td></tr>
+          <tr class="good-row"><td><strong>Planned Hours</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Total effort budgeted. Drives BAC labour contribution. Without hours, % complete by hours method fails.</td></tr>
+          <tr class="good-row"><td><strong>Cost Rate</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>₹/hour or ₹/day depending on Pay Type. Without rate, hours are tracked but cost is blind.</td></tr>
+          <tr class="good-row"><td><strong>Calendar</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Determines which days the person is available. OPUS validates that planned hours fit within activity duration.</td></tr>
+          <tr><td>Units per day</td><td><span class="tag tag-gray">Optional</span></td><td>Defaults to 8 hrs/day. Override if person is part-time on this activity.</td></tr>
+          <tr><td>Cost account</td><td><span class="tag tag-gray">Optional</span></td><td>Which cost bucket this charge goes to — for finance reporting.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-blue" style="margin-top:0.75rem">
+        <strong>Validation:</strong> Planned Hours / Units per day must fit within activity duration. If Ravi has 40 hrs on a 5-day activity → 40/8 = 5 days ✓. If 60 hrs entered → 60/8 = 7.5 days &gt; 5 days → OPUS warns: "Resource over-allocated."
+      </div>
+    </div>
+
+    <!-- Material -->
+    <div class="sub-section">
+      <div class="sub-label">Resource Type 2 — Material</div>
+      <table>
+        <thead><tr><th>Field</th><th>Required?</th><th>Why Mandatory</th></tr></thead>
+        <tbody>
+          <tr class="good-row"><td><strong>Material Name</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>What is being consumed. Links to inventory / procurement catalogue.</td></tr>
+          <tr class="good-row"><td><strong>Unit of Measure (UOM)</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Litres, kg, bags, pieces. Without UOM, the quantity number is meaningless — 100 of what?</td></tr>
+          <tr class="good-row"><td><strong>Planned Quantity</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Total quantity needed for the full activity. Drives BAC material contribution.</td></tr>
+          <tr class="good-row"><td><strong>Rate per Unit</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Cost per litre / kg / bag. Without rate, quantity is tracked but cost is blind.</td></tr>
+          <tr><td>Consumption Rate</td><td><span class="tag tag-amber">Recommended</span></td><td>Planned qty per day. Enables shortage prediction before Day 5.</td></tr>
+          <tr><td>Wastage %</td><td><span class="tag tag-gray">Optional</span></td><td>Industry-standard allowance. e.g., 5% → planned qty auto-increases. More realistic BAC.</td></tr>
+          <tr><td>Source / Vendor</td><td><span class="tag tag-gray">Optional</span></td><td>Links to procurement module for purchase requests.</td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-teal" style="margin-top:0.75rem">
+        <strong>Consumption Rate Validation:</strong> If entered, Consumption Rate × Duration should ≈ Planned Quantity. e.g., 20 litres/day × 5 days = 100L ✓. Mismatch → OPUS warns: "Consumption rate implies 120L but planned qty is 100L — activity may run short on Day 4."
+      </div>
+    </div>
+
+    <!-- Equipment -->
+    <div class="sub-section">
+      <div class="sub-label">Resource Type 3 — Equipment / Machinery</div>
+      <table>
+        <thead><tr><th>Field</th><th>Required?</th><th>Why Mandatory</th></tr></thead>
+        <tbody>
+          <tr class="good-row"><td><strong>Equipment Name</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>What asset is being used. Rope, Ladder, Crane, Scaffolding.</td></tr>
+          <tr class="good-row"><td><strong>Billing Type</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Determines when AC ticks. This changes the entire cost accumulation logic. See table below.</td></tr>
+          <tr class="good-row"><td><strong>Rate</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Cost per unit of billing. Without rate, deployment is tracked but cost is blind.</td></tr>
+          <tr class="good-row"><td><strong>Planned Deployment</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>How many days / hours the equipment is planned on site. Drives BAC equipment contribution.</td></tr>
+          <tr><td>Utilization %</td><td><span class="tag tag-amber">Recommended</span></td><td>What % of the day is the equipment productive. Idle equipment on daily rental = wasted cost.</td></tr>
+          <tr><td>Mobilization / Demob dates</td><td><span class="tag tag-gray">Optional</span></td><td>Equipment may arrive before activity starts or leave after it ends.</td></tr>
+        </tbody>
+      </table>
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">Billing Type — The Critical Field</h3>
+      <table>
+        <thead><tr><th>Billing Type</th><th>When AC Ticks</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Daily Rental</strong></td><td>Every deployed day — whether used or idle</td><td>Hired scaffolding ₹500/day regardless</td></tr>
+          <tr><td><strong>Hourly Rental</strong></td><td>Only hours of active use</td><td>Crane hire ₹2,000/hr only when operating</td></tr>
+          <tr><td><strong>Pay per Use</strong></td><td>Only when producing output</td><td>Generator — pay only when running</td></tr>
+          <tr><td><strong>Owned (Internal)</strong></td><td>Depreciation per day — internal cost transfer</td><td>Company ladder ₹50/day depreciation</td></tr>
+          <tr><td><strong>Fixed Hire</strong></td><td>Lump sum for full activity duration</td><td>Pumping machine ₹15,000 flat for the job</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Expense -->
+    <div class="sub-section">
+      <div class="sub-label">Resource Type 4 — Expense</div>
+      <table>
+        <thead><tr><th>Field</th><th>Required?</th><th>Why Mandatory</th></tr></thead>
+        <tbody>
+          <tr class="good-row"><td><strong>Description</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>What this expense is for. Safety permit, subcontractor fee, testing charges.</td></tr>
+          <tr class="good-row"><td><strong>Planned Amount</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>The budgeted cost. Drives BAC expense contribution.</td></tr>
+          <tr class="good-row"><td><strong>Expense Type</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>Categorises for reporting. Permit / Subcontractor / Testing / Travel / Miscellaneous.</td></tr>
+          <tr class="good-row"><td><strong>Expected Date</strong></td><td><span class="tag tag-green">Mandatory</span></td><td>When this expense will be incurred. Critical for cash flow forecasting and EAC projection timing.</td></tr>
+          <tr><td>Vendor / Payee</td><td><span class="tag tag-gray">Optional</span></td><td>Who is being paid — links to vendor management module.</td></tr>
+          <tr><td>Recurring flag</td><td><span class="tag tag-gray">Optional</span></td><td>If the expense repeats (e.g., weekly site cleaning) — auto-generates multiple expense records.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- What if missing -->
+    <div class="sub-section">
+      <div class="sub-label">What Happens if a Mandatory Field is Missing</div>
+      <table>
+        <thead><tr><th>Missing Field</th><th>Consequence</th><th>OPUS Action</th></tr></thead>
+        <tbody>
+          <tr class="bad-row"><td>Labour — no Rate</td><td>BAC labour = ₹0. AC shows ₹0. CV always looks good — silently wrong.</td><td>Block save</td></tr>
+          <tr class="bad-row"><td>Material — no UOM</td><td>"100" is meaningless — 100 litres? 100 kg? Consumption logging fails.</td><td>Block save</td></tr>
+          <tr class="bad-row"><td>Equipment — no Billing Type</td><td>System doesn't know when to tick AC. Daily vs hourly gives completely different cost.</td><td>Block save</td></tr>
+          <tr class="bad-row"><td>Expense — no Expected Date</td><td>Expense has no time anchor. Cash flow forecast wrong. EAC spikes unexpectedly.</td><td>Block save</td></tr>
+          <tr class="bad-row"><td>Labour — no Calendar</td><td>Cannot validate if hours fit duration. Resource may be over-allocated silently.</td><td>Block save</td></tr>
+        </tbody>
+      </table>
+      <div class="callout callout-red" style="margin-top:0.75rem">
+        OPUS must <strong>block save</strong> on missing mandatory fields — not just warn. A resource with a missing rate or UOM silently corrupts every EVM metric downstream for the life of the activity.
+      </div>
+    </div>
+
+    <!-- One rule per type -->
+    <div class="sub-section">
+      <div class="sub-label">One Rule to Remember per Type</div>
+      <div class="two-col">
+        <div class="prop-card"><div class="prop-card-label">Labour</div><div class="prop-card-value">Calendar is mandatory</div><div class="prop-card-note">Hours must fit within duration — calendar validates this</div></div>
+        <div class="prop-card"><div class="prop-card-label">Material</div><div class="prop-card-value">UOM is mandatory</div><div class="prop-card-note">Quantity without unit is meaningless</div></div>
+        <div class="prop-card"><div class="prop-card-label">Equipment</div><div class="prop-card-value">Billing Type is mandatory</div><div class="prop-card-note">Determines when AC ticks — idle vs active</div></div>
+        <div class="prop-card"><div class="prop-card-label">Expense</div><div class="prop-card-value">Expected Date is mandatory</div><div class="prop-card-note">Anchors the cash flow and EAC projection</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════ SECTION 12: LABOUR ADVANCED — PAY TYPE, OVERTIME, PRODUCTIVITY ═══════════════════ -->
+<div id="labour-advanced" class="activity-section">
+  <div class="activity-header">
+    <div class="section-num">12</div>
+    <div class="activity-header-top">
+      <span class="type-badge badge-blue">Labour — Advanced</span>
+      <span class="use-tag">Pay Type · Overtime · Productivity Rate</span>
+    </div>
+    <h2>Labour — Pay Type, Overtime &amp; Productivity Rate</h2>
+    <div class="core-rule" style="margin-top:0.75rem">
+      The basic labour model only tracks cost per hour. This section adds three dimensions that turn a timesheet entry into a workforce intelligence model: <strong>Pay Type</strong> (how cost is computed), <strong>Overtime flag</strong> (whether extra hours cost money), and <strong>Productivity Rate</strong> (how much output the person produces per hour).
+    </div>
+  </div>
+  <div class="activity-body">
+
+    <!-- The Problem -->
+    <div class="sub-section">
+      <div class="sub-label">The Problem with Hourly-Only for Salaried Workers</div>
+      <p>Ravi is a salaried employee at ₹52,000/month. He works 10 hours on Day 3 (2 hrs overtime).</p>
+      <div class="two-col">
+        <div class="scenario">
+          <div class="scenario-header" style="background:#FCEBEB; color:#A32D2D">Hourly model (wrong for salaried)</div>
+          <div class="scenario-body">
+            <span class="formula" style="font-size:11px">Daily allocation = ₹52,000 / 26 days = ₹2,000/day
+Hourly equivalent = ₹2,000 / 8 = ₹250/hr
+AC Day 3 = 10 hrs × ₹250 = ₹2,500  ← overstates cost
+He was not paid extra for overtime</span>
+          </div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-header" style="background:#EAF3DE; color:#3B6D11">Salaried model (correct)</div>
+          <div class="scenario-body">
+            <span class="formula" style="font-size:11px">AC Day 3 = ₹2,000 flat  ← daily allocation only
+Overtime 2 hrs = tracked, not paid
+Cost is accurate. Hours are still visible.</span>
+          </div>
+        </div>
+      </div>
+      <div class="callout callout-blue" style="margin-top:0.75rem">
+        The overtime hours are real work that happened. They should be tracked — for productivity analysis, future planning, and recognising when a person is consistently overloaded. But they should <strong>not inflate AC</strong>.
+      </div>
+    </div>
+
+    <!-- Pay Type -->
+    <div class="sub-section">
+      <div class="sub-label">Pay Type — The New Field</div>
+      <table>
+        <thead><tr><th>Pay Type</th><th>How AC is Computed</th><th>Overtime</th><th>Rate Field</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Hourly</strong></td><td>Hours logged × hourly rate</td><td>Paid — at overtime rate</td><td>₹/hour</td></tr>
+          <tr><td><strong>Salaried</strong></td><td>Fixed daily allocation regardless of hours</td><td>Tracked only — not paid (locked)</td><td>₹/month or ₹/day</td></tr>
+          <tr><td><strong>Contract</strong></td><td>Fixed lump sum for full activity</td><td>Not applicable</td><td>Fixed amount</td></tr>
+        </tbody>
+      </table>
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">How Pay Type Changes the Fields in OPUS</h3>
+      <span class="formula">If Pay Type = HOURLY:
+  Cost Rate      = ₹/hour  (mandatory)
+  Overtime Rate  = ₹/hour  (mandatory if overtime allowed)
+  AC             = Regular hours × rate + Overtime hours × OT rate
+
+If Pay Type = SALARIED:
+  Cost Rate      = ₹/month → auto-converts to daily allocation
+  Overtime flag  = TRACKED ONLY (locked — no overtime pay field shown)
+  AC             = Working days allocated × daily rate
+                   (overtime hours logged but not costed)
+
+If Pay Type = CONTRACT:
+  Cost Rate      = Fixed lump sum for activity
+  Overtime       = Not applicable — hidden
+  AC             = Fixed amount logged on completion</span>
+    </div>
+
+    <!-- Productivity Rate -->
+    <div class="sub-section">
+      <div class="sub-label">Productivity Rate — The Key New Concept</div>
+      <p>Instead of only knowing cost per hour, OPUS should also know <strong>output per hour</strong>. This is the productivity rate.</p>
+      <span class="formula">Productivity Rate = Quantity produced / Hour worked
+                 = m²/hr  (for painting)
+                 = bags/hr (for concrete laying)
+                 = units/hr (for assembly)</span>
+
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">Three Ways to Set the Productivity Rate</h3>
+      <div class="three-col">
+        <div class="scenario">
+          <div class="scenario-header"><div class="scenario-icon blue">1</div>Historical (auto-suggested)</div>
+          <div class="scenario-body">
+            <p style="font-size:13px">OPUS looks at past activities for this person + same activity type and computes the average.</p>
+            <span class="formula" style="font-size:11px">Ravi — past painting jobs:
+Activity A: 300m² / 24hrs = 12.5 m²/hr
+Activity B: 220m² / 20hrs = 11.0 m²/hr
+Activity C: 180m² / 15hrs = 12.0 m²/hr
+Suggested = 11.8 m²/hr (average)</span>
+            <p style="font-size:12px; color:#888780; margin-top:4px">OPUS pre-fills this when Ravi is assigned to a new painting activity.</p>
+          </div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-header"><div class="scenario-icon teal">2</div>Manual Override</div>
+          <div class="scenario-body">
+            <p style="font-size:13px">PM looks at site conditions — rough surface, scaffolding needed — and decides Ravi will be slower than usual.</p>
+            <span class="formula" style="font-size:11px">Historical: 11.8 m²/hr
+Manual override: 10 m²/hr
+Reason: rough exterior surface, scaffolding</span>
+            <p style="font-size:12px; color:#888780; margin-top:4px">PM judgment overrides historical average. Override reason is logged.</p>
+          </div>
+        </div>
+        <div class="scenario">
+          <div class="scenario-header"><div class="scenario-icon purple">3</div>Computed Actual</div>
+          <div class="scenario-body">
+            <p style="font-size:13px">During execution, OPUS computes the actual rate daily from quantity and hours logged.</p>
+            <span class="formula" style="font-size:11px">Day 3: 100m² / 8hrs = 12.5 m²/hr
+  → above planned 10 m²/hr ✓
+This feeds back into Ravi's history
+for the next activity assignment.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan Validation -->
+    <div class="sub-section">
+      <div class="sub-label">How Productivity Rate Validates the Plan Before Execution</div>
+      <p>Once productivity rates are set, OPUS can check whether the plan is actually feasible before the baseline is frozen.</p>
+      <span class="formula">Planned Quantity:         1,000 m²
+Ravi's productivity:      10 m²/hr (manual override)
+Suresh's productivity:    8 m²/hr  (historical average)
+Combined output:          18 m²/hr
+
+Hours needed = 1,000 / 18 = 55.6 hours
+Available hrs = 2 people × 8 hrs × 5 days = 80 hrs
+
+Check: 55.6 hrs &lt; 80 hrs ✓  Plan is feasible — has buffer</span>
+
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">What if the Plan is Not Feasible?</h3>
+      <span class="formula">If only Ravi is assigned (10 m²/hr):
+  Hours needed = 1,000 / 10 = 100 hrs
+  Available    = 1 × 8 × 5  = 40 hrs
+  Gap = 60 hrs
+
+OPUS alert: "Insufficient capacity. At planned productivity,
+  activity will complete only 400m² of 1,000m² in 5 days.
+  Increase resources or extend duration to 13 days."</span>
+      <div class="callout callout-purple" style="margin-top:0.5rem">This pre-validates the plan <strong>before the baseline is frozen</strong>. No ERP tool does this by default — it is a significant differentiator for OPUS.</div>
+    </div>
+
+    <!-- Predictive Warning -->
+    <div class="sub-section">
+      <div class="sub-label">Predictive Warning During Execution</div>
+      <p>Productivity rate also enables OPUS to issue <strong>leading indicator alerts</strong> — warnings before SV even goes negative.</p>
+      <span class="formula">Day 2 — Ravi's actual productivity = 8 m²/hr (planned 10 m²/hr)
+
+OPUS computes trajectory:
+  Remaining days          = 3
+  Ravi + Suresh capacity  = (8 + 8) × 8 hrs × 3 days = 192 m²
+  Current completed       = 200 m²  (Day 1 + Day 2)
+  Projected total         = 200 + 192 = 392 m²
+
+  Gap = 1,000 − 392 = 608 m² short
+
+OPUS alert (Day 2, before SV is negative):
+  "At current productivity, activity will complete 39% of
+   planned quantity by Day 5. Consider adding resources
+   or reviewing work method."</span>
+      <div class="callout callout-green" style="margin-top:0.5rem">
+        SV hasn't gone negative yet — it's only Day 2. But OPUS can see the <strong>trajectory</strong> before the damage is done. This is far more valuable than discovering the problem on Day 5 when it is too late to recover without crashing.
+      </div>
+    </div>
+
+    <!-- Overtime Tracking -->
+    <div class="sub-section">
+      <div class="sub-label">Overtime Tracking for Salaried Workers — Day 3 Example</div>
+      <p>Ravi is salaried. Overtime pay flag = No. He works 10 hours on Day 3.</p>
+      <div class="two-col">
+        <div>
+          <h3>Timesheet Entry</h3>
+          <table style="margin-top:6px">
+            <tbody>
+              <tr><td style="color:#888780">Regular hours</td><td>8 hrs (within contract)</td></tr>
+              <tr><td style="color:#888780">Overtime hours</td><td>2 hrs (tracked, no pay)</td></tr>
+              <tr><td style="color:#888780">Total logged</td><td>10 hrs</td></tr>
+              <tr class="total-row"><td>AC impact</td><td>₹2,000 (daily allocation only)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>Productivity Captured</h3>
+          <table style="margin-top:6px">
+            <tbody>
+              <tr><td style="color:#888780">m² painted Day 3</td><td>125 m²</td></tr>
+              <tr><td style="color:#888780">Total hours worked</td><td>10 hrs</td></tr>
+              <tr class="total-row"><td>Actual productivity</td><td>12.5 m²/hr</td></tr>
+            </tbody>
+          </table>
+          <div class="callout callout-teal" style="margin-top:0.5rem; font-size:12px">Overtime gave extra output. The productivity rate is captured correctly using total hours — 10 hrs, not 8 hrs.</div>
+        </div>
+      </div>
+      <h3 style="margin-top:1rem; margin-bottom:0.5rem">What Consistent Overtime Tells You</h3>
+      <div class="callout callout-amber">
+        If Ravi logs overtime consistently across 3 or more activities, OPUS should flag: <strong>"Resource regularly over-allocated — review planning assumptions."</strong> This signals that either activity durations are too short, or Ravi's planned hours are being systematically underestimated. Future planning should use a higher hour estimate for activities he is assigned to.
+      </div>
+    </div>
+
+    <!-- Updated Data Model -->
+    <div class="sub-section">
+      <div class="sub-label">Updated Labour Resource Data Model</div>
+      <span class="formula">LaborResource {
+  // Identity
+  person_id
+  role
+
+  // Pay structure
+  pay_type: HOURLY | SALARIED | CONTRACT
+
+  // Cost rates (conditional on pay_type)
+  hourly_rate: Float            // if HOURLY
+  overtime_rate: Float          // if HOURLY and overtime_allowed = true
+  daily_allocation: Float       // if SALARIED = monthly_salary / working_days
+  contract_amount: Float        // if CONTRACT
+
+  // Overtime
+  overtime_allowed: Boolean
+  overtime_pay: Boolean         // false for salaried — locked in UI
+
+  // Productivity
+  productivity_rate: Float      // m²/hr, units/hr — this activity's UOM per hour
+  productivity_source: HISTORICAL | MANUAL | COMPUTED
+  historical_rate: Float        // auto-filled from past activities
+
+  // Planning outputs (computed)
+  planned_hours: Float
+  planned_cost: Float           // computed from pay_type logic
+
+  // Execution (updated daily)
+  actual_regular_hours: Float
+  actual_overtime_hours: Float  // tracked always, even if no pay
+  actual_total_hours: Float     // regular + overtime
+  actual_productivity: Float    // recomputed daily: quantity done / total hours
+  actual_cost: Float            // from pay_type — NOT blindly from total hours
+}</span>
+    </div>
+
+    <!-- Summary -->
+    <div class="sub-section">
+      <div class="sub-label">Summary — Three Additions That Work as a System</div>
+      <div class="three-col">
+        <div class="prop-card">
+          <div class="prop-card-label">Pay Type</div>
+          <div class="prop-card-value">Controls HOW cost is computed</div>
+          <div class="prop-card-note">Hourly → hours × rate. Salaried → daily allocation flat. Contract → fixed lump sum.</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-card-label">Overtime Flag</div>
+          <div class="prop-card-value">Controls WHETHER extra hours cost money</div>
+          <div class="prop-card-note">Salaried = track but don't pay. Overtime hours always visible for workforce analysis.</div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-card-label">Productivity Rate</div>
+          <div class="prop-card-value">Controls HOW output is planned and monitored</div>
+          <div class="prop-card-note">m²/hr validates plans before baseline, predicts completion daily, builds historical benchmarks.</div>
+        </div>
+      </div>
+      <div class="callout callout-blue" style="margin-top:0.75rem">
+        Together, these three turn a basic labour assignment into a <strong>workforce intelligence model</strong> — distinguishing OPUS from a simple timesheet tool.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="doc-footer">OPUS ERP · Project Management Module · Activity Types &amp; Resource Types Detailed Reference · For internal team use</div>
+
+</div>
+</body>
+</html>
