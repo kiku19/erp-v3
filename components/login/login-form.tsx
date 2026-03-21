@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -134,9 +135,12 @@ function LoginForm({ onSubmit, isLoading = false, serverError }: LoginFormProps)
           <span className="text-sm text-muted-foreground">
             Don&apos;t have an account?
           </span>
-          <span className="text-sm font-semibold text-foreground cursor-pointer hover:text-primary-hover transition-colors duration-[var(--duration-fast)]">
+          <Link
+            href="/signup"
+            className="text-sm font-semibold text-foreground hover:text-primary-hover transition-colors duration-[var(--duration-fast)]"
+          >
             Sign up
-          </span>
+          </Link>
         </div>
       </div>
     </form>

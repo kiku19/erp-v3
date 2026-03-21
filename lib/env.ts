@@ -20,6 +20,8 @@ interface Env {
   readonly DATABASE_URL: string;
   readonly JWT_ACCESS_SECRET: string;
   readonly JWT_REFRESH_SECRET: string;
+  readonly RESEND_API_KEY: string;
+  readonly APP_URL: string;
   readonly NODE_ENV: "development" | "production" | "test";
   readonly CI: boolean;
 }
@@ -32,6 +34,8 @@ const envDefs = {
   DATABASE_URL: lazyEnv(() => required("DATABASE_URL")),
   JWT_ACCESS_SECRET: lazyEnv(() => required("JWT_ACCESS_SECRET")),
   JWT_REFRESH_SECRET: lazyEnv(() => required("JWT_REFRESH_SECRET")),
+  RESEND_API_KEY: lazyEnv(() => required("RESEND_API_KEY")),
+  APP_URL: lazyEnv(() => required("APP_URL")),
   NODE_ENV: lazyEnv(
     () => optional("NODE_ENV", "development") as Env["NODE_ENV"],
   ),

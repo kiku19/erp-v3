@@ -31,6 +31,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logout: () => Promise<void>;
+  setTokens: (accessToken: string, tenant: TenantInfo, user: UserInfo) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -92,6 +93,15 @@ function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const setTokens = useCallback(
+    (token: string, tenantInfo: TenantInfo, userInfo: UserInfo) => {
+      setAccessToken(token);
+      setTenant(tenantInfo);
+      setUser(userInfo);
+    },
+    [],
+  );
+
   return (
     <AuthContext value={{
       accessToken,
@@ -101,6 +111,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       logout,
+      setTokens,
     }}>
       {children}
     </AuthContext>

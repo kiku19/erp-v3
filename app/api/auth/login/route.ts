@@ -108,6 +108,13 @@ export async function POST(request: Request): Promise<Response> {
 
     const tenant = user.tenant;
 
+    if (!tenant.emailVerified) {
+      return NextResponse.json(
+        { message: "Please verify your email before signing in", code: "EMAIL_NOT_VERIFIED" },
+        { status: 403 },
+      );
+    }
+
     const refreshExpiryDays = rememberMe
       ? tenant.rememberMeExpiryDays
       : tenant.refreshTokenExpiryDays;

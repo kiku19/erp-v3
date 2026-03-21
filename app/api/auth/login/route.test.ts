@@ -13,6 +13,7 @@ const mockTenant = {
   refreshToken: null,
   refreshTokenExpiresAt: null,
   accessTokenExpiresAt: null,
+  emailVerified: true,
   isDeleted: false,
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -158,6 +159,21 @@ describe("POST /api/auth/login", () => {
       password: "securepass123",
     });
     expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for unverified email", async () => {
+    const unverifiedTenant = { ...mockTenant, emailVerified: false };
+    mockPrisma.user.findFirst.mockResolvedValue({
+      ...mockUser,
+      tenant: unverifiedTenant,
+    });
+    const res = await makeRequest({
+      email: "admin@acme.com",
+      password: "securepass123",
+    });
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.code).toBe("EMAIL_NOT_VERIFIED");
   });
 
   it("returns 400 for missing body", async () => {

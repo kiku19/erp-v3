@@ -68,6 +68,11 @@
   --animate-sidebar-in: sidebar-slide-in var(--duration-slow) var(--ease-default);
   --animate-sidebar-out: sidebar-slide-out var(--duration-slow) var(--ease-default) forwards;
   --animate-tooltip-in: tooltip-in var(--duration-fast) var(--ease-default);
+  --animate-icon-scale-in: icon-scale-in var(--duration-slow) var(--ease-default);
+  --animate-icon-bounce-in: icon-bounce-in 600ms var(--ease-default);
+  --animate-checkmark-draw: checkmark-draw 400ms var(--ease-default) 300ms forwards;
+  --animate-step-in: step-in var(--duration-slow) var(--ease-default);
+  --animate-step-out: step-out var(--duration-slow) var(--ease-default) forwards;
   --animate-blob-drift-1: blob-drift-1 25s ease-in-out infinite;
   --animate-blob-drift-2: blob-drift-2 30s ease-in-out infinite;
   --animate-blob-drift-3: blob-drift-3 20s ease-in-out infinite;
@@ -221,6 +226,33 @@
   40% { transform: translate(-10px, 25px) scale(1.04); }
   60% { transform: translate(15px, 10px) scale(0.98); }
   80% { transform: translate(-25px, -20px) scale(1.03); }
+}
+
+@keyframes icon-scale-in {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes icon-bounce-in {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes checkmark-draw {
+  from { stroke-dashoffset: 24; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes step-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes step-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-20px); }
 }
 
 @keyframes wave-drift {

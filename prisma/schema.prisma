@@ -19,12 +19,21 @@ model Tenant {
   refreshToken           String?
   refreshTokenExpiresAt  DateTime?
   accessTokenExpiresAt   DateTime?
+  emailVerified          Boolean   @default(false)
+  companyName            String?
+  companySize            String?
+  industry               String?
+  userRole               String?
+  country                String?
+  currency               String?
+  onboardingCompleted    Boolean   @default(false)
   isDeleted              Boolean   @default(false)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
-  users           User[]
-  canvasSnapshots CanvasSnapshot[]
+  users                    User[]
+  canvasSnapshots          CanvasSnapshot[]
+  emailVerificationTokens  EmailVerificationToken[]
 
   @@index([email, isDeleted])
 }
@@ -351,4 +360,21 @@ model ActivityRelationship {
   @@index([tenantId, projectId, isDeleted])
   @@index([predecessorId, isDeleted])
   @@index([successorId, isDeleted])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  tenantId  String
+  token     String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+  isDeleted Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([token])
+  @@index([tenantId, isDeleted])
 }
