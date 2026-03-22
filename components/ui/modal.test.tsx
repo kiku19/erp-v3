@@ -122,6 +122,25 @@ describe("Modal", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog.style.width).toBe("480px");
   });
+
+  it("only closes topmost modal when Escape is pressed with nested modals", async () => {
+    const user = userEvent.setup();
+    const outerClose = vi.fn();
+    const innerClose = vi.fn();
+    render(
+      <>
+        <Modal open onClose={outerClose}>
+          <ModalBody>Outer modal</ModalBody>
+        </Modal>
+        <Modal open onClose={innerClose}>
+          <ModalBody>Inner modal</ModalBody>
+        </Modal>
+      </>,
+    );
+    await user.keyboard("{Escape}");
+    expect(innerClose).toHaveBeenCalledTimes(1);
+    expect(outerClose).not.toHaveBeenCalled();
+  });
 });
 
 describe("ModalHeader", () => {

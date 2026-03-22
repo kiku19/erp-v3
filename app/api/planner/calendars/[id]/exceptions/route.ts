@@ -7,7 +7,8 @@ const createExceptionSchema = z.object({
   name: z.string().min(1),
   date: z.string().min(1),
   endDate: z.string().optional().nullable(),
-  exceptionType: z.enum(["Holiday", "Non-Working", "Half Day"]).default("Holiday"),
+  exceptionTypeId: z.string().min(1),
+  reason: z.string().optional().nullable(),
   workHours: z.number().min(0).optional().nullable(),
 });
 
@@ -45,7 +46,17 @@ const createExceptionSchema = z.object({
  *                         type: string
  *                         nullable: true
  *                       exceptionType:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           color:
+ *                             type: string
+ *                       reason:
  *                         type: string
+ *                         nullable: true
  *                       workHours:
  *                         type: number
  *                         nullable: true
@@ -79,6 +90,7 @@ export async function GET(
 
     const exceptions = await prisma.calendarException.findMany({
       where: { calendarId: id, tenantId: auth.tenantId, isDeleted: false },
+      include: { exceptionType: true },
       orderBy: { date: "asc" },
     });
 
@@ -88,7 +100,12 @@ export async function GET(
         name: e.name,
         date: e.date.toISOString(),
         endDate: e.endDate?.toISOString() ?? null,
-        exceptionType: e.exceptionType,
+        exceptionType: {
+          id: e.exceptionType.id,
+          name: e.exceptionType.name,
+          color: e.exceptionType.color,
+        },
+        reason: e.reason,
         workHours: e.workHours,
       })),
     });
@@ -129,9 +146,11 @@ export async function GET(
  *               endDate:
  *                 type: string
  *                 nullable: true
- *               exceptionType:
+ *               exceptionTypeId:
  *                 type: string
- *                 enum: [Holiday, Non-Working, Half Day]
+ *               reason:
+ *                 type: string
+ *                 nullable: true
  *               workHours:
  *                 type: number
  *                 nullable: true
@@ -186,6 +205,17 @@ export async function POST(
       );
     }
 
+    // Verify exception type exists and belongs to tenant
+    const exType = await prisma.exceptionType.findFirst({
+      where: { id: parsed.data.exceptionTypeId, tenantId: auth.tenantId, isDeleted: false },
+    });
+    if (!exType) {
+      return NextResponse.json(
+        { message: "Exception type not found" },
+        { status: 404 },
+      );
+    }
+
     const exception = await prisma.calendarException.create({
       data: {
         tenantId: auth.tenantId,
@@ -193,7 +223,8 @@ export async function POST(
         name: parsed.data.name,
         date: new Date(parsed.data.date),
         endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
-        exceptionType: parsed.data.exceptionType,
+        exceptionTypeId: parsed.data.exceptionTypeId,
+        reason: parsed.data.reason ?? null,
         workHours: parsed.data.workHours ?? null,
       },
     });

@@ -11,12 +11,19 @@ export interface WorkDayConfig {
   endTime: string;
 }
 
+export interface ExceptionTypeData {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export interface CalendarExceptionData {
   id: string;
   name: string;
   date: string;
   endDate: string | null;
-  exceptionType: "Holiday" | "Non-Working" | "Half Day";
+  exceptionType: ExceptionTypeData;
+  reason: string | null;
   workHours: number | null;
 }
 

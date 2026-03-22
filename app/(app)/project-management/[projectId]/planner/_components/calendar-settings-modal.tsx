@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { CalendarData, WorkDayConfig } from "@/lib/planner/calendar-types";
 import { DEFAULT_WORK_DAYS } from "@/lib/planner/calendar-types";
+import { CalendarExceptionModal } from "@/components/shared/calendar-exception-modal/calendar-exception-modal";
 
 /* ─────────────────────── Props ─────────────────────────────────── */
 
@@ -22,6 +23,7 @@ interface CalendarSettingsModalProps {
   onUpdate: (calId: string, updates: Partial<CalendarData>) => void | Promise<void>;
   onDelete: (calId: string) => void | Promise<void>;
   onDeleteException: (calId: string, exceptionId: string) => void | Promise<void>;
+  onRefresh?: () => void | Promise<void>;
 }
 
 /* ─────────────────────── DuplicateCalendarModal ──────────────── */
@@ -256,6 +258,7 @@ function CalendarSettingsModal({
   onUpdate,
   onDelete,
   onDeleteException,
+  onRefresh,
 }: CalendarSettingsModalProps) {
   const [selectedCalId, setSelectedCalId] = useState<string | null>(
     calendars.length > 0 ? calendars[0].id : null,
@@ -264,6 +267,7 @@ function CalendarSettingsModal({
   const [workDays, setWorkDays] = useState<WorkDayConfig[]>(DEFAULT_WORK_DAYS);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
 
   const selectedCal = calendars.find((c) => c.id === selectedCalId) ?? null;
 
@@ -512,7 +516,12 @@ function CalendarSettingsModal({
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[13px] font-semibold text-foreground">Exceptions & Holidays</span>
-                        <Button variant="outline" size="sm" className="h-7 text-[12px]">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[12px]"
+                          onClick={() => setExceptionModalOpen(true)}
+                        >
                           <Plus size={12} />
                           Add Exception
                         </Button>
@@ -526,12 +535,12 @@ function CalendarSettingsModal({
                             <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
                               <div className={cn(
                                 "w-2 h-2 rounded-full shrink-0",
-                                ex.exceptionType === "Holiday" ? "bg-destructive" : ex.exceptionType === "Non-Working" ? "bg-warning" : "bg-info",
+                                `bg-[var(--color-${ex.exceptionType.color})]`,
                               )} />
                               <div className="flex flex-col gap-0.5 flex-1">
                                 <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
                                 <span className="text-[11px] text-muted-foreground">
-                                  {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
+                                  {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType.name}
                                 </span>
                               </div>
                               <Button
@@ -576,6 +585,19 @@ function CalendarSettingsModal({
         calendars={calendars}
         onAssign={handleSearchAssign}
       />
+
+      {/* Add Exception Modal */}
+      {selectedCal && (
+        <CalendarExceptionModal
+          open={exceptionModalOpen}
+          onClose={() => setExceptionModalOpen(false)}
+          calendarId={selectedCal.id}
+          onSave={() => {
+            setExceptionModalOpen(false);
+            onRefresh?.();
+          }}
+        />
+      )}
     </>
   );
 }

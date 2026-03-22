@@ -34,7 +34,8 @@ const HOLIDAY: CalendarExceptionData = {
   name: "New Year",
   date: "2026-01-01T00:00:00.000Z",
   endDate: null,
-  exceptionType: "Holiday",
+  exceptionType: { id: "et-1", name: "Holiday", color: "error" },
+  reason: null,
   workHours: null,
 };
 
@@ -43,7 +44,8 @@ const MULTI_DAY_HOLIDAY: CalendarExceptionData = {
   name: "Shutdown",
   date: "2026-01-05T00:00:00.000Z",
   endDate: "2026-01-07T00:00:00.000Z",
-  exceptionType: "Non-Working",
+  exceptionType: { id: "et-2", name: "Non-Working", color: "warning" },
+  reason: null,
   workHours: null,
 };
 
@@ -52,7 +54,8 @@ const HALF_DAY: CalendarExceptionData = {
   name: "Half Day Friday",
   date: "2026-01-09T00:00:00.000Z",
   endDate: null,
-  exceptionType: "Half Day",
+  exceptionType: { id: "et-3", name: "Half Day", color: "info" },
+  reason: null,
   workHours: 4,
 };
 
@@ -69,7 +72,7 @@ describe("buildExceptionSet", () => {
   it("indexes single-day exception by date string", () => {
     const set = buildExceptionSet([HOLIDAY]);
     expect(set.has("2026-01-01")).toBe(true);
-    expect(set.get("2026-01-01")?.exceptionType).toBe("Holiday");
+    expect(set.get("2026-01-01")?.exceptionTypeName).toBe("Holiday");
   });
 
   it("indexes multi-day exception for every day in range", () => {
@@ -83,7 +86,7 @@ describe("buildExceptionSet", () => {
   it("indexes half-day with workHours", () => {
     const set = buildExceptionSet([HALF_DAY]);
     const entry = set.get("2026-01-09");
-    expect(entry?.exceptionType).toBe("Half Day");
+    expect(entry?.exceptionTypeName).toBe("Half Day");
     expect(entry?.workHours).toBe(4);
   });
 });

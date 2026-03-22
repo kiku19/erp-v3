@@ -7,7 +7,8 @@ const updateExceptionSchema = z.object({
   name: z.string().min(1).optional(),
   date: z.string().optional(),
   endDate: z.string().optional().nullable(),
-  exceptionType: z.enum(["Holiday", "Non-Working", "Half Day"]).optional(),
+  exceptionTypeId: z.string().min(1).optional(),
+  reason: z.string().optional().nullable(),
   workHours: z.number().min(0).optional().nullable(),
   isDeleted: z.boolean().optional(),
 });
@@ -42,9 +43,11 @@ const updateExceptionSchema = z.object({
  *               endDate:
  *                 type: string
  *                 nullable: true
- *               exceptionType:
+ *               exceptionTypeId:
  *                 type: string
- *                 enum: [Holiday, Non-Working, Half Day]
+ *               reason:
+ *                 type: string
+ *                 nullable: true
  *               workHours:
  *                 type: number
  *                 nullable: true
@@ -112,7 +115,8 @@ export async function PATCH(
     if (parsed.data.endDate !== undefined) {
       data.endDate = parsed.data.endDate ? new Date(parsed.data.endDate) : null;
     }
-    if (parsed.data.exceptionType !== undefined) data.exceptionType = parsed.data.exceptionType;
+    if (parsed.data.exceptionTypeId !== undefined) data.exceptionTypeId = parsed.data.exceptionTypeId;
+    if (parsed.data.reason !== undefined) data.reason = parsed.data.reason;
     if (parsed.data.workHours !== undefined) data.workHours = parsed.data.workHours;
     if (parsed.data.isDeleted !== undefined) data.isDeleted = parsed.data.isDeleted;
 
