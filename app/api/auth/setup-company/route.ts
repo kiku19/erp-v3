@@ -166,6 +166,7 @@ export async function POST(request: Request): Promise<Response> {
           tenantName: tenant.tenantName,
           email: tenant.email,
           role: tenant.role,
+          onboardingCompleted: true,
         },
         user: {
           id: user.id,

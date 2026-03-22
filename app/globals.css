@@ -73,6 +73,12 @@
   --animate-checkmark-draw: checkmark-draw 400ms var(--ease-default) 300ms forwards;
   --animate-step-in: step-in var(--duration-slow) var(--ease-default);
   --animate-step-out: step-out var(--duration-slow) var(--ease-default) forwards;
+  --animate-panel-slide-in: panel-slide-in 250ms var(--ease-default);
+  --animate-panel-slide-out: panel-slide-out 200ms var(--ease-default) forwards;
+  --animate-node-enter: node-enter 200ms var(--ease-default);
+  --animate-modal-enter: modal-enter 180ms var(--ease-default);
+  --animate-pulse-attention: pulse-attention 2s ease-in-out infinite;
+  --animate-toast-slide-up: toast-slide-up 300ms var(--ease-default);
   --animate-blob-drift-1: blob-drift-1 25s ease-in-out infinite;
   --animate-blob-drift-2: blob-drift-2 30s ease-in-out infinite;
   --animate-blob-drift-3: blob-drift-3 20s ease-in-out infinite;
@@ -116,8 +122,31 @@
   --radius-lg: 12px;
   --radius-pill: 9999px;
 
+  /* Brand */
+  --color-brand: #01AF7B;
+  --color-brand-foreground: #ffffff;
+
+  /* OBS Node Type Colors */
+  --color-obs-root: #3b82f6;
+  --color-obs-root-bg: #eff6ff;
+  --color-obs-division: #0d9488;
+  --color-obs-division-bg: #f0fdfa;
+  --color-obs-department: #f59e0b;
+  --color-obs-department-bg: #fffbeb;
+  --color-obs-team: #ef4444;
+  --color-obs-team-bg: #fef2f2;
+
+  /* Canvas */
+  --color-canvas-bg: #f8f8f6;
+  --color-canvas-dot: #e0e0dc;
+  --color-connector: #d3d1c7;
+
   /* Shadows */
   --shadow-dropdown: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+  --shadow-node: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --shadow-node-hover: 0 4px 12px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-panel: -8px 0 24px -4px rgba(0, 0, 0, 0.08);
+  --shadow-modal: 0 20px 60px -12px rgba(0, 0, 0, 0.25);
 
   /* Spacing */
   --spacing-0: 0px;
@@ -259,6 +288,36 @@
   0% { transform: translateX(-80px); }
   50% { transform: translateX(80px); }
   100% { transform: translateX(-80px); }
+}
+
+@keyframes panel-slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes panel-slide-out {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes node-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modal-enter {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse-attention {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes toast-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /*

@@ -155,6 +155,7 @@ export async function POST(request: Request): Promise<Response> {
           tenantName: tenant.tenantName,
           email: tenant.email,
           role: tenant.role,
+          onboardingCompleted: tenant.onboardingCompleted,
         },
         user: {
           id: user.id,

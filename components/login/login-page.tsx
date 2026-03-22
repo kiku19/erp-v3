@@ -17,8 +17,12 @@ function LoginPage() {
     setIsLoading(true);
     setServerError("");
     try {
-      await login(data.email, data.password, data.rememberMe);
-      router.push("/dashboard");
+      const result = await login(data.email, data.password, data.rememberMe);
+      if (!result.tenant.onboardingCompleted) {
+        router.push("/onboarding");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Login failed",

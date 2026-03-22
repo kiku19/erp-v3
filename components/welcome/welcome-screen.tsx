@@ -4,6 +4,7 @@ import { Bell, ChevronDown, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Divider } from "@/components/ui/divider";
+import { Logo } from "@/components/ui/logo";
 
 const SETUP_STEPS = [
   "Organisation Structure",
@@ -32,10 +33,7 @@ function WelcomeScreen({ userName, onBeginSetup }: WelcomeScreenProps) {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-[var(--border)] px-8 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-md)] bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">O</span>
-          </div>
-          <span className="text-sm font-medium text-foreground">Dashboard</span>
+          <Logo size="sm" />
         </div>
         <div className="flex items-center gap-4">
           <Bell className="h-5 w-5 text-muted-foreground" />

@@ -14,6 +14,7 @@ interface TenantInfo {
   tenantName: string;
   email: string;
   role: string;
+  onboardingCompleted: boolean;
 }
 
 interface UserInfo {
@@ -29,7 +30,7 @@ interface AuthContextValue {
   user: UserInfo | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ tenant: TenantInfo; user: UserInfo }>;
   logout: () => Promise<void>;
   setTokens: (accessToken: string, tenant: TenantInfo, user: UserInfo) => void;
 }
@@ -78,6 +79,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(data.accessToken);
       setTenant(data.tenant);
       setUser(data.user ?? null);
+      return { tenant: data.tenant, user: data.user };
     },
     [],
   );

@@ -11,19 +11,37 @@ type FormValues = Omit<CompanySetupInput, "tenantId">;
 
 function CompanySetupPage() {
   const router = useRouter();
-  const { setTokens } = useAuth();
+  const { setTokens, tenant: authTenant, isLoading: authLoading } = useAuth();
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState("");
 
   useEffect(() => {
+    // Wait for auth context to resolve before making routing decisions
+    if (authLoading) return;
+
+    // 1. Fresh signup flow — tenantId stored in sessionStorage after email verification
     const stored = sessionStorage.getItem("onboarding_tenant_id");
-    if (!stored) {
-      router.push("/signup");
+    if (stored) {
+      setTenantId(stored);
       return;
     }
-    setTenantId(stored);
-  }, [router]);
+
+    // 2. Returning user who is authenticated but hasn't completed onboarding
+    if (authTenant?.id && !authTenant.onboardingCompleted) {
+      setTenantId(authTenant.id);
+      return;
+    }
+
+    // 3. Already onboarded — redirect to org structure (not signup)
+    if (authTenant?.onboardingCompleted) {
+      router.push("/organization-structure");
+      return;
+    }
+
+    // 4. No auth context and no sessionStorage — truly no way to proceed
+    router.push("/signup");
+  }, [router, authTenant, authLoading]);
 
   const handleSubmit = useCallback(
     async (data: FormValues) => {
@@ -47,7 +65,7 @@ function CompanySetupPage() {
 
         sessionStorage.removeItem("onboarding_tenant_id");
         setTokens(json.accessToken, json.tenant, json.user);
-        router.push("/welcome");
+        router.push("/organization-structure");
       } catch {
         setServerError("Network error. Please try again.");
       } finally {

@@ -773,9 +773,36 @@ export default function ProjectPlannerPage() {
       <CalendarSettingsModal
         open={calendarSettingsOpen}
         onClose={() => setCalendarSettingsOpen(false)}
-        projectId={projectId}
         calendars={[]}
-        onCalendarChange={() => {}}
+        categories={["global", "project", "resource"]}
+        onCreate={async (cal) => {
+          await fetch("/api/planner/calendars", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...cal, projectId }),
+          });
+        }}
+        onUpdate={async (calId, updates) => {
+          await fetch(`/api/planner/calendars/${calId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updates),
+          });
+        }}
+        onDelete={async (calId) => {
+          await fetch(`/api/planner/calendars/${calId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isDeleted: true }),
+          });
+        }}
+        onDeleteException={async (calId, exceptionId) => {
+          await fetch(`/api/planner/calendars/${calId}/exceptions/${exceptionId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ isDeleted: true }),
+          });
+        }}
       />
 
       {/* OBS modal */}

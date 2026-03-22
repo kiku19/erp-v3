@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Hexagon, CircleCheck } from "lucide-react";
+import { CircleCheck } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Logo } from "@/components/ui/logo";
 import { BlobBackground } from "@/components/login/blob-background";
 
 const FEATURES = [
@@ -24,12 +25,7 @@ function AuthLayout({ children }: AuthLayoutProps) {
 
         <div className="relative z-10 flex flex-col justify-between h-full p-12">
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <Hexagon className="h-8 w-8 text-primary-foreground" />
-            <span className="text-[22px] font-semibold text-primary-foreground">
-              Acme ERP
-            </span>
-          </div>
+          <Logo size="lg" variant="light" />
 
           {/* Hero Content */}
           <div className="flex flex-col gap-6">
@@ -77,11 +73,8 @@ function AuthLayout({ children }: AuthLayoutProps) {
         <BlobBackground variant="light" />
 
         {/* Mobile Logo */}
-        <div className="relative z-10 flex items-center gap-2.5 mb-8 lg:hidden">
-          <Hexagon className="h-8 w-8 text-foreground" />
-          <span className="text-[22px] font-semibold text-foreground">
-            Acme ERP
-          </span>
+        <div className="relative z-10 mb-8 lg:hidden">
+          <Logo size="lg" variant="dark" />
         </div>
 
         {/* Glassmorphic Card */}

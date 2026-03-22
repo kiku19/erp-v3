@@ -29,6 +29,18 @@ const createCalendarSchema = z.object({
  *         required: false
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: search
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Filter calendars by name (case-insensitive contains)
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *         description: Maximum number of calendars to return
  *     responses:
  *       200:
  *         description: Calendars listed successfully
@@ -66,6 +78,9 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const projectId = searchParams.get("projectId");
+  const search = searchParams.get("search");
+  const limitParam = searchParams.get("limit");
+  const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : undefined;
 
   try {
     const calendars = await prisma.calendar.findMany({
@@ -75,6 +90,9 @@ export async function GET(request: NextRequest) {
         ...(projectId
           ? { OR: [{ projectId: null }, { projectId }] }
           : {}),
+        ...(search
+          ? { name: { contains: search, mode: "insensitive" as const } }
+          : {}),
       },
       include: {
         exceptions: {
@@ -82,7 +100,8 @@ export async function GET(request: NextRequest) {
           orderBy: { date: "asc" },
         },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
+      ...(limit ? { take: limit } : {}),
     });
 
     return NextResponse.json({

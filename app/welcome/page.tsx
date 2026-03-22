@@ -20,7 +20,7 @@ export default function Welcome() {
   return (
     <WelcomeScreen
       userName={user.name}
-      onBeginSetup={() => router.push("/dashboard")}
+      onBeginSetup={() => router.push("/organization-structure")}
     />
   );
 }

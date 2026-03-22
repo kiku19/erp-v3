@@ -48,4 +48,14 @@ const DEFAULT_CALENDAR: CalendarData = {
   exceptions: [],
 };
 
-export { DEFAULT_CALENDAR, DEFAULT_WORK_DAYS, DAY_NAMES };
+/** Convert legacy number[] working days to WorkDayConfig[]. */
+function numberDaysToWorkDayConfig(days: number[], hoursPerDay: number): WorkDayConfig[] {
+  return DAY_NAMES.map((day, idx) => ({
+    day,
+    working: days.includes(idx),
+    startTime: "09:00",
+    endTime: `${String(9 + hoursPerDay).padStart(2, "0")}:00`,
+  }));
+}
+
+export { DEFAULT_CALENDAR, DEFAULT_WORK_DAYS, DAY_NAMES, numberDaysToWorkDayConfig };
