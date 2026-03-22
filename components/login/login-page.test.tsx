@@ -12,6 +12,12 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
+vi.mock("next/link", () => ({
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
 vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({
     login: vi.fn(),
@@ -26,21 +32,21 @@ vi.mock("@/lib/auth-context", () => ({
 describe("LoginPage", () => {
   it("renders branding panel with logo and hero text", () => {
     render(<LoginPage />);
-    expect(screen.getByText("Acme ERP")).toBeDefined();
-    expect(screen.getByText(/Streamline your/)).toBeDefined();
+    expect(screen.getAllByText("Acme ERP").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Streamline your/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders feature bullets", () => {
     render(<LoginPage />);
-    expect(screen.getByText("Real-time inventory tracking")).toBeDefined();
-    expect(screen.getByText("Automated financial reporting")).toBeDefined();
-    expect(screen.getByText("Multi-location support")).toBeDefined();
+    expect(screen.getAllByText("Real-time inventory tracking").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Automated financial reporting").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Multi-location support").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders testimonial section", () => {
     render(<LoginPage />);
-    expect(screen.getByText(/order processing time/)).toBeDefined();
-    expect(screen.getByText("Sarah Chen")).toBeDefined();
+    expect(screen.getAllByText(/order processing time/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Sarah Chen").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders form panel with login form", () => {

@@ -75,6 +75,37 @@ describe("GET /api/planner/calendars", () => {
     expect(body.calendars).toHaveLength(1);
     expect(body.calendars[0].name).toBe("Standard");
   });
+
+  it("passes search filter to prisma when search param provided", async () => {
+    mockPrisma.calendar.findMany.mockResolvedValue([]);
+
+    await makeGetRequest("?search=team");
+    expect(mockPrisma.calendar.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          name: { contains: "team", mode: "insensitive" },
+        }),
+      }),
+    );
+  });
+
+  it("passes take limit to prisma when limit param provided", async () => {
+    mockPrisma.calendar.findMany.mockResolvedValue([]);
+
+    await makeGetRequest("?limit=3");
+    expect(mockPrisma.calendar.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 3 }),
+    );
+  });
+
+  it("clamps limit to 100 max", async () => {
+    mockPrisma.calendar.findMany.mockResolvedValue([]);
+
+    await makeGetRequest("?limit=500");
+    expect(mockPrisma.calendar.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ take: 100 }),
+    );
+  });
 });
 
 describe("POST /api/planner/calendars", () => {

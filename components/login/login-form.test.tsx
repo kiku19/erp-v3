@@ -5,6 +5,12 @@ import { LoginForm } from "./login-form";
 
 afterEach(cleanup);
 
+vi.mock("next/link", () => ({
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
 describe("LoginForm", () => {
   it("renders email input, password input, remember me checkbox, and sign in button", () => {
     render(<LoginForm onSubmit={vi.fn()} />);

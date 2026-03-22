@@ -9,6 +9,7 @@ import {
   Users,
   BarChart3,
   FolderKanban,
+  Building2,
   Settings,
   LogOut,
   Hexagon,
@@ -136,6 +137,14 @@ export default function DashboardLayout({
               label="Project Management"
               active={pathname.startsWith("/project-management")}
               href="/project-management"
+            />
+          </Tooltip>
+          <Tooltip content="Organization Structure" side="right">
+            <NavItem
+              icon={<Building2 />}
+              label="Organization Structure"
+              active={pathname.startsWith("/organization-structure")}
+              href="/organization-structure"
             />
           </Tooltip>
           <NavSectionTitle>System</NavSectionTitle>
