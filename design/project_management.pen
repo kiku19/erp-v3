@@ -6879,7 +6879,7 @@
                           "type": "frame",
                           "id": "btEuA",
                           "name": "EPS Panel",
-                          "width": 9.999840001279993e-193,
+                          "width": 9.99992000032e-97,
                           "height": 571,
                           "fill": "$--card",
                           "stroke": {
@@ -24412,8 +24412,8 @@
                                           "type": "frame",
                                           "id": "bNXlX",
                                           "name": "legLine",
-                                          "width": 16.000000000000004,
-                                          "height": 2.0000000000000004,
+                                          "width": 16.000000000000018,
+                                          "height": 2,
                                           "fill": "$--color-error",
                                           "alignItems": "center"
                                         },
@@ -24424,8 +24424,8 @@
                                           "name": "legAH",
                                           "rotation": -449.99999999999994,
                                           "fill": "$--color-error",
-                                          "width": 5.000000000000017,
-                                          "height": 5.000000000000024
+                                          "width": 5.000000000000035,
+                                          "height": 5.00000000000004
                                         }
                                       ]
                                     },
@@ -47711,8 +47711,8 @@
     {
       "type": "group",
       "id": "jiIda",
-      "x": -8973,
-      "y": 1124,
+      "x": -14528,
+      "y": 2137,
       "name": "OBS",
       "children": [
         {
@@ -49917,7 +49917,7 @@
                   "id": "FWrfD",
                   "name": "Modal Body",
                   "width": "fill_container",
-                  "height": 660,
+                  "height": 736,
                   "children": [
                     {
                       "type": "frame",
@@ -50471,6 +50471,27 @@
                       "padding": 20,
                       "children": [
                         {
+                          "id": "qSLN8",
+                          "type": "ref",
+                          "ref": "y4mlz",
+                          "width": "fill_container",
+                          "name": "nameField",
+                          "x": 20,
+                          "y": 20,
+                          "descendants": {
+                            "kWbMm": {
+                              "content": "Exception Name"
+                            },
+                            "lHZBD": {
+                              "width": "fill_container"
+                            },
+                            "eh2bk": {
+                              "width": "fill_container",
+                              "content": "Enter exception name"
+                            }
+                          }
+                        },
+                        {
                           "type": "frame",
                           "id": "kATyx",
                           "name": "Exception Type Section",
@@ -50612,6 +50633,23 @@
                                       "fontWeight": "500"
                                     }
                                   ]
+                                },
+                                {
+                                  "id": "GYugb",
+                                  "type": "ref",
+                                  "ref": "ExY4u",
+                                  "height": 32,
+                                  "width": 32,
+                                  "name": "addBtn",
+                                  "x": 387.99999999999994,
+                                  "y": 0,
+                                  "descendants": {
+                                    "5pSBZ": {
+                                      "iconFontName": "plus",
+                                      "width": 14,
+                                      "height": 14
+                                    }
+                                  }
                                 }
                               ]
                             }
@@ -50669,7 +50707,7 @@
                                   "id": "c4LmB",
                                   "name": "dateInputText",
                                   "fill": "$--muted-foreground",
-                                  "content": "DD / MM / YYYY",
+                                  "content": "15 / 03 / 2026",
                                   "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -51929,21 +51967,11 @@
                       "alignItems": "center",
                       "children": [
                         {
-                          "type": "icon_font",
-                          "id": "b70vP",
-                          "name": "addIcon",
-                          "width": 14,
-                          "height": 14,
-                          "iconFontName": "plus",
-                          "iconFontFamily": "lucide",
-                          "fill": "$--primary-foreground"
-                        },
-                        {
                           "type": "text",
                           "id": "gHKlL",
                           "name": "addText",
                           "fill": "$--primary-foreground",
-                          "content": "Add Exception",
+                          "content": "Save Exception",
                           "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "500"

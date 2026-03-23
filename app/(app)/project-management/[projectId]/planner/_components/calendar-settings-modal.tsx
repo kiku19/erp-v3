@@ -535,12 +535,12 @@ function CalendarSettingsModal({
                             <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
                               <div className={cn(
                                 "w-2 h-2 rounded-full shrink-0",
-                                `bg-[var(--color-${ex.exceptionType.color})]`,
+                                ex.exceptionType === "Holiday" ? "bg-[var(--color-error)]" : ex.exceptionType === "Non-Working" ? "bg-[var(--color-warning)]" : "bg-[var(--color-info)]",
                               )} />
                               <div className="flex flex-col gap-0.5 flex-1">
                                 <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
                                 <span className="text-[11px] text-muted-foreground">
-                                  {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType.name}
+                                  {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
                                 </span>
                               </div>
                               <Button

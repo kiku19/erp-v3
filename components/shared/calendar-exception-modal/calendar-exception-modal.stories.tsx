@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { CalendarExceptionModal } from "./calendar-exception-modal";
-import type { CalendarExceptionData, ExceptionTypeData } from "@/lib/planner/calendar-types";
+import type { CalendarExceptionData } from "@/lib/planner/calendar-types";
 
 const meta: Meta<typeof CalendarExceptionModal> = {
   title: "Shared/CalendarExceptionModal",
@@ -11,19 +11,15 @@ const meta: Meta<typeof CalendarExceptionModal> = {
 export default meta;
 type Story = StoryObj<typeof CalendarExceptionModal>;
 
-const MOCK_TYPES: ExceptionTypeData[] = [
-  { id: "et-1", name: "Holiday", color: "error" },
-  { id: "et-2", name: "Non-Working", color: "warning" },
-  { id: "et-3", name: "Half Day", color: "info" },
-];
-
 const MOCK_EXCEPTIONS: CalendarExceptionData[] = [
   {
     id: "ex-1",
     name: "New Year's Day",
     date: "2026-01-01T00:00:00.000Z",
     endDate: null,
-    exceptionType: MOCK_TYPES[0],
+    exceptionType: "Holiday",
+    startTime: null,
+    endTime: null,
     reason: "National holiday",
     workHours: null,
   },
@@ -32,7 +28,9 @@ const MOCK_EXCEPTIONS: CalendarExceptionData[] = [
     name: "Republic Day",
     date: "2026-01-26T00:00:00.000Z",
     endDate: null,
-    exceptionType: MOCK_TYPES[0],
+    exceptionType: "Holiday",
+    startTime: null,
+    endTime: null,
     reason: null,
     workHours: null,
   },
@@ -41,26 +39,10 @@ const MOCK_EXCEPTIONS: CalendarExceptionData[] = [
     name: "Shutdown Period",
     date: "2026-04-15T00:00:00.000Z",
     endDate: "2026-04-20T00:00:00.000Z",
-    exceptionType: MOCK_TYPES[1],
-    reason: "Annual maintenance shutdown",
-    workHours: null,
-  },
-  {
-    id: "ex-4",
-    name: "Independence Day",
-    date: "2026-08-15T00:00:00.000Z",
-    endDate: null,
-    exceptionType: MOCK_TYPES[0],
-    reason: null,
-    workHours: null,
-  },
-  {
-    id: "ex-5",
-    name: "Gandhi Jayanti",
-    date: "2026-10-02T00:00:00.000Z",
-    endDate: null,
-    exceptionType: MOCK_TYPES[0],
-    reason: null,
+    exceptionType: "Non-Working",
+    startTime: null,
+    endTime: null,
+    reason: "Annual maintenance",
     workHours: null,
   },
 ];
@@ -77,7 +59,6 @@ function Interactive() {
         onClose={() => setOpen(false)}
         calendarId="cal-demo"
         exceptions={MOCK_EXCEPTIONS}
-        exceptionTypes={MOCK_TYPES}
         onSave={() => {}}
       />
     </>
@@ -100,7 +81,6 @@ function EmptyState() {
         onClose={() => setOpen(false)}
         calendarId="cal-demo"
         exceptions={[]}
-        exceptionTypes={MOCK_TYPES}
         onSave={() => {}}
       />
     </>

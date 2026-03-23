@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { CalendarPlus, X, Trash2, CalendarCheck, Calendar, Plus } from "lucide-react";
+import { CalendarPlus, X, Trash2, Calendar } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { CalendarExceptionData, ExceptionTypeData } from "@/lib/planner/calendar-types";
+import type { CalendarExceptionData, ExceptionType } from "@/lib/planner/calendar-types";
 import { useCalendarExceptions } from "./use-calendar-exceptions";
 import { MiniCalendar } from "./mini-calendar";
-import { AddExceptionTypeModal } from "./add-exception-type-modal";
 
 /* ─────────────────────── Helpers ──────────────────────── */
 
@@ -32,16 +31,6 @@ function parseDateDD_MM_YYYY(input: string): Date | null {
   return new Date(Date.UTC(y, m, d));
 }
 
-function formatDisplayDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 function formatExceptionDate(dateStr: string): string {
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-GB", {
@@ -52,42 +41,18 @@ function formatExceptionDate(dateStr: string): string {
   });
 }
 
-/* ─────────────────────── Color helpers ──────────────────────── */
+/* ─────────────────────── Constants ──────────────────────── */
 
-const COLOR_BG_MAP: Record<string, string> = {
-  error: "bg-[var(--color-error-bg)]",
-  warning: "bg-[var(--color-warning-bg)]",
-  info: "bg-[var(--color-info-bg)]",
-  success: "bg-[var(--color-success-bg)]",
-  primary: "bg-primary/10",
-  accent: "bg-accent/10",
-};
+const EXCEPTION_TYPES: { value: ExceptionType; label: string; dotClass: string; activeBg: string; activeBorder: string; activeText: string }[] = [
+  { value: "Holiday", label: "Holiday", dotClass: "bg-[var(--color-error)]", activeBg: "bg-[var(--color-error-bg)]", activeBorder: "border-[var(--color-error)]", activeText: "text-[var(--color-error-foreground)]" },
+  { value: "Non-Working", label: "Non-Working", dotClass: "bg-[var(--color-warning)]", activeBg: "bg-[var(--color-warning-bg)]", activeBorder: "border-[var(--color-warning)]", activeText: "text-[var(--color-warning-foreground)]" },
+  { value: "Misc", label: "Misc", dotClass: "bg-[var(--color-info)]", activeBg: "bg-[var(--color-info-bg)]", activeBorder: "border-[var(--color-info)]", activeText: "text-[var(--color-info-foreground)]" },
+];
 
-const COLOR_DOT_MAP: Record<string, string> = {
-  error: "bg-[var(--color-error)]",
-  warning: "bg-[var(--color-warning)]",
-  info: "bg-[var(--color-info)]",
-  success: "bg-[var(--color-success)]",
-  primary: "bg-primary",
-  accent: "bg-accent",
-};
-
-const COLOR_BORDER_MAP: Record<string, string> = {
-  error: "border-[var(--color-error)]",
-  warning: "border-[var(--color-warning)]",
-  info: "border-[var(--color-info)]",
-  success: "border-[var(--color-success)]",
-  primary: "border-primary",
-  accent: "border-accent",
-};
-
-const COLOR_TEXT_MAP: Record<string, string> = {
-  error: "text-[var(--color-error-foreground)]",
-  warning: "text-[var(--color-warning-foreground)]",
-  info: "text-[var(--color-info-foreground)]",
-  success: "text-[var(--color-success-foreground)]",
-  primary: "text-primary",
-  accent: "text-accent-foreground",
+const DOT_CLASS_MAP: Record<string, string> = {
+  Holiday: "bg-[var(--color-error)]",
+  "Non-Working": "bg-[var(--color-warning)]",
+  Misc: "bg-[var(--color-info)]",
 };
 
 /* ─────────────────────── Props ─────────────────────────── */
@@ -97,7 +62,6 @@ interface CalendarExceptionModalProps {
   onClose: () => void;
   calendarId: string;
   exceptions?: CalendarExceptionData[];
-  exceptionTypes?: ExceptionTypeData[];
   onSave?: () => void;
 }
 
@@ -108,29 +72,26 @@ function CalendarExceptionModal({
   onClose,
   calendarId,
   exceptions: externalExceptions,
-  exceptionTypes: externalExceptionTypes,
   onSave,
 }: CalendarExceptionModalProps) {
   const {
     exceptions,
-    exceptionTypes,
     isLoading,
     createException,
     deleteException,
-    createExceptionType,
-    deleteExceptionType,
   } = useCalendarExceptions({
     calendarId,
     externalExceptions,
-    externalExceptionTypes,
     onSave,
   });
 
   // Form state
   const [name, setName] = useState("");
-  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<ExceptionType>("Holiday");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [dateInput, setDateInput] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [reason, setReason] = useState("");
   const [selectedExceptionId, setSelectedExceptionId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -139,21 +100,13 @@ function CalendarExceptionModal({
   const [deleteTarget, setDeleteTarget] = useState<CalendarExceptionData | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Add exception type modal
-  const [showAddType, setShowAddType] = useState(false);
-
-  // Delete exception type state
-  const [deleteTypeTarget, setDeleteTypeTarget] = useState<ExceptionTypeData | null>(null);
-  const [isDeletingType, setIsDeletingType] = useState(false);
-
-  // Auto-select first type when types load
-  const activeTypeId = selectedTypeId ?? exceptionTypes[0]?.id ?? null;
-
   const resetForm = useCallback(() => {
     setName("");
-    setSelectedTypeId(null);
+    setSelectedType("Holiday");
     setSelectedDate(null);
     setDateInput("");
+    setStartTime("");
+    setEndTime("");
     setReason("");
     setSelectedExceptionId(null);
   }, []);
@@ -162,10 +115,12 @@ function CalendarExceptionModal({
   const handleSelectException = useCallback((ex: CalendarExceptionData) => {
     setSelectedExceptionId(ex.id);
     setName(ex.name);
-    setSelectedTypeId(ex.exceptionType.id);
+    setSelectedType(ex.exceptionType);
     const date = new Date(ex.date);
     setSelectedDate(date);
     setDateInput(formatDateDD_MM_YYYY(date));
+    setStartTime(ex.startTime ?? "");
+    setEndTime(ex.endTime ?? "");
     setReason(ex.reason ?? "");
   }, []);
 
@@ -186,18 +141,19 @@ function CalendarExceptionModal({
 
   // Save exception
   const handleSave = useCallback(async () => {
-    if (!name.trim() || !selectedDate || !activeTypeId) return;
+    if (!name.trim() || !selectedDate) return;
     setIsSubmitting(true);
     const success = await createException({
       name: name.trim(),
       date: selectedDate.toISOString(),
-      exceptionTypeId: activeTypeId,
+      exceptionType: selectedType,
+      startTime: startTime || null,
+      endTime: endTime || null,
       reason: reason.trim() || undefined,
-      workHours: exceptionTypes.find((t) => t.id === activeTypeId)?.name === "Half Day" ? 4 : null,
     });
     if (success) resetForm();
     setIsSubmitting(false);
-  }, [name, selectedDate, activeTypeId, reason, exceptionTypes, createException, resetForm]);
+  }, [name, selectedDate, selectedType, startTime, endTime, reason, createException, resetForm]);
 
   // Delete exception
   const handleConfirmDelete = useCallback(async () => {
@@ -210,30 +166,6 @@ function CalendarExceptionModal({
       resetForm();
     }
   }, [deleteTarget, deleteException, selectedExceptionId, resetForm]);
-
-  // Handle new type created
-  const handleCreateType = useCallback(async (data: { name: string; color: string }) => {
-    const result = await createExceptionType(data);
-    if (result) {
-      setSelectedTypeId(result.id);
-      setShowAddType(false);
-    }
-  }, [createExceptionType]);
-
-  // Handle exception type delete confirmation
-  const handleConfirmDeleteType = useCallback(async () => {
-    if (!deleteTypeTarget) return;
-    setIsDeletingType(true);
-    await deleteExceptionType(deleteTypeTarget.id);
-    setIsDeletingType(false);
-    setDeleteTypeTarget(null);
-    // If deleted type was selected, reset to first available
-    if (selectedTypeId === deleteTypeTarget.id) {
-      setSelectedTypeId(null);
-    }
-  }, [deleteTypeTarget, deleteExceptionType, selectedTypeId]);
-
-  const displayDate = selectedDate ? formatDisplayDate(selectedDate) : null;
 
   return (
     <>
@@ -254,7 +186,7 @@ function CalendarExceptionModal({
           </div>
 
           {/* Body */}
-          <div className="flex" style={{ height: 736 }}>
+          <div className="flex" style={{ height: 660 }}>
             {/* Left Panel — Exception List */}
             <div className="w-[320px] border-r border-border flex flex-col shrink-0">
               <div className="flex items-center justify-between h-11 px-5 border-b border-border">
@@ -287,12 +219,12 @@ function CalendarExceptionModal({
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "w-2 h-2 rounded-full shrink-0",
-                          COLOR_DOT_MAP[ex.exceptionType.color] ?? "bg-muted-foreground",
+                          DOT_CLASS_MAP[ex.exceptionType] ?? "bg-muted-foreground",
                         )} />
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[13px] font-medium text-foreground">{ex.name}</span>
                           <span className="text-[11px] text-muted-foreground">
-                            {formatExceptionDate(ex.date)} — {ex.exceptionType.name}
+                            {formatExceptionDate(ex.date)} — {ex.exceptionType}
                           </span>
                         </div>
                       </div>
@@ -329,48 +261,21 @@ function CalendarExceptionModal({
               <div className="flex flex-col gap-2">
                 <span className="text-[12px] font-semibold text-foreground">Exception Type</span>
                 <div className="flex items-center gap-2">
-                  {exceptionTypes.map((t) => (
-                    <div key={t.id} className="relative group">
-                      <button
-                        onClick={() => setSelectedTypeId(t.id)}
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[12px] font-medium cursor-pointer transition-colors duration-[var(--duration-fast)] border",
-                          activeTypeId === t.id
-                            ? cn(
-                                COLOR_BG_MAP[t.color] ?? "bg-muted",
-                                COLOR_BORDER_MAP[t.color] ?? "border-border",
-                                COLOR_TEXT_MAP[t.color] ?? "text-foreground",
-                              )
-                            : "border-border text-muted-foreground hover:bg-muted-hover",
-                        )}
-                      >
-                        <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          COLOR_DOT_MAP[t.color] ?? "bg-muted-foreground",
-                        )} />
-                        {t.name}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteTypeTarget(t);
-                        }}
-                        className="absolute -top-1.5 -right-1.5 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-destructive text-destructive-foreground cursor-pointer"
-                        aria-label={`Delete type ${t.name}`}
-                      >
-                        <X size={10} />
-                      </button>
-                    </div>
+                  {EXCEPTION_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => setSelectedType(t.value)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[12px] font-medium cursor-pointer transition-colors duration-[var(--duration-fast)] border",
+                        selectedType === t.value
+                          ? cn(t.activeBg, t.activeBorder, t.activeText)
+                          : "border-border text-muted-foreground hover:bg-muted-hover",
+                      )}
+                    >
+                      <div className={cn("w-2 h-2 rounded-full", t.dotClass)} />
+                      {t.label}
+                    </button>
                   ))}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setShowAddType(true)}
-                    aria-label="Add exception type"
-                  >
-                    <Plus size={14} />
-                  </Button>
                 </div>
               </div>
 
@@ -399,6 +304,28 @@ function CalendarExceptionModal({
               {/* Calendar */}
               <MiniCalendar selectedDate={selectedDate} onSelect={handleCalendarSelect} />
 
+              {/* Time */}
+              <div className="flex gap-3">
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <span className="text-[12px] font-semibold text-foreground">Start Time</span>
+                  <Input
+                    type="time"
+                    className="h-9 text-[12px]"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                  />
+                </div>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <span className="text-[12px] font-semibold text-foreground">End Time</span>
+                  <Input
+                    type="time"
+                    className="h-9 text-[12px]"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
               {/* Reason / Description */}
               <div className="flex flex-col gap-1.5">
                 <span className="text-[12px] font-semibold text-foreground">Reason / Description</span>
@@ -409,16 +336,6 @@ function CalendarExceptionModal({
                   onChange={(e) => setReason(e.target.value)}
                 />
               </div>
-
-              {/* Selected Date Info */}
-              {displayDate && (
-                <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2">
-                  <CalendarCheck size={14} className="text-accent-foreground shrink-0" />
-                  <span className="text-[11px] font-medium text-foreground">
-                    Selected: {displayDate}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -429,7 +346,7 @@ function CalendarExceptionModal({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!name.trim() || !selectedDate || !activeTypeId || isSubmitting}
+              disabled={!name.trim() || !selectedDate || isSubmitting}
             >
               Save Exception
             </Button>
@@ -461,38 +378,6 @@ function CalendarExceptionModal({
           </div>
         </div>
       </Modal>
-
-      {/* Delete Exception Type Confirmation */}
-      <Modal open={!!deleteTypeTarget} onClose={() => setDeleteTypeTarget(null)} width={400}>
-        <div className="flex flex-col">
-          <div className="px-6 py-5">
-            <h2 className="text-base font-semibold text-foreground">Delete Exception Type</h2>
-            <p className="mt-2 text-[13px] text-muted-foreground">
-              Are you sure you want to delete the &quot;{deleteTypeTarget?.name}&quot; exception type? Existing exceptions using this type will not be affected.
-            </p>
-          </div>
-          <div className="h-px bg-border" />
-          <div className="flex items-center justify-end gap-2 px-6 py-4">
-            <Button variant="outline" onClick={() => setDeleteTypeTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmDeleteType}
-              disabled={isDeletingType}
-            >
-              Delete
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Add Exception Type Modal */}
-      <AddExceptionTypeModal
-        open={showAddType}
-        onClose={() => setShowAddType(false)}
-        onSave={handleCreateType}
-      />
     </>
   );
 }

@@ -1,14 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState, useRef } from "react";
 import { CalendarSettingsModal } from "./calendar-settings-modal";
-import type { CalendarData, CalendarExceptionData, ExceptionTypeData } from "@/lib/planner/calendar-types";
+import type { CalendarData, CalendarExceptionData } from "@/lib/planner/calendar-types";
 import { DEFAULT_WORK_DAYS } from "@/lib/planner/calendar-types";
-
-const MOCK_TYPES: ExceptionTypeData[] = [
-  { id: "et-1", name: "Holiday", color: "error" },
-  { id: "et-2", name: "Non-Working", color: "warning" },
-  { id: "et-3", name: "Half Day", color: "info" },
-];
 
 const MOCK_EXCEPTIONS: CalendarExceptionData[] = [
   {
@@ -16,7 +10,9 @@ const MOCK_EXCEPTIONS: CalendarExceptionData[] = [
     name: "New Year's Day",
     date: "2026-01-01T00:00:00.000Z",
     endDate: null,
-    exceptionType: MOCK_TYPES[0],
+    exceptionType: "Holiday",
+    startTime: null,
+    endTime: null,
     reason: "National holiday",
     workHours: null,
   },
@@ -25,7 +21,9 @@ const MOCK_EXCEPTIONS: CalendarExceptionData[] = [
     name: "Republic Day",
     date: "2026-01-26T00:00:00.000Z",
     endDate: null,
-    exceptionType: MOCK_TYPES[0],
+    exceptionType: "Holiday",
+    startTime: null,
+    endTime: null,
     reason: null,
     workHours: null,
   },
@@ -52,36 +50,14 @@ const MOCK_CALENDARS: CalendarData[] = [
   },
 ];
 
-/** Install mock fetch at module scope so it's ready before any component mounts */
 const originalFetch = window.fetch;
 let mockNextId = 100;
-let mockExceptionTypes = [...MOCK_TYPES];
 
 function installMockFetch(calendarsRef: { current: CalendarData[] }) {
-  mockExceptionTypes = [...MOCK_TYPES];
   mockNextId = 100;
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
-
-    // GET exception types
-    if (url.includes("/api/planner/exception-types") && (!init || !init.method || init.method === "GET")) {
-      return new Response(JSON.stringify({ exceptionTypes: mockExceptionTypes }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // POST exception type
-    if (url.includes("/api/planner/exception-types") && init?.method === "POST") {
-      const body = JSON.parse(init.body as string);
-      const newType = { id: `et-new-${mockNextId++}`, name: body.name, color: body.color };
-      mockExceptionTypes.push(newType);
-      return new Response(JSON.stringify(newType), {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
 
     // GET exceptions for a calendar
     if (url.match(/\/api\/planner\/calendars\/[^/]+\/exceptions$/) && (!init || !init.method || init.method === "GET")) {
@@ -109,21 +85,10 @@ function installMockFetch(calendarsRef: { current: CalendarData[] }) {
       );
     }
 
-    // PATCH exception type (soft delete)
-    if (url.match(/\/api\/planner\/exception-types\/[^/]+$/) && init?.method === "PATCH") {
-      const typeId = url.split("/exception-types/")[1];
-      mockExceptionTypes = mockExceptionTypes.filter((t) => t.id !== typeId);
-      return new Response(
-        JSON.stringify({ id: typeId, name: "deleted", color: "error" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
     // Calendar search
     if (url.includes("/api/planner/calendars?search=")) {
       return new Response(JSON.stringify({ calendars: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
+        status: 200, headers: { "Content-Type": "application/json" },
       });
     }
 
@@ -136,7 +101,6 @@ const meta: Meta<typeof CalendarSettingsModal> = {
   component: CalendarSettingsModal,
   decorators: [
     (Story) => {
-      // Ensure mock is installed before any child mounts
       const calendarsRef = useRef(MOCK_CALENDARS);
       installMockFetch(calendarsRef);
       return <Story />;

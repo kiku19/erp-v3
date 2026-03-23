@@ -7,7 +7,9 @@ const createExceptionSchema = z.object({
   name: z.string().min(1),
   date: z.string().min(1),
   endDate: z.string().optional().nullable(),
-  exceptionTypeId: z.string().min(1),
+  exceptionType: z.enum(["Holiday", "Non-Working", "Misc"]).default("Holiday"),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
   reason: z.string().optional().nullable(),
   workHours: z.number().min(0).optional().nullable(),
 });
@@ -46,14 +48,14 @@ const createExceptionSchema = z.object({
  *                         type: string
  *                         nullable: true
  *                       exceptionType:
- *                         type: object
- *                         properties:
- *                           id:
- *                             type: string
- *                           name:
- *                             type: string
- *                           color:
- *                             type: string
+ *                         type: string
+ *                         enum: [Holiday, Non-Working, Misc]
+ *                       startTime:
+ *                         type: string
+ *                         nullable: true
+ *                       endTime:
+ *                         type: string
+ *                         nullable: true
  *                       reason:
  *                         type: string
  *                         nullable: true
@@ -77,7 +79,6 @@ export async function GET(
   const { id } = await params;
 
   try {
-    // Verify calendar exists
     const calendar = await prisma.calendar.findFirst({
       where: { id, tenantId: auth.tenantId, isDeleted: false },
     });
@@ -90,7 +91,6 @@ export async function GET(
 
     const exceptions = await prisma.calendarException.findMany({
       where: { calendarId: id, tenantId: auth.tenantId, isDeleted: false },
-      include: { exceptionType: true },
       orderBy: { date: "asc" },
     });
 
@@ -100,11 +100,9 @@ export async function GET(
         name: e.name,
         date: e.date.toISOString(),
         endDate: e.endDate?.toISOString() ?? null,
-        exceptionType: {
-          id: e.exceptionType.id,
-          name: e.exceptionType.name,
-          color: e.exceptionType.color,
-        },
+        exceptionType: e.exceptionType,
+        startTime: e.startTime,
+        endTime: e.endTime,
         reason: e.reason,
         workHours: e.workHours,
       })),
@@ -146,8 +144,15 @@ export async function GET(
  *               endDate:
  *                 type: string
  *                 nullable: true
- *               exceptionTypeId:
+ *               exceptionType:
  *                 type: string
+ *                 enum: [Holiday, Non-Working, Misc]
+ *               startTime:
+ *                 type: string
+ *                 nullable: true
+ *               endTime:
+ *                 type: string
+ *                 nullable: true
  *               reason:
  *                 type: string
  *                 nullable: true
@@ -194,24 +199,12 @@ export async function POST(
       );
     }
 
-    // Verify calendar exists
     const calendar = await prisma.calendar.findFirst({
       where: { id, tenantId: auth.tenantId, isDeleted: false },
     });
     if (!calendar) {
       return NextResponse.json(
         { message: "Calendar not found" },
-        { status: 404 },
-      );
-    }
-
-    // Verify exception type exists and belongs to tenant
-    const exType = await prisma.exceptionType.findFirst({
-      where: { id: parsed.data.exceptionTypeId, tenantId: auth.tenantId, isDeleted: false },
-    });
-    if (!exType) {
-      return NextResponse.json(
-        { message: "Exception type not found" },
         { status: 404 },
       );
     }
@@ -223,7 +216,9 @@ export async function POST(
         name: parsed.data.name,
         date: new Date(parsed.data.date),
         endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
-        exceptionTypeId: parsed.data.exceptionTypeId,
+        exceptionType: parsed.data.exceptionType,
+        startTime: parsed.data.startTime ?? null,
+        endTime: parsed.data.endTime ?? null,
         reason: parsed.data.reason ?? null,
         workHours: parsed.data.workHours ?? null,
       },

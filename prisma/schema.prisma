@@ -34,7 +34,6 @@ model Tenant {
   users                    User[]
   canvasSnapshots          CanvasSnapshot[]
   emailVerificationTokens  EmailVerificationToken[]
-  exceptionTypes           ExceptionType[]
 
   @@index([email, isDeleted])
 }
@@ -237,38 +236,23 @@ model Calendar {
   @@index([tenantId, projectId, isDeleted])
 }
 
-model ExceptionType {
-  id        String   @id @default(cuid())
-  tenantId  String
-  name      String
-  color     String
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  tenant     Tenant              @relation(fields: [tenantId], references: [id])
-  exceptions CalendarException[]
-
-  @@unique([tenantId, name])
-  @@index([tenantId, isDeleted])
-}
-
 model CalendarException {
-  id              String    @id @default(cuid())
-  tenantId        String
-  calendarId      String
-  name            String
-  date            DateTime
-  endDate         DateTime?
-  exceptionTypeId String
-  reason          String?
-  workHours       Float?
-  isDeleted       Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  tenantId      String
+  calendarId    String
+  name          String
+  date          DateTime
+  endDate       DateTime?
+  exceptionType String    @default("Holiday")
+  startTime     String?
+  endTime       String?
+  reason        String?
+  workHours     Float?
+  isDeleted     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  calendar      Calendar      @relation(fields: [calendarId], references: [id])
-  exceptionType ExceptionType @relation(fields: [exceptionTypeId], references: [id])
+  calendar Calendar @relation(fields: [calendarId], references: [id])
 
   @@index([tenantId, calendarId, isDeleted])
 }

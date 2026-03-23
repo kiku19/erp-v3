@@ -183,7 +183,9 @@ describe("forwardPass", () => {
       name: "Holiday",
       date: "2026-01-02T00:00:00.000Z",
       endDate: null,
-      exceptionType: { id: "et-1", name: "Holiday", color: "error" },
+      exceptionType: "Holiday",
+      startTime: null,
+      endTime: null,
       reason: null,
       workHours: null,
     };

@@ -12,7 +12,7 @@ import { DAY_NAMES } from "./calendar-types";
 /* ─── Exception lookup ─── */
 
 interface ExceptionEntry {
-  exceptionTypeName: string;
+  exceptionType: string;
   workHours: number | null;
 }
 
@@ -27,7 +27,7 @@ function buildExceptionSet(
 
   for (const ex of exceptions) {
     const entry: ExceptionEntry = {
-      exceptionTypeName: ex.exceptionType.name,
+      exceptionType: ex.exceptionType,
       workHours: ex.workHours,
     };
 
@@ -74,7 +74,7 @@ function isWorkingDayFast(
   const key = toDateKey(date);
   const exception = exceptionSet.get(key);
   if (exception) {
-    return exception.exceptionTypeName === "Half Day";
+    return exception.exceptionType === "Half Day";
   }
 
   // Check work week configuration
@@ -103,7 +103,7 @@ function getWorkHoursForDayFast(
   const key = toDateKey(date);
   const exception = exceptionSet.get(key);
   if (exception) {
-    if (exception.exceptionTypeName === "Half Day" && exception.workHours != null) {
+    if (exception.exceptionType === "Half Day" && exception.workHours != null) {
       return exception.workHours;
     }
     return 0; // Holiday or Non-Working

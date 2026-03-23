@@ -74,7 +74,6 @@ export async function GET(
       include: {
         exceptions: {
           where: { isDeleted: false },
-          include: { exceptionType: true },
           orderBy: { date: "asc" },
         },
       },
@@ -99,11 +98,9 @@ export async function GET(
         name: e.name,
         date: e.date.toISOString(),
         endDate: e.endDate?.toISOString() ?? null,
-        exceptionType: {
-          id: e.exceptionType.id,
-          name: e.exceptionType.name,
-          color: e.exceptionType.color,
-        },
+        exceptionType: e.exceptionType,
+        startTime: e.startTime,
+        endTime: e.endTime,
         reason: e.reason,
         workHours: e.workHours,
       })),

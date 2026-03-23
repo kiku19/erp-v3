@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
           OR: [{ projectId: null }, { projectId }],
         },
         include: {
-          exceptions: { where: { isDeleted: false }, include: { exceptionType: true } },
+          exceptions: { where: { isDeleted: false } },
         },
       }),
     ]);
@@ -134,11 +134,9 @@ export async function GET(request: NextRequest) {
           name: e.name,
           date: e.date.toISOString(),
           endDate: e.endDate?.toISOString() ?? null,
-          exceptionType: {
-            id: e.exceptionType.id,
-            name: e.exceptionType.name,
-            color: e.exceptionType.color,
-          },
+          exceptionType: e.exceptionType,
+          startTime: e.startTime,
+          endTime: e.endTime,
           reason: e.reason,
           workHours: e.workHours,
         })),

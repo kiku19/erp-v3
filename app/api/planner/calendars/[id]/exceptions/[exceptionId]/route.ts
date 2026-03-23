@@ -7,7 +7,9 @@ const updateExceptionSchema = z.object({
   name: z.string().min(1).optional(),
   date: z.string().optional(),
   endDate: z.string().optional().nullable(),
-  exceptionTypeId: z.string().min(1).optional(),
+  exceptionType: z.enum(["Holiday", "Non-Working", "Misc"]).optional(),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
   reason: z.string().optional().nullable(),
   workHours: z.number().min(0).optional().nullable(),
   isDeleted: z.boolean().optional(),
@@ -43,8 +45,15 @@ const updateExceptionSchema = z.object({
  *               endDate:
  *                 type: string
  *                 nullable: true
- *               exceptionTypeId:
+ *               exceptionType:
  *                 type: string
+ *                 enum: [Holiday, Non-Working, Misc]
+ *               startTime:
+ *                 type: string
+ *                 nullable: true
+ *               endTime:
+ *                 type: string
+ *                 nullable: true
  *               reason:
  *                 type: string
  *                 nullable: true
@@ -115,7 +124,9 @@ export async function PATCH(
     if (parsed.data.endDate !== undefined) {
       data.endDate = parsed.data.endDate ? new Date(parsed.data.endDate) : null;
     }
-    if (parsed.data.exceptionTypeId !== undefined) data.exceptionTypeId = parsed.data.exceptionTypeId;
+    if (parsed.data.exceptionType !== undefined) data.exceptionType = parsed.data.exceptionType;
+    if (parsed.data.startTime !== undefined) data.startTime = parsed.data.startTime;
+    if (parsed.data.endTime !== undefined) data.endTime = parsed.data.endTime;
     if (parsed.data.reason !== undefined) data.reason = parsed.data.reason;
     if (parsed.data.workHours !== undefined) data.workHours = parsed.data.workHours;
     if (parsed.data.isDeleted !== undefined) data.isDeleted = parsed.data.isDeleted;

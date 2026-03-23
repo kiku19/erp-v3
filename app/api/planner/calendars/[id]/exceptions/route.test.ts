@@ -10,7 +10,6 @@ const mockPrisma = {
     findMany: vi.fn(),
     create: vi.fn(),
   },
-  exceptionType: { findFirst: vi.fn() },
 };
 
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));
@@ -66,13 +65,13 @@ describe("GET /api/planner/calendars/[id]/exceptions", () => {
   it("returns exceptions list", async () => {
     mockPrisma.calendar.findFirst.mockResolvedValue({ id: "cal-1" });
     mockPrisma.calendarException.findMany.mockResolvedValue([
-      { id: "ex-1", name: "Holiday", date: new Date("2026-01-01"), endDate: null, exceptionType: { id: "et-1", name: "Holiday", color: "error" }, reason: null, workHours: null },
+      { id: "ex-1", name: "Holiday", date: new Date("2026-01-01"), endDate: null, exceptionType: "Holiday", startTime: null, endTime: null, reason: null, workHours: null },
     ]);
     const res = await makeGetRequest();
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.exceptions).toHaveLength(1);
-    expect(body.exceptions[0].name).toBe("Holiday");
+    expect(body.exceptions[0].exceptionType).toBe("Holiday");
   });
 });
 
@@ -91,15 +90,14 @@ describe("POST /api/planner/calendars/[id]/exceptions", () => {
 
   it("returns 404 when calendar not found", async () => {
     mockPrisma.calendar.findFirst.mockResolvedValue(null);
-    const res = await makePostRequest({ name: "Holiday", date: "2026-01-01", exceptionTypeId: "et-1" });
+    const res = await makePostRequest({ name: "Holiday", date: "2026-01-01", exceptionType: "Holiday" });
     expect(res.status).toBe(404);
   });
 
   it("returns 201 on success", async () => {
     mockPrisma.calendar.findFirst.mockResolvedValue({ id: "cal-1" });
-    mockPrisma.exceptionType.findFirst.mockResolvedValue({ id: "et-1", name: "Holiday", color: "error" });
     mockPrisma.calendarException.create.mockResolvedValue({ id: "ex-new", name: "Holiday" });
-    const res = await makePostRequest({ name: "Holiday", date: "2026-01-01", exceptionTypeId: "et-1" });
+    const res = await makePostRequest({ name: "Holiday", date: "2026-01-01", exceptionType: "Holiday" });
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.id).toBe("ex-new");
