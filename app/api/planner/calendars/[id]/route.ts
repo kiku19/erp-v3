@@ -99,6 +99,9 @@ export async function GET(
         date: e.date.toISOString(),
         endDate: e.endDate?.toISOString() ?? null,
         exceptionType: e.exceptionType,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        reason: e.reason,
         workHours: e.workHours,
       })),
     });

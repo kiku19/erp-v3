@@ -95,7 +95,7 @@ describe("computeSchedule", () => {
   it("uses activity calendar when calendars provided", () => {
     const holiday: CalendarExceptionData = {
       id: "h1", name: "Holiday", date: "2025-01-07T00:00:00.000Z",
-      endDate: null, exceptionType: "Holiday", workHours: null,
+      endDate: null, exceptionType: "Holiday", startTime: null, endTime: null, reason: null, workHours: null,
     };
     const cal: CalendarData = { ...DEFAULT_CALENDAR, id: "cal-1", exceptions: [holiday] };
     const calendars = new Map([["cal-1", cal]]);

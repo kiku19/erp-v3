@@ -76,7 +76,7 @@ describe("GET /api/planner/calendars/[id]", () => {
       id: "cal-1", name: "Standard", category: "global",
       hoursPerDay: 8, workDays: DEFAULT_WORK_DAYS, projectId: null,
       exceptions: [
-        { id: "ex-1", name: "Holiday", date: new Date("2026-01-01"), endDate: null, exceptionType: "Holiday", workHours: null },
+        { id: "ex-1", name: "Holiday", date: new Date("2026-01-01"), endDate: null, exceptionType: "Holiday", startTime: null, endTime: null, reason: null, workHours: null },
       ],
     });
     const res = await makeGetRequest();

@@ -35,6 +35,9 @@ const HOLIDAY: CalendarExceptionData = {
   date: "2026-01-01T00:00:00.000Z",
   endDate: null,
   exceptionType: "Holiday",
+  startTime: null,
+  endTime: null,
+  reason: null,
   workHours: null,
 };
 
@@ -44,6 +47,9 @@ const MULTI_DAY_HOLIDAY: CalendarExceptionData = {
   date: "2026-01-05T00:00:00.000Z",
   endDate: "2026-01-07T00:00:00.000Z",
   exceptionType: "Non-Working",
+  startTime: null,
+  endTime: null,
+  reason: null,
   workHours: null,
 };
 
@@ -53,6 +59,9 @@ const HALF_DAY: CalendarExceptionData = {
   date: "2026-01-09T00:00:00.000Z",
   endDate: null,
   exceptionType: "Half Day",
+  startTime: "09:00",
+  endTime: "13:00",
+  reason: null,
   workHours: 4,
 };
 

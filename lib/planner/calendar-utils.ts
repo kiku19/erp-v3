@@ -12,7 +12,7 @@ import { DAY_NAMES } from "./calendar-types";
 /* ─── Exception lookup ─── */
 
 interface ExceptionEntry {
-  exceptionType: "Holiday" | "Non-Working" | "Half Day";
+  exceptionType: string;
   workHours: number | null;
 }
 

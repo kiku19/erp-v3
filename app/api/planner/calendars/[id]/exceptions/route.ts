@@ -7,7 +7,10 @@ const createExceptionSchema = z.object({
   name: z.string().min(1),
   date: z.string().min(1),
   endDate: z.string().optional().nullable(),
-  exceptionType: z.enum(["Holiday", "Non-Working", "Half Day"]).default("Holiday"),
+  exceptionType: z.enum(["Holiday", "Non-Working", "Misc"]).default("Holiday"),
+  startTime: z.string().optional().nullable(),
+  endTime: z.string().optional().nullable(),
+  reason: z.string().optional().nullable(),
   workHours: z.number().min(0).optional().nullable(),
 });
 
@@ -46,6 +49,16 @@ const createExceptionSchema = z.object({
  *                         nullable: true
  *                       exceptionType:
  *                         type: string
+ *                         enum: [Holiday, Non-Working, Misc]
+ *                       startTime:
+ *                         type: string
+ *                         nullable: true
+ *                       endTime:
+ *                         type: string
+ *                         nullable: true
+ *                       reason:
+ *                         type: string
+ *                         nullable: true
  *                       workHours:
  *                         type: number
  *                         nullable: true
@@ -66,7 +79,6 @@ export async function GET(
   const { id } = await params;
 
   try {
-    // Verify calendar exists
     const calendar = await prisma.calendar.findFirst({
       where: { id, tenantId: auth.tenantId, isDeleted: false },
     });
@@ -89,6 +101,9 @@ export async function GET(
         date: e.date.toISOString(),
         endDate: e.endDate?.toISOString() ?? null,
         exceptionType: e.exceptionType,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        reason: e.reason,
         workHours: e.workHours,
       })),
     });
@@ -131,7 +146,16 @@ export async function GET(
  *                 nullable: true
  *               exceptionType:
  *                 type: string
- *                 enum: [Holiday, Non-Working, Half Day]
+ *                 enum: [Holiday, Non-Working, Misc]
+ *               startTime:
+ *                 type: string
+ *                 nullable: true
+ *               endTime:
+ *                 type: string
+ *                 nullable: true
+ *               reason:
+ *                 type: string
+ *                 nullable: true
  *               workHours:
  *                 type: number
  *                 nullable: true
@@ -175,7 +199,6 @@ export async function POST(
       );
     }
 
-    // Verify calendar exists
     const calendar = await prisma.calendar.findFirst({
       where: { id, tenantId: auth.tenantId, isDeleted: false },
     });
@@ -194,6 +217,9 @@ export async function POST(
         date: new Date(parsed.data.date),
         endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
         exceptionType: parsed.data.exceptionType,
+        startTime: parsed.data.startTime ?? null,
+        endTime: parsed.data.endTime ?? null,
+        reason: parsed.data.reason ?? null,
         workHours: parsed.data.workHours ?? null,
       },
     });

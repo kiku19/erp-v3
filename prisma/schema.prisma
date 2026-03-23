@@ -244,6 +244,9 @@ model CalendarException {
   date          DateTime
   endDate       DateTime?
   exceptionType String    @default("Holiday")
+  startTime     String?
+  endTime       String?
+  reason        String?
   workHours     Float?
   isDeleted     Boolean   @default(false)
   createdAt     DateTime  @default(now())

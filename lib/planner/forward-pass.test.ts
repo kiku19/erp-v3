@@ -184,6 +184,9 @@ describe("forwardPass", () => {
       date: "2026-01-02T00:00:00.000Z",
       endDate: null,
       exceptionType: "Holiday",
+      startTime: null,
+      endTime: null,
+      reason: null,
       workHours: null,
     };
     const cal: CalendarData = { ...DEFAULT_CALENDAR, id: "cal-h", exceptions: [holiday] };

@@ -4,12 +4,36 @@ import {
   useState,
   useEffect,
   useCallback,
+  useId,
   type ReactNode,
   type HTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+
+/* ─────────────────────── Modal Stack ─────────────────────────────── */
+// Tracks which modals are open so only the topmost one handles Escape.
+
+const modalStack: string[] = [];
+
+function pushModal(id: string) {
+  modalStack.push(id);
+}
+
+function popModal(id: string) {
+  const idx = modalStack.indexOf(id);
+  if (idx !== -1) modalStack.splice(idx, 1);
+}
+
+function isTopModal(id: string): boolean {
+  return modalStack.length > 0 && modalStack[modalStack.length - 1] === id;
+}
+
+function getModalDepth(id: string): number {
+  const idx = modalStack.indexOf(id);
+  return idx === -1 ? 0 : idx;
+}
 
 /* ─────────────────────── Types ───────────────────────────────────── */
 
@@ -38,8 +62,10 @@ interface ModalFooterProps extends HTMLAttributes<HTMLDivElement> {
 /* ─────────────────────── Modal ───────────────────────────────────── */
 
 function Modal({ open, onClose, children, className, width = 420 }: ModalProps) {
+  const modalId = useId();
   const [isMounted, setIsMounted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [depth, setDepth] = useState(0);
 
   // Handle mount/unmount with animation
   useEffect(() => {
@@ -50,6 +76,15 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
       setIsClosing(true);
     }
   }, [open, isMounted]);
+
+  // Register/unregister in the modal stack
+  useEffect(() => {
+    if (open) {
+      pushModal(modalId);
+      setDepth(getModalDepth(modalId));
+      return () => popModal(modalId);
+    }
+  }, [open, modalId]);
 
   // Fallback: unmount after exit duration if onAnimationEnd doesn't fire (e.g. jsdom)
   useEffect(() => {
@@ -68,19 +103,19 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
     }
   }, [isClosing]);
 
-  // Close on Escape
+  // Close on Escape — only the topmost modal responds
   useEffect(() => {
     if (!open) return;
 
     function handleEscape(e: globalThis.KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && isTopModal(modalId)) {
         onClose();
       }
     }
 
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [open, onClose]);
+  }, [open, onClose, modalId]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -94,13 +129,18 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
 
   if (!isMounted) return null;
 
+  // Each stacked modal gets a higher z-index so its overlay covers the previous dialog
+  const overlayZ = 9998 + depth * 2;
+  const dialogZ = 9999 + depth * 2;
+
   const modal = (
     <>
       {/* Overlay */}
       <div
         data-testid="modal-overlay"
-        className="fixed inset-0 z-[9998] bg-foreground/20"
+        className="fixed inset-0 bg-foreground/20"
         style={{
+          zIndex: overlayZ,
           animation: isClosing
             ? "dropdown-out var(--duration-fast) var(--ease-default) forwards"
             : "dropdown-in var(--duration-normal) var(--ease-default) forwards",
@@ -114,13 +154,14 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
         aria-modal="true"
         onAnimationEnd={handleAnimationEnd}
         style={{
+          zIndex: dialogZ,
           width: `${width}px`,
           animation: isClosing
             ? "dropdown-out var(--duration-fast) var(--ease-default) forwards"
             : "dropdown-in var(--duration-normal) var(--ease-default) forwards",
         }}
         className={cn(
-          "fixed left-1/2 top-1/2 z-[9999] -translate-x-1/2 -translate-y-1/2",
+          "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
           "flex flex-col rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)]",
           className,
         )}
