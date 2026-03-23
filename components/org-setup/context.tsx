@@ -45,6 +45,7 @@ type Action =
   | { type: "REMOVE_CALENDAR_EXCEPTION"; calendarId: string; exceptionId: string }
   | { type: "ADD_ROLE"; role: Role }
   | { type: "UPDATE_ROLE"; roleId: string; updates: Partial<Role> }
+  | { type: "REMOVE_ROLE"; roleId: string }
   | { type: "ADD_COST_CENTRE"; costCentre: CostCentre }
   | { type: "UPDATE_COST_CENTRE"; costCentreId: string; updates: Partial<CostCentre> }
   | { type: "ASSIGN_ROLE_TO_NODE"; nodeId: string; assignedRole: AssignedRole }
@@ -306,6 +307,20 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         ...state,
         roles: { ...state.roles, [action.roleId]: { ...role, ...action.updates } },
       };
+    }
+
+    case "REMOVE_ROLE": {
+      const newRoles = { ...state.roles };
+      delete newRoles[action.roleId];
+      // Remove role assignments from all nodes
+      const updatedNodes = { ...state.nodes };
+      for (const [nid, node] of Object.entries(updatedNodes)) {
+        const filtered = node.assignedRoles.filter((r) => r.roleId !== action.roleId);
+        if (filtered.length !== node.assignedRoles.length) {
+          updatedNodes[nid] = { ...node, assignedRoles: filtered };
+        }
+      }
+      return { ...state, roles: newRoles, nodes: updatedNodes };
     }
 
     case "ADD_COST_CENTRE":

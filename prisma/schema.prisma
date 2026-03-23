@@ -34,6 +34,7 @@ model Tenant {
   users                    User[]
   canvasSnapshots          CanvasSnapshot[]
   emailVerificationTokens  EmailVerificationToken[]
+  roles                    Role[]
 
   @@index([email, isDeleted])
 }
@@ -244,6 +245,9 @@ model CalendarException {
   date          DateTime
   endDate       DateTime?
   exceptionType String    @default("Holiday")
+  startTime     String?
+  endTime       String?
+  reason        String?
   workHours     Float?
   isDeleted     Boolean   @default(false)
   createdAt     DateTime  @default(now())
@@ -376,5 +380,24 @@ model EmailVerificationToken {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@index([token])
+  @@index([tenantId, isDeleted])
+}
+
+model Role {
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String
+  code             String
+  level            String   @default("Junior")
+  defaultPayType   String   @default("hourly")
+  overtimeEligible Boolean  @default(false)
+  skillTags        String[] @default([])
+  isDeleted        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
   @@index([tenantId, isDeleted])
 }
