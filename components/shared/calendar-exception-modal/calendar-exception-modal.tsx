@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { CalendarExceptionData, ExceptionType } from "@/lib/planner/calendar-types";
 import { useCalendarExceptions } from "./use-calendar-exceptions";
@@ -63,6 +64,16 @@ interface CalendarExceptionModalProps {
   calendarId: string;
   exceptions?: CalendarExceptionData[];
   onSave?: () => void;
+  onCreateException?: (data: {
+    name: string;
+    date: string;
+    exceptionType: ExceptionType;
+    startTime: string | null;
+    endTime: string | null;
+    reason: string | null;
+    workHours: number | null;
+  }) => void | Promise<void>;
+  onDeleteException?: (exceptionId: string) => void | Promise<void>;
 }
 
 /* ─────────────────────── Component ─────────────────────── */
@@ -73,6 +84,8 @@ function CalendarExceptionModal({
   calendarId,
   exceptions: externalExceptions,
   onSave,
+  onCreateException,
+  onDeleteException,
 }: CalendarExceptionModalProps) {
   const {
     exceptions,
@@ -90,6 +103,7 @@ function CalendarExceptionModal({
   const [selectedType, setSelectedType] = useState<ExceptionType>("Holiday");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [dateInput, setDateInput] = useState("");
+  const [isFullDay, setIsFullDay] = useState(true);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [reason, setReason] = useState("");
@@ -105,10 +119,27 @@ function CalendarExceptionModal({
     setSelectedType("Holiday");
     setSelectedDate(null);
     setDateInput("");
+    setIsFullDay(true);
     setStartTime("");
     setEndTime("");
     setReason("");
     setSelectedExceptionId(null);
+  }, []);
+
+  // Toggle full day checkbox
+  const handleFullDayToggle = useCallback(() => {
+    setIsFullDay((prev) => {
+      if (prev) {
+        // Unchecking full day → set default times
+        setStartTime("09:00");
+        setEndTime("18:00");
+      } else {
+        // Checking full day → clear times
+        setStartTime("");
+        setEndTime("");
+      }
+      return !prev;
+    });
   }, []);
 
   // Click exception in left panel → auto-fill form
@@ -119,6 +150,8 @@ function CalendarExceptionModal({
     const date = new Date(ex.date);
     setSelectedDate(date);
     setDateInput(formatDateDD_MM_YYYY(date));
+    const fullDay = !ex.startTime && !ex.endTime;
+    setIsFullDay(fullDay);
     setStartTime(ex.startTime ?? "");
     setEndTime(ex.endTime ?? "");
     setReason(ex.reason ?? "");
@@ -143,29 +176,49 @@ function CalendarExceptionModal({
   const handleSave = useCallback(async () => {
     if (!name.trim() || !selectedDate) return;
     setIsSubmitting(true);
-    const success = await createException({
+
+    const exceptionData = {
       name: name.trim(),
       date: selectedDate.toISOString(),
       exceptionType: selectedType,
-      startTime: startTime || null,
-      endTime: endTime || null,
-      reason: reason.trim() || undefined,
-    });
+      startTime: isFullDay ? null : (startTime || null),
+      endTime: isFullDay ? null : (endTime || null),
+      reason: reason.trim() || null,
+      workHours: null as number | null,
+    };
+
+    let success = false;
+
+    if (onCreateException) {
+      // Use parent-provided handler (for org-setup / local state management)
+      await onCreateException(exceptionData);
+      success = true;
+    } else {
+      // Use API-based handler (for planner / DB-backed calendars)
+      success = await createException(exceptionData);
+    }
+
     if (success) resetForm();
     setIsSubmitting(false);
-  }, [name, selectedDate, selectedType, startTime, endTime, reason, createException, resetForm]);
+  }, [name, selectedDate, selectedType, isFullDay, startTime, endTime, reason, createException, onCreateException, resetForm]);
 
   // Delete exception
   const handleConfirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
-    await deleteException(deleteTarget.id);
+
+    if (onDeleteException) {
+      await onDeleteException(deleteTarget.id);
+    } else {
+      await deleteException(deleteTarget.id);
+    }
+
     setIsDeleting(false);
     setDeleteTarget(null);
     if (selectedExceptionId === deleteTarget.id) {
       resetForm();
     }
-  }, [deleteTarget, deleteException, selectedExceptionId, resetForm]);
+  }, [deleteTarget, deleteException, onDeleteException, selectedExceptionId, resetForm]);
 
   return (
     <>
@@ -186,7 +239,7 @@ function CalendarExceptionModal({
           </div>
 
           {/* Body */}
-          <div className="flex" style={{ height: 660 }}>
+          <div className="flex" style={{ height: 780 }}>
             {/* Left Panel — Exception List */}
             <div className="w-[320px] border-r border-border flex flex-col shrink-0">
               <div className="flex items-center justify-between h-11 px-5 border-b border-border">
@@ -304,25 +357,41 @@ function CalendarExceptionModal({
               {/* Calendar */}
               <MiniCalendar selectedDate={selectedDate} onSelect={handleCalendarSelect} />
 
-              {/* Time */}
-              <div className="flex gap-3">
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <span className="text-[12px] font-semibold text-foreground">Start Time</span>
-                  <Input
-                    type="time"
-                    className="h-9 text-[12px]"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+              {/* Full Day + Time */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={isFullDay}
+                    onChange={handleFullDayToggle}
+                    data-testid="full-day-checkbox"
                   />
+                  <span className="text-[12px] font-medium text-foreground cursor-pointer" onClick={handleFullDayToggle}>
+                    Full Day
+                  </span>
                 </div>
-                <div className="flex-1 flex flex-col gap-1.5">
-                  <span className="text-[12px] font-semibold text-foreground">End Time</span>
-                  <Input
-                    type="time"
-                    className="h-9 text-[12px]"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
+                <div className="flex gap-3">
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <span className={cn("text-[12px] font-semibold", isFullDay ? "text-muted-foreground" : "text-foreground")}>Start Time</span>
+                    <Input
+                      type="time"
+                      className="h-9 text-[12px]"
+                      value={isFullDay ? "" : startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      disabled={isFullDay}
+                      placeholder="--:--"
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <span className={cn("text-[12px] font-semibold", isFullDay ? "text-muted-foreground" : "text-foreground")}>End Time</span>
+                    <Input
+                      type="time"
+                      className="h-9 text-[12px]"
+                      value={isFullDay ? "" : endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      disabled={isFullDay}
+                      placeholder="--:--"
+                    />
+                  </div>
                 </div>
               </div>
 

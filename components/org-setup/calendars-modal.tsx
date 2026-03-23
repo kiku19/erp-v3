@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { CalendarSettingsModal } from "@/app/(app)/project-management/[projectId]/planner/_components/calendar-settings-modal";
-import type { CalendarData } from "@/lib/planner/calendar-types";
+import type { CalendarData, CalendarExceptionData, ExceptionType } from "@/lib/planner/calendar-types";
 import { useOrgSetup, generateId } from "./context";
 
 interface CalendarsModalProps {
@@ -45,6 +45,32 @@ function CalendarsModal({ open, onClose }: CalendarsModalProps) {
     [dispatch],
   );
 
+  const handleCreateException = useCallback(
+    (calId: string, data: {
+      name: string;
+      date: string;
+      exceptionType: ExceptionType;
+      startTime: string | null;
+      endTime: string | null;
+      reason: string | null;
+      workHours: number | null;
+    }) => {
+      const exception: CalendarExceptionData = {
+        id: generateId("ex"),
+        name: data.name,
+        date: data.date,
+        endDate: null,
+        exceptionType: data.exceptionType,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        reason: data.reason,
+        workHours: data.workHours,
+      };
+      dispatch({ type: "ADD_CALENDAR_EXCEPTION", calendarId: calId, exception });
+    },
+    [dispatch],
+  );
+
   return (
     <CalendarSettingsModal
       open={open}
@@ -55,6 +81,7 @@ function CalendarsModal({ open, onClose }: CalendarsModalProps) {
       onUpdate={handleUpdate}
       onDelete={handleDelete}
       onDeleteException={handleDeleteException}
+      onCreateException={handleCreateException}
     />
   );
 }

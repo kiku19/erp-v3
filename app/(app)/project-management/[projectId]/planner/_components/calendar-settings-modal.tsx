@@ -23,6 +23,15 @@ interface CalendarSettingsModalProps {
   onUpdate: (calId: string, updates: Partial<CalendarData>) => void | Promise<void>;
   onDelete: (calId: string) => void | Promise<void>;
   onDeleteException: (calId: string, exceptionId: string) => void | Promise<void>;
+  onCreateException?: (calId: string, data: {
+    name: string;
+    date: string;
+    exceptionType: "Holiday" | "Non-Working" | "Misc";
+    startTime: string | null;
+    endTime: string | null;
+    reason: string | null;
+    workHours: number | null;
+  }) => void | Promise<void>;
   onRefresh?: () => void | Promise<void>;
 }
 
@@ -258,6 +267,7 @@ function CalendarSettingsModal({
   onUpdate,
   onDelete,
   onDeleteException,
+  onCreateException,
   onRefresh,
 }: CalendarSettingsModalProps) {
   const [selectedCalId, setSelectedCalId] = useState<string | null>(
@@ -592,8 +602,16 @@ function CalendarSettingsModal({
           open={exceptionModalOpen}
           onClose={() => setExceptionModalOpen(false)}
           calendarId={selectedCal.id}
+          exceptions={selectedCal.exceptions}
+          onCreateException={onCreateException
+            ? (data) => onCreateException(selectedCal.id, data)
+            : undefined
+          }
+          onDeleteException={onDeleteException
+            ? (exId) => onDeleteException(selectedCal.id, exId)
+            : undefined
+          }
           onSave={() => {
-            setExceptionModalOpen(false);
             onRefresh?.();
           }}
         />

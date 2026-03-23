@@ -16,6 +16,7 @@ import {
   type Equipment,
   type Material,
   type Calendar,
+  type CalendarExceptionData,
   type Role,
   type CostCentre,
   type GlobalPanelType,
@@ -42,6 +43,7 @@ type Action =
   | { type: "ADD_CALENDAR"; calendar: Calendar }
   | { type: "UPDATE_CALENDAR"; calendarId: string; updates: Partial<Calendar> }
   | { type: "REMOVE_CALENDAR"; calendarId: string }
+  | { type: "ADD_CALENDAR_EXCEPTION"; calendarId: string; exception: CalendarExceptionData }
   | { type: "REMOVE_CALENDAR_EXCEPTION"; calendarId: string; exceptionId: string }
   | { type: "ADD_ROLE"; role: Role }
   | { type: "UPDATE_ROLE"; roleId: string; updates: Partial<Role> }
@@ -279,6 +281,21 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         }
       }
       return { ...state, calendars: newCals, nodes: updatedNodes };
+    }
+
+    case "ADD_CALENDAR_EXCEPTION": {
+      const cal = state.calendars[action.calendarId];
+      if (!cal) return state;
+      return {
+        ...state,
+        calendars: {
+          ...state.calendars,
+          [action.calendarId]: {
+            ...cal,
+            exceptions: [...cal.exceptions, action.exception],
+          },
+        },
+      };
     }
 
     case "REMOVE_CALENDAR_EXCEPTION": {
