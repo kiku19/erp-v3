@@ -222,7 +222,7 @@ function CalendarExceptionModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} width={780}>
+      <Modal open={open} onClose={onClose} width={900}>
         <div className="flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -239,7 +239,7 @@ function CalendarExceptionModal({
           </div>
 
           {/* Body */}
-          <div className="flex" style={{ height: 780 }}>
+          <div className="flex" style={{ height: 860 }}>
             {/* Left Panel — Exception List */}
             <div className="w-[320px] border-r border-border flex flex-col shrink-0">
               <div className="flex items-center justify-between h-11 px-5 border-b border-border">
@@ -259,9 +259,12 @@ function CalendarExceptionModal({
                   </div>
                 ) : (
                   exceptions.map((ex) => (
-                    <button
+                    <div
                       key={ex.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleSelectException(ex)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelectException(ex); }}
                       className={cn(
                         "flex items-center justify-between w-full h-14 px-5 border-b border-border last:border-0 cursor-pointer text-left transition-colors duration-[var(--duration-fast)]",
                         selectedExceptionId === ex.id
@@ -278,6 +281,7 @@ function CalendarExceptionModal({
                           <span className="text-[13px] font-medium text-foreground">{ex.name}</span>
                           <span className="text-[11px] text-muted-foreground">
                             {formatExceptionDate(ex.date)} — {ex.exceptionType}
+                            {ex.startTime && ex.endTime ? ` · ${ex.startTime}–${ex.endTime}` : ""}
                           </span>
                         </div>
                       </div>
@@ -291,7 +295,7 @@ function CalendarExceptionModal({
                       >
                         <Trash2 size={14} />
                       </button>
-                    </button>
+                    </div>
                   ))
                 )}
               </div>

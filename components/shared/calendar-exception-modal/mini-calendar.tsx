@@ -103,7 +103,7 @@ function MiniCalendar({ selectedDate, onSelect }: MiniCalendarProps) {
       {/* Calendar grid */}
       <div className="flex flex-col gap-0.5 px-2 pb-2">
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 h-10">
+          <div key={wi} className="grid grid-cols-7 h-12">
             {week.map((day, di) => (
               <button
                 key={di}
