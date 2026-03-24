@@ -7,6 +7,7 @@ test.describe("Typeahead Component E2E", () => {
     await page.goto(`${STORY_URL}--default&viewMode=story`);
     const input = page.getByPlaceholder("Search...");
     await expect(input).toBeVisible();
+    await input.click();
     const items = page.getByRole("option");
     await expect(items).toHaveCount(4);
   });
@@ -25,10 +26,10 @@ test.describe("Typeahead Component E2E", () => {
     await input.click();
     await page.keyboard.press("ArrowDown");
     const firstItem = page.getByRole("option").first();
-    await expect(firstItem).toHaveClass(/bg-accent/);
+    await expect(firstItem).toHaveClass(/bg-primary-active/);
     await page.keyboard.press("ArrowDown");
     const secondItem = page.getByRole("option").nth(1);
-    await expect(secondItem).toHaveClass(/bg-accent/);
+    await expect(secondItem).toHaveClass(/bg-primary-active/);
   });
 
   test("clears input with Escape", async ({ page }) => {
@@ -49,6 +50,8 @@ test.describe("Typeahead Component E2E", () => {
 
   test("displays item descriptions", async ({ page }) => {
     await page.goto(`${STORY_URL}--default&viewMode=story`);
+    const input = page.getByPlaceholder("Search...");
+    await input.click();
     await expect(page.getByText("View all documents")).toBeVisible();
     await expect(page.getByText("Manage projects")).toBeVisible();
   });

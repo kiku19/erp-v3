@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const STORY_URL = "/iframe.html?id=login-loginpage--default&viewMode=story";
+const STORY_URL = "/iframe.html?id=auth-authlayout--with-login-content&viewMode=story";
 const FORM_URL = "/iframe.html?id=login-loginform--default&viewMode=story";
 const FORM_ERROR_URL = "/iframe.html?id=login-loginform--with-server-error&viewMode=story";
 const FORM_LOADING_URL = "/iframe.html?id=login-loginform--loading&viewMode=story";
@@ -8,7 +8,7 @@ const FORM_LOADING_URL = "/iframe.html?id=login-loginform--loading&viewMode=stor
 test.describe("Login Page", () => {
   test("renders both panels with branding and form", async ({ page }) => {
     await page.goto(STORY_URL);
-    await expect(page.getByText("Acme ERP")).toBeVisible();
+    await expect(page.getByText("Opus E1").first()).toBeVisible();
     await expect(page.getByText("Welcome back")).toBeVisible();
   });
 
@@ -31,7 +31,7 @@ test.describe("Login Form", () => {
   test("renders email and password inputs", async ({ page }) => {
     await page.goto(FORM_URL);
     await expect(page.getByLabel("Email address")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true }).first()).toBeVisible();
   });
 
   test("renders sign in button and links", async ({ page }) => {

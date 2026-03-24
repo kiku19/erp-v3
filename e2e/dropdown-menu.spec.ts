@@ -47,7 +47,7 @@ test.describe("DropdownMenu Component E2E", () => {
     const trigger = page.getByRole("button", { name: "Open Menu" });
     await trigger.click();
     const activeItem = page.locator("[role='menuitem']", { hasText: "Settings" });
-    await expect(activeItem).toHaveClass(/bg-accent/);
+    await expect(activeItem).toHaveClass(/bg-primary-active/);
   });
 
   test("renders dividers between groups", async ({ page }) => {

@@ -12,7 +12,7 @@ describe("AuthLayout", () => {
 
   it("renders branding panel with logo", () => {
     render(<AuthLayout><p>Test</p></AuthLayout>);
-    expect(screen.getAllByText("Acme ERP").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Opus E1").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders hero heading", () => {
@@ -34,7 +34,7 @@ describe("AuthLayout", () => {
 
   it("renders mobile logo", () => {
     render(<AuthLayout><p>Test</p></AuthLayout>);
-    const logos = screen.getAllByText("Acme ERP");
+    const logos = screen.getAllByText("Opus E1");
     expect(logos.length).toBeGreaterThanOrEqual(2);
   });
 

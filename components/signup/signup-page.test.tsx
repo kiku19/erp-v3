@@ -32,7 +32,7 @@ describe("SignupPage", () => {
 
   it("renders inside AuthLayout with branding", () => {
     render(<SignupPage />);
-    expect(screen.getAllByText("Acme ERP").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Opus E1").length).toBeGreaterThanOrEqual(1);
   });
 
   it("transitions to email-sent after successful signup", async () => {

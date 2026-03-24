@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-const STORY_URL = "/iframe.html?id=ui-table";
+const STORY_URL = "/iframe.html?id=ui-datatable";
 
 test.describe("Table Component E2E", () => {
   test("default table renders with header and body rows", async ({ page }) => {

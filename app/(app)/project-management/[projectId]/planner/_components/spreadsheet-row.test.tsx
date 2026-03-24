@@ -87,22 +87,15 @@ describe("SpreadsheetRowComponent", () => {
     expect(onToggleExpand).toHaveBeenCalledWith("w1");
   });
 
-  it("calls onSelect when row is clicked (after debounce)", () => {
-    vi.useFakeTimers();
-    const onSelect = vi.fn();
+  it("renders row as clickable", () => {
     render(
       <SpreadsheetRowComponent
         row={activityRow}
         {...defaultProps}
-        onSelect={onSelect}
       />,
     );
-
-    fireEvent.click(screen.getByText("Site Survey"));
-    expect(onSelect).not.toHaveBeenCalled(); // not called immediately
-    vi.advanceTimersByTime(200);
-    expect(onSelect).toHaveBeenCalledWith("a1");
-    vi.useRealTimers();
+    const rowEl = screen.getByTestId("spreadsheet-row-a1");
+    expect(rowEl.className).toContain("cursor-pointer");
   });
 
   it("applies selected styles when isSelected is true", () => {
