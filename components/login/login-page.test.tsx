@@ -32,7 +32,7 @@ vi.mock("@/lib/auth-context", () => ({
 describe("LoginPage", () => {
   it("renders branding panel with logo and hero text", () => {
     render(<LoginPage />);
-    expect(screen.getAllByText("Acme ERP").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Opus E1").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/Streamline your/).length).toBeGreaterThanOrEqual(1);
   });
 
