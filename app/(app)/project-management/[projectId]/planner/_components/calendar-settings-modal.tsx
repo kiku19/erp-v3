@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar } from "lucide-react";
+import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { CalendarData, WorkDayConfig } from "@/lib/planner/calendar-types";
 import { DEFAULT_WORK_DAYS } from "@/lib/planner/calendar-types";
-import { CalendarExceptionModal } from "@/components/shared/calendar-exception-modal/calendar-exception-modal";
+import { ExceptionEditorContent, DOT_CLASS_MAP } from "@/components/shared/calendar-exception-modal/exception-editor-content";
 
 /* ─────────────────────── Props ─────────────────────────────────── */
 
@@ -278,6 +278,7 @@ function CalendarSettingsModal({
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
+  const [deleteCalTarget, setDeleteCalTarget] = useState<CalendarData | null>(null);
 
   const selectedCal = calendars.find((c) => c.id === selectedCalId) ?? null;
 
@@ -313,12 +314,21 @@ function CalendarSettingsModal({
     await onUpdate(selectedCal.id, { workDays: updated });
   }, [selectedCal, workDays, onUpdate]);
 
-  // Delete calendar
+  // Delete calendar (from right panel button)
   const handleDelete = useCallback(async () => {
     if (!selectedCal) return;
-    await onDelete(selectedCal.id);
-    setSelectedCalId(calendars.find((c) => c.id !== selectedCal.id)?.id ?? null);
-  }, [selectedCal, calendars, onDelete]);
+    setDeleteCalTarget(selectedCal);
+  }, [selectedCal]);
+
+  // Confirm delete calendar
+  const handleConfirmDeleteCal = useCallback(async () => {
+    if (!deleteCalTarget) return;
+    await onDelete(deleteCalTarget.id);
+    if (selectedCalId === deleteCalTarget.id) {
+      setSelectedCalId(calendars.find((c) => c.id !== deleteCalTarget.id)?.id ?? null);
+    }
+    setDeleteCalTarget(null);
+  }, [deleteCalTarget, calendars, selectedCalId, onDelete]);
 
   // Delete exception
   const handleDeleteException = useCallback(async (exceptionId: string) => {
@@ -346,9 +356,18 @@ function CalendarSettingsModal({
   const totalHoursPerWeek = workDays.filter((d) => d.working).length * (selectedCal?.hoursPerDay ?? 8);
   const workingDaysCount = workDays.filter((d) => d.working).length;
 
+  // Intercept close: collapse exception editor first, then close modal
+  const handleModalClose = useCallback(() => {
+    if (exceptionModalOpen) {
+      setExceptionModalOpen(false);
+      return;
+    }
+    onClose();
+  }, [exceptionModalOpen, onClose]);
+
   return (
     <>
-      <Modal open={open} onClose={onClose} width={1280} className="h-[90vh] max-h-[900px]">
+      <Modal open={open} onClose={handleModalClose} width={1280} className="h-[90vh] max-h-[900px]">
         <div className="flex flex-col h-full">
           {/* ── Header ── */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-border shrink-0">
@@ -407,29 +426,46 @@ function CalendarSettingsModal({
                         {cat} calendars
                       </div>
                       {items.map((cal) => (
-                        <button
+                        <div
                           key={cal.id}
-                          onClick={() => selectCalendar(cal.id)}
                           className={cn(
-                            "flex flex-col gap-0.5 w-full px-4 py-2.5 text-left cursor-pointer transition-colors duration-[var(--duration-fast)]",
+                            "group/cal flex items-center w-full transition-colors duration-[var(--duration-fast)]",
                             cal.id === selectedCalId
                               ? "bg-primary-active text-primary-active-foreground"
                               : "hover:bg-muted-hover",
                           )}
                         >
-                          <span className={cn(
-                            "text-[12px] font-medium",
-                            cal.id === selectedCalId ? "text-primary-active-foreground" : "text-foreground",
-                          )}>
-                            {cal.name}
-                          </span>
-                          <span className={cn(
-                            "text-[10px]",
-                            cal.id === selectedCalId ? "text-primary-active-foreground/70" : "text-muted-foreground",
-                          )}>
-                            {cal.hoursPerDay}h/day · {cal.workDays.filter((d) => d.working).length} days/wk
-                          </span>
-                        </button>
+                          <button
+                            onClick={() => selectCalendar(cal.id)}
+                            className="flex flex-col gap-0.5 flex-1 min-w-0 px-4 py-2.5 text-left cursor-pointer"
+                          >
+                            <span className={cn(
+                              "text-[12px] font-medium truncate",
+                              cal.id === selectedCalId ? "text-primary-active-foreground" : "text-foreground",
+                            )}>
+                              {cal.name}
+                            </span>
+                            <span className={cn(
+                              "text-[10px]",
+                              cal.id === selectedCalId ? "text-primary-active-foreground/70" : "text-muted-foreground",
+                            )}>
+                              {cal.hoursPerDay}h/day · {cal.workDays.filter((d) => d.working).length} days/wk
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setDeleteCalTarget(cal); }}
+                            className={cn(
+                              "flex items-center justify-center h-7 w-7 mr-2 rounded-md shrink-0 opacity-0 group-hover/cal:opacity-100 transition-opacity duration-[var(--duration-fast)] cursor-pointer",
+                              cal.id === selectedCalId
+                                ? "text-primary-active-foreground/70 hover:text-primary-active-foreground hover:bg-primary-active-foreground/10"
+                                : "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                            )}
+                            aria-label={`Delete ${cal.name}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       ))}
                     </div>
                   );
@@ -437,9 +473,39 @@ function CalendarSettingsModal({
               </div>
             </div>
 
-            {/* Right Panel — Calendar Details */}
-            <div className="flex-1 flex flex-col overflow-auto bg-background">
-              {selectedCal ? (
+            {/* Right Panel — Calendar Details OR Exception Editor */}
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              {selectedCal && exceptionModalOpen ? (
+                /* ── Inline Exception Editor ── */
+                <div className="flex flex-col h-full animate-[fade-in_var(--duration-normal)_var(--ease-default)]">
+                  <div className="flex items-center gap-3 h-14 px-6 border-b border-border shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setExceptionModalOpen(false)}
+                      className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted-hover cursor-pointer transition-colors duration-[var(--duration-fast)]"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
+                    <span className="text-[14px] font-semibold text-foreground">
+                      Exceptions & Holidays — {selectedCal.name}
+                    </span>
+                  </div>
+                  <ExceptionEditorContent
+                    calendarId={selectedCal.id}
+                    exceptions={selectedCal.exceptions}
+                    onCreateException={onCreateException
+                      ? (data) => onCreateException(selectedCal.id, data)
+                      : undefined
+                    }
+                    onDeleteException={onDeleteException
+                      ? (exId) => onDeleteException(selectedCal.id, exId)
+                      : undefined
+                    }
+                    onSave={() => onRefresh?.()}
+                    onDone={() => setExceptionModalOpen(false)}
+                  />
+                </div>
+              ) : selectedCal ? (
                 <>
                   {/* Calendar Name + Actions */}
                   <div className="flex items-center justify-between h-14 px-6 border-b border-border">
@@ -545,7 +611,7 @@ function CalendarSettingsModal({
                             <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
                               <div className={cn(
                                 "w-2 h-2 rounded-full shrink-0",
-                                ex.exceptionType === "Holiday" ? "bg-[var(--color-error)]" : ex.exceptionType === "Non-Working" ? "bg-[var(--color-warning)]" : "bg-[var(--color-info)]",
+                                DOT_CLASS_MAP[ex.exceptionType] ?? "bg-muted-foreground",
                               )} />
                               <div className="flex flex-col gap-0.5 flex-1">
                                 <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
@@ -596,26 +662,28 @@ function CalendarSettingsModal({
         onAssign={handleSearchAssign}
       />
 
-      {/* Add Exception Modal */}
-      {selectedCal && (
-        <CalendarExceptionModal
-          open={exceptionModalOpen}
-          onClose={() => setExceptionModalOpen(false)}
-          calendarId={selectedCal.id}
-          exceptions={selectedCal.exceptions}
-          onCreateException={onCreateException
-            ? (data) => onCreateException(selectedCal.id, data)
-            : undefined
-          }
-          onDeleteException={onDeleteException
-            ? (exId) => onDeleteException(selectedCal.id, exId)
-            : undefined
-          }
-          onSave={() => {
-            onRefresh?.();
-          }}
-        />
-      )}
+      {/* Exception editor is now rendered inline — no stacked modal */}
+
+      {/* Delete Calendar Confirmation */}
+      <Modal open={!!deleteCalTarget} onClose={() => setDeleteCalTarget(null)} width={400}>
+        <div className="flex flex-col">
+          <div className="px-6 py-5">
+            <h2 className="text-base font-semibold text-foreground">Delete Calendar</h2>
+            <p className="mt-2 text-[13px] text-muted-foreground">
+              Are you sure you want to delete &quot;{deleteCalTarget?.name}&quot;? All associated exceptions will also be removed. This action cannot be undone.
+            </p>
+          </div>
+          <div className="h-px bg-border" />
+          <div className="flex items-center justify-end gap-2 px-6 py-4">
+            <Button variant="outline" onClick={() => setDeleteCalTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteCal}>
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
