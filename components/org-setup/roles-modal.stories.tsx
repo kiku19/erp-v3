@@ -45,8 +45,8 @@ export const SearchWithResults: StoryObj<typeof RolesSearchModal> = {
   render: () => {
     const [query, setQuery] = useState("eng");
     const roles = [
-      { id: "r1", name: "Site Engineer", code: "ENGR-ST", level: "senior" as const, defaultPayType: "hourly" as const, overtimeEligible: true, skillTags: [] },
-      { id: "r2", name: "Civil Engineer", code: "ENGR-CV", level: "mid" as const, defaultPayType: "salaried" as const, overtimeEligible: false, skillTags: [] },
+      { id: "r1", name: "Site Engineer", code: "ENGR-ST", level: "Senior" as const, defaultPayType: "hourly" as const, overtimeEligible: true, skillTags: [] },
+      { id: "r2", name: "Civil Engineer", code: "ENGR-CV", level: "Mid" as const, defaultPayType: "salaried" as const, overtimeEligible: false, skillTags: [] },
     ];
     return (
       <RolesSearchModal
