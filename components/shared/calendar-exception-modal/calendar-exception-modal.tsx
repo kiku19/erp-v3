@@ -228,7 +228,7 @@ function CalendarExceptionModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} width={780}>
+      <Modal open={open} onClose={onClose} width={900}>
         <div className="flex flex-col h-[90vh]">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
@@ -301,46 +301,58 @@ function CalendarExceptionModal({
             </div>
 
             {/* Right Panel — Exception Form */}
-            <div className="flex-1 overflow-auto px-6 py-5 flex flex-col gap-5">
-              {/* Exception Name */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-foreground">Exception Name</label>
-                <Input
-                  placeholder="Enter exception name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </div>
-
-              {/* Exception Type */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-foreground">Exception Type</label>
-                <div className="flex items-center gap-2">
-                  {EXCEPTION_TYPES.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setExceptionType(type)}
-                      className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-medium cursor-pointer transition-colors duration-[var(--duration-fast)]",
-                        exceptionType === type
-                          ? PILL_ACTIVE_MAP[type]
-                          : "border-border text-muted-foreground hover:border-foreground/30",
-                      )}
-                    >
-                      <div className={cn(
-                        "w-2 h-2 rounded-full",
-                        DOT_CLASS_MAP[type],
-                      )} />
-                      {type}
-                    </button>
-                  ))}
+            <div className="flex-1 px-6 py-5 flex flex-col gap-4">
+              {/* Row 1: Exception Name + Exception Type */}
+              <div className="flex items-end gap-4">
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-foreground">Exception Name</label>
+                  <Input
+                    placeholder="Enter exception name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                <div className="shrink-0 flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-foreground">Type</label>
+                  <div className="flex items-center gap-2">
+                    {EXCEPTION_TYPES.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setExceptionType(type)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-medium cursor-pointer transition-colors duration-[var(--duration-fast)]",
+                          exceptionType === type
+                            ? PILL_ACTIVE_MAP[type]
+                            : "border-border text-muted-foreground hover:border-foreground/30",
+                        )}
+                      >
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          DOT_CLASS_MAP[type],
+                        )} />
+                        {type}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Full Day Toggle + Time Inputs */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-4">
+              {/* Row 2: Date + Full Day Toggle + Time Inputs */}
+              <div className="flex items-end gap-4">
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-foreground">Date</label>
+                  <div className="relative">
+                    <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="DD / MM / YYYY"
+                      value={dateInput}
+                      onChange={(e) => handleDateInputChange(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center gap-4 pb-0.5">
                   <label className="flex items-center gap-2 cursor-pointer" onClick={handleFullDayToggle}>
                     <div className={cn(
                       "flex items-center justify-center w-4 h-4 rounded-[3px] border transition-colors duration-[var(--duration-fast)]",
@@ -376,42 +388,27 @@ function CalendarExceptionModal({
                 </div>
               </div>
 
-              {/* Date */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-foreground">Date</label>
-                <div className="relative">
-                  <CalendarIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <Input
-                    placeholder="DD / MM / YYYY"
-                    value={dateInput}
-                    onChange={(e) => handleDateInputChange(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-                <span className="text-[11px] text-muted-foreground">or pick from calendar</span>
-              </div>
-
-              {/* Mini Calendar */}
+              {/* Row 3: Mini Calendar (full width) */}
               <MiniCalendar selectedDate={selectedDate} onSelect={handleCalendarSelect} />
 
-              {/* Reason / Description */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-foreground">Reason / Description</label>
-                <Textarea
-                  placeholder="e.g. New Year's Day, Company Holiday..."
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="min-h-[72px]"
-                />
-              </div>
-
-              {/* Selected date display */}
-              {selectedDate && (
-                <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                  <CalendarIcon size={13} />
-                  <span>Selected: {formatSelectedDate(selectedDate)}</span>
+              {/* Row 4: Reason / Description + Selected date display */}
+              <div className="flex items-start gap-4">
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <label className="text-[13px] font-medium text-foreground">Reason / Description</label>
+                  <Textarea
+                    placeholder="e.g. New Year's Day, Company Holiday..."
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="min-h-[60px]"
+                  />
                 </div>
-              )}
+                {selectedDate && (
+                  <div className="shrink-0 flex items-center gap-2 text-[12px] text-muted-foreground pt-7">
+                    <CalendarIcon size={13} />
+                    <span>{formatSelectedDate(selectedDate)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
