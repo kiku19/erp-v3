@@ -51,7 +51,7 @@ test.describe("Calendar Exception Modal E2E", () => {
 
     // Exception type pills are in the right panel — use the modal's form area
     const exModal = page.locator("[role='dialog']").last();
-    await expect(exModal.getByText("Exception Type")).toBeVisible();
+    await expect(exModal.getByText("Type")).toBeVisible();
     await expect(exModal.getByText("Holiday", { exact: true })).toBeVisible();
     await expect(exModal.getByText("Non-Working", { exact: true })).toBeVisible();
     await expect(exModal.getByText("Misc", { exact: true })).toBeVisible();
@@ -62,8 +62,9 @@ test.describe("Calendar Exception Modal E2E", () => {
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
     const exModal = page.locator("[role='dialog']").last();
-    await expect(exModal.getByText("Start Time")).toBeVisible();
-    await expect(exModal.getByText("End Time")).toBeVisible();
+    const timeInputs = exModal.locator("input[type='time']");
+    await expect(timeInputs).toHaveCount(2);
+    await expect(exModal.getByText("to")).toBeVisible();
   });
 
   test("can fill the exception form and save", async ({ page }) => {
