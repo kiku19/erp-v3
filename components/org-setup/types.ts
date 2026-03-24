@@ -94,7 +94,7 @@ import type { CalendarData, CalendarExceptionData } from "@/lib/planner/calendar
 
 type Calendar = CalendarData;
 
-type RoleLevel = "junior" | "mid" | "senior" | "lead" | "manager";
+type RoleLevel = "Junior" | "Mid" | "Senior" | "Lead" | "Principal";
 
 interface Role {
   id: string;
