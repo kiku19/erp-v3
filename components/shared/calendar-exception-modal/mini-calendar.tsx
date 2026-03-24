@@ -67,7 +67,7 @@ function MiniCalendar({ selectedDate, onSelect }: MiniCalendarProps) {
 
   return (
     <div
-      className="flex flex-col rounded-lg border border-border bg-card overflow-hidden"
+      className="flex flex-col rounded-lg border border-border bg-card"
       data-testid="mini-calendar"
     >
       {/* Navigation */}
