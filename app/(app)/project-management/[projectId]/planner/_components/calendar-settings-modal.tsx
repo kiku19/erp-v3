@@ -619,14 +619,14 @@ function CalendarSettingsModal({
                                   {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
                                 </span>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-muted-foreground"
+                              <button
+                                type="button"
                                 onClick={() => handleDeleteException(ex.id)}
+                                className="flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-destructive cursor-pointer shrink-0 transition-colors duration-[var(--duration-fast)]"
+                                aria-label={`Delete ${ex.name}`}
                               >
-                                <Trash2 size={12} />
-                              </Button>
+                                <Trash2 size={14} />
+                              </button>
                             </div>
                           ))
                         )}
