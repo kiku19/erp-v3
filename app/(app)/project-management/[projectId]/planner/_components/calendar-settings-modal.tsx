@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar } from "lucide-react";
+import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { CalendarData, WorkDayConfig } from "@/lib/planner/calendar-types";
 import { DEFAULT_WORK_DAYS } from "@/lib/planner/calendar-types";
-import { CalendarExceptionModal } from "@/components/shared/calendar-exception-modal/calendar-exception-modal";
+import { ExceptionEditorContent, DOT_CLASS_MAP } from "@/components/shared/calendar-exception-modal/exception-editor-content";
 
 /* ─────────────────────── Props ─────────────────────────────────── */
 
@@ -346,9 +346,18 @@ function CalendarSettingsModal({
   const totalHoursPerWeek = workDays.filter((d) => d.working).length * (selectedCal?.hoursPerDay ?? 8);
   const workingDaysCount = workDays.filter((d) => d.working).length;
 
+  // Intercept close: collapse exception editor first, then close modal
+  const handleModalClose = useCallback(() => {
+    if (exceptionModalOpen) {
+      setExceptionModalOpen(false);
+      return;
+    }
+    onClose();
+  }, [exceptionModalOpen, onClose]);
+
   return (
     <>
-      <Modal open={open} onClose={onClose} width={1280} className="h-[90vh] max-h-[900px]">
+      <Modal open={open} onClose={handleModalClose} width={1280} className="h-[90vh] max-h-[900px]">
         <div className="flex flex-col h-full">
           {/* ── Header ── */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-border shrink-0">
@@ -437,9 +446,39 @@ function CalendarSettingsModal({
               </div>
             </div>
 
-            {/* Right Panel — Calendar Details */}
-            <div className="flex-1 flex flex-col overflow-auto bg-background">
-              {selectedCal ? (
+            {/* Right Panel — Calendar Details OR Exception Editor */}
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              {selectedCal && exceptionModalOpen ? (
+                /* ── Inline Exception Editor ── */
+                <div className="flex flex-col h-full animate-[fade-in_var(--duration-normal)_var(--ease-default)]">
+                  <div className="flex items-center gap-3 h-14 px-6 border-b border-border shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setExceptionModalOpen(false)}
+                      className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted-hover cursor-pointer transition-colors duration-[var(--duration-fast)]"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
+                    <span className="text-[14px] font-semibold text-foreground">
+                      Exceptions & Holidays — {selectedCal.name}
+                    </span>
+                  </div>
+                  <ExceptionEditorContent
+                    calendarId={selectedCal.id}
+                    exceptions={selectedCal.exceptions}
+                    onCreateException={onCreateException
+                      ? (data) => onCreateException(selectedCal.id, data)
+                      : undefined
+                    }
+                    onDeleteException={onDeleteException
+                      ? (exId) => onDeleteException(selectedCal.id, exId)
+                      : undefined
+                    }
+                    onSave={() => onRefresh?.()}
+                    onDone={() => setExceptionModalOpen(false)}
+                  />
+                </div>
+              ) : selectedCal ? (
                 <>
                   {/* Calendar Name + Actions */}
                   <div className="flex items-center justify-between h-14 px-6 border-b border-border">
@@ -545,7 +584,7 @@ function CalendarSettingsModal({
                             <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
                               <div className={cn(
                                 "w-2 h-2 rounded-full shrink-0",
-                                ex.exceptionType === "Holiday" ? "bg-[var(--color-error)]" : ex.exceptionType === "Non-Working" ? "bg-[var(--color-warning)]" : "bg-[var(--color-info)]",
+                                DOT_CLASS_MAP[ex.exceptionType] ?? "bg-muted-foreground",
                               )} />
                               <div className="flex flex-col gap-0.5 flex-1">
                                 <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
@@ -596,26 +635,7 @@ function CalendarSettingsModal({
         onAssign={handleSearchAssign}
       />
 
-      {/* Add Exception Modal */}
-      {selectedCal && (
-        <CalendarExceptionModal
-          open={exceptionModalOpen}
-          onClose={() => setExceptionModalOpen(false)}
-          calendarId={selectedCal.id}
-          exceptions={selectedCal.exceptions}
-          onCreateException={onCreateException
-            ? (data) => onCreateException(selectedCal.id, data)
-            : undefined
-          }
-          onDeleteException={onDeleteException
-            ? (exId) => onDeleteException(selectedCal.id, exId)
-            : undefined
-          }
-          onSave={() => {
-            onRefresh?.();
-          }}
-        />
-      )}
+      {/* Exception editor is now rendered inline — no stacked modal */}
     </>
   );
 }

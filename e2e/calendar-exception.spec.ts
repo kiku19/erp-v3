@@ -22,49 +22,49 @@ test.describe("Calendar Exception Modal E2E", () => {
     await expect(page.getByText("Republic Day").first()).toBeVisible();
   });
 
-  test("clicking Add Exception opens the exception modal on top", async ({
+  test("clicking Add Exception shows inline exception editor", async ({
     page,
   }) => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
+    // Still just one dialog — editor is inline, not a stacked modal
     const overlays = page.locator("[data-testid='modal-overlay']");
-    await expect(overlays).toHaveCount(2);
+    await expect(overlays).toHaveCount(1);
   });
 
-  test("exception modal shows exceptions from the selected calendar", async ({
+  test("exception editor shows exceptions from the selected calendar", async ({
     page,
   }) => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
-    const exceptionModal = page.locator("[role='dialog']").last();
-    await expect(exceptionModal.getByText("New Year's Day")).toBeVisible();
-    await expect(exceptionModal.getByText("Republic Day")).toBeVisible();
+    const dialog = page.locator("[role='dialog']");
+    await expect(dialog.getByText("New Year's Day")).toBeVisible();
+    await expect(dialog.getByText("Republic Day")).toBeVisible();
   });
 
-  test("renders hardcoded exception type pills (Holiday, Non-Working, Misc)", async ({
+  test("renders exception type pills (Holiday, Non-Working, Misc)", async ({
     page,
   }) => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
-    // Exception type pills are in the right panel — use the modal's form area
-    const exModal = page.locator("[role='dialog']").last();
-    await expect(exModal.getByText("Type")).toBeVisible();
-    await expect(exModal.getByText("Holiday", { exact: true })).toBeVisible();
-    await expect(exModal.getByText("Non-Working", { exact: true })).toBeVisible();
-    await expect(exModal.getByText("Misc", { exact: true })).toBeVisible();
+    const dialog = page.locator("[role='dialog']");
+    await expect(dialog.getByText("Type")).toBeVisible();
+    await expect(dialog.getByText("Holiday", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Non-Working", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Misc", { exact: true })).toBeVisible();
   });
 
-  test("renders time inputs (Start Time and End Time)", async ({ page }) => {
+  test("renders time inputs", async ({ page }) => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
-    const exModal = page.locator("[role='dialog']").last();
-    const timeInputs = exModal.locator("input[type='time']");
+    const dialog = page.locator("[role='dialog']");
+    const timeInputs = dialog.locator("input[type='time']");
     await expect(timeInputs).toHaveCount(2);
-    await expect(exModal.getByText("to")).toBeVisible();
+    await expect(dialog.getByText("to")).toBeVisible();
   });
 
   test("can fill the exception form and save", async ({ page }) => {
@@ -74,8 +74,8 @@ test.describe("Calendar Exception Modal E2E", () => {
     await page.getByPlaceholder("Enter exception name").fill("Diwali");
     await page.getByPlaceholder("DD / MM / YYYY").fill("12 / 11 / 2026");
 
-    const exModal = page.locator("[role='dialog']").last();
-    await exModal
+    const dialog = page.locator("[role='dialog']");
+    await dialog
       .getByPlaceholder("e.g. New Year's Day, Company Holiday...")
       .fill("Festival of lights");
 
@@ -90,8 +90,8 @@ test.describe("Calendar Exception Modal E2E", () => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
-    const exceptionModal = page.locator("[role='dialog']").last();
-    await exceptionModal.getByText("New Year's Day").click();
+    const dialog = page.locator("[role='dialog']");
+    await dialog.getByText("New Year's Day").click();
 
     await expect(page.getByPlaceholder("Enter exception name")).toHaveValue(
       "New Year's Day",
@@ -99,7 +99,7 @@ test.describe("Calendar Exception Modal E2E", () => {
     await expect(page.getByPlaceholder("DD / MM / YYYY")).toHaveValue(
       "01 / 01 / 2026",
     );
-    await expect(exceptionModal.getByText("January 2026")).toBeVisible();
+    await expect(dialog.getByText("January 2026")).toBeVisible();
   });
 
   test("delete exception shows confirmation and removes it", async ({
@@ -108,13 +108,14 @@ test.describe("Calendar Exception Modal E2E", () => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
-    const exceptionModal = page.locator("[role='dialog']").last();
-    await exceptionModal.getByLabel("Delete New Year's Day").click();
+    const dialog = page.locator("[role='dialog']").first();
+    await dialog.getByLabel("Delete New Year's Day").click();
 
     await expect(page.getByText("Delete Exception")).toBeVisible();
 
+    // Settings modal + delete confirm = 2 overlays
     const overlays = page.locator("[data-testid='modal-overlay']");
-    await expect(overlays).toHaveCount(3);
+    await expect(overlays).toHaveCount(2);
 
     await page
       .getByRole("button", { name: "Delete" })
@@ -127,7 +128,7 @@ test.describe("Calendar Exception Modal E2E", () => {
     });
   });
 
-  test("Escape closes only the topmost modal", async ({ page }) => {
+  test("Escape collapses inline editor back to calendar details", async ({ page }) => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
@@ -138,18 +139,20 @@ test.describe("Calendar Exception Modal E2E", () => {
     await expect(page.getByText("Exceptions & Holidays")).toBeVisible();
   });
 
-  test("nested Escape: confirm → exception → settings", async ({ page }) => {
+  test("nested Escape: confirm → editor → settings", async ({ page }) => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
-    const exceptionModal = page.locator("[role='dialog']").last();
-    await exceptionModal.getByLabel("Delete New Year's Day").click();
+    const dialog = page.locator("[role='dialog']").first();
+    await dialog.getByLabel("Delete New Year's Day").click();
     await expect(page.getByText("Delete Exception")).toBeVisible();
 
+    // Escape closes delete confirm
     await page.keyboard.press("Escape");
     await expect(page.getByText("Delete Exception")).not.toBeVisible();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
+    // Escape collapses inline editor back to calendar details
     await page.keyboard.press("Escape");
     await expect(page.getByText("Existing Exceptions")).not.toBeVisible();
     await expect(page.getByText("Exceptions & Holidays")).toBeVisible();
@@ -159,12 +162,12 @@ test.describe("Calendar Exception Modal E2E", () => {
     await page.getByRole("button", { name: "Add Exception" }).click();
     await expect(page.getByText("Existing Exceptions")).toBeVisible();
 
-    const exceptionModal = page.locator("[role='dialog']").last();
+    const dialog = page.locator("[role='dialog']");
 
     await page.getByPlaceholder("DD / MM / YYYY").fill("15 / 03 / 2026");
-    await expect(exceptionModal.getByText("March 2026")).toBeVisible();
+    await expect(dialog.getByText("March 2026")).toBeVisible();
 
-    await exceptionModal
+    await dialog
       .getByTestId("mini-calendar")
       .getByText("20", { exact: true })
       .click();

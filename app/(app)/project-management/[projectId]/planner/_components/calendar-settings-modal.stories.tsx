@@ -149,6 +149,21 @@ function Interactive() {
             ),
           );
         }}
+        onCreateException={(calId, data) => {
+          setCalendars((prev) =>
+            prev.map((c) =>
+              c.id === calId
+                ? {
+                    ...c,
+                    exceptions: [
+                      ...c.exceptions,
+                      { ...data, id: `ex-${Date.now()}`, endDate: null, workHours: null } as CalendarExceptionData,
+                    ],
+                  }
+                : c,
+            ),
+          );
+        }}
         onRefresh={() => {}}
       />
     </>
