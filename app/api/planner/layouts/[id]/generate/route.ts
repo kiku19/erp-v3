@@ -172,7 +172,6 @@ export async function POST(
             totalWorkHours: act.totalWorkHours,
             startDate: act.startDate ? new Date(act.startDate) : null,
             finishDate: act.finishDate ? new Date(act.finishDate) : null,
-            totalFloat: act.totalFloat,
             sortOrder: act.sortOrder,
           },
         });
