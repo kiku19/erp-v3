@@ -12,12 +12,6 @@ interface OBSNode {
   nodeHeadPersonId: string | null;
   calendarId: string | null;
   assignedRoles: AssignedRole[];
-  costCentres: {
-    labour: string | null;
-    equipment: string | null;
-    material: string | null;
-    overhead: string | null;
-  };
   isActive: boolean;
 }
 
@@ -106,18 +100,9 @@ interface Role {
   skillTags: string[];
 }
 
-type CostCentreType = "labour" | "equipment" | "material" | "overhead" | "other";
-
-interface CostCentre {
-  id: string;
-  code: string;
-  description: string;
-  type: CostCentreType;
-}
-
 /* ─────────────────────── UI State ───────────────────────────────── */
 
-type GlobalPanelType = "calendars" | "roles" | "costcentres" | null;
+type GlobalPanelType = "calendars" | "roles" | null;
 
 interface UIState {
   selectedNodeId: string | null;
@@ -128,6 +113,7 @@ interface UIState {
   panY: number;
   addNodeTarget: { parentId: string; type: "child" | "sibling" } | null;
   globalPanelOpen: GlobalPanelType;
+  isLoading: boolean;
 }
 
 /* ─────────────────────── Root State ─────────────────────────────── */
@@ -143,7 +129,6 @@ interface OrgSetupState {
   materials: Record<string, Material>;
   calendars: Record<string, Calendar>;
   roles: Record<string, Role>;
-  costCentres: Record<string, CostCentre>;
   ui: UIState;
 }
 
@@ -200,8 +185,6 @@ export {
   type CalendarExceptionData,
   type RoleLevel,
   type Role,
-  type CostCentreType,
-  type CostCentre,
   type GlobalPanelType,
   type UIState,
   type OrgSetupState,

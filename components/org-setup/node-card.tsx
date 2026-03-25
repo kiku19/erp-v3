@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { Settings, Plus, Users, Briefcase, CalendarDays } from "lucide-react";
+import { Settings, Plus, Users, Briefcase, CalendarDays, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -58,6 +58,24 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
   const rolesCount = getNodeRolesCount(nodeId);
   const calendar = node.calendarId ? state.calendars[node.calendarId] : null;
   const hasNoDivisions = isRoot && node.children.length === 0;
+
+  // Inline validation warnings
+  const warnings: string[] = [];
+
+  if (isRoot && !node.nodeHeadPersonId) {
+    warnings.push("No node head assigned");
+  }
+
+  if (!isRoot && peopleCount > 0 && !node.calendarId) {
+    warnings.push("No calendar assigned");
+  }
+
+  const badRates = node.assignedRoles.filter(
+    (r) => r.standardRate === null || r.standardRate <= 0
+  );
+  if (badRates.length > 0) {
+    warnings.push(`${badRates.length} role(s) missing rates`);
+  }
 
   const handleOpen = useCallback(() => {
     dispatch({ type: "SET_SELECTED_NODE", nodeId });
@@ -129,6 +147,18 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
             </span>
           )}
         </div>
+
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <div className="flex flex-col gap-0.5 px-3 pb-1">
+            {warnings.map((w) => (
+              <span key={w} className="flex items-center gap-1 text-[11px] text-warning-foreground">
+                <AlertTriangle size={10} className="shrink-0" />
+                {w}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Divider */}
         <div className="mx-3 h-px bg-border" />
