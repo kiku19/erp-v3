@@ -166,41 +166,30 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
         </div>
       </div>
 
-      {/* Right-edge add-child button with extending line */}
+      {/* Right-edge add-child button */}
       {canAddChild && (
-        <div
+        <button
           data-testid={`add-child-${nodeId}`}
-          className="absolute flex items-center"
+          className={cn(
+            "absolute flex h-5 w-5 items-center justify-center rounded-full",
+            "border border-[var(--color-connector)] bg-card text-muted-foreground",
+            "transition-all duration-[var(--duration-fast)] ease-[var(--ease-default)]",
+            "hover:border-primary hover:text-primary hover:shadow-[var(--shadow-node-hover)]",
+            "cursor-pointer",
+            hasNoDivisions && "animate-[pulse-attention_2s_ease-in-out_infinite]",
+          )}
           style={{
-            left: layout.x + layout.width,
-            top: layout.y + layout.height / 2,
-            transform: "translateY(-50%)",
+            left: layout.x + layout.width - 10,
+            top: layout.y + layout.height / 2 - 10,
           }}
+          aria-label={`Add child to ${node.name}`}
           onClick={(e) => {
             e.stopPropagation();
             handleAddChild();
           }}
         >
-          {/* Extending line */}
-          <div
-            className="h-px w-6"
-            style={{ backgroundColor: "var(--color-connector)" }}
-          />
-          {/* Plus circle */}
-          <button
-            className={cn(
-              "flex h-5 w-5 items-center justify-center rounded-full",
-              "border border-[var(--color-connector)] bg-card text-muted-foreground",
-              "transition-all duration-[var(--duration-fast)] ease-[var(--ease-default)]",
-              "hover:border-primary hover:text-primary hover:shadow-[var(--shadow-node-hover)]",
-              "cursor-pointer",
-              hasNoDivisions && "animate-[pulse-attention_2s_ease-in-out_infinite]",
-            )}
-            aria-label={`Add child to ${node.name}`}
-          >
-            <Plus size={12} />
-          </button>
-        </div>
+          <Plus size={12} />
+        </button>
       )}
 
       {/* Empty state hint — only for root with no divisions */}
@@ -208,7 +197,7 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
         <div
           className="absolute text-center text-sm text-muted-foreground"
           style={{
-            left: layout.x + layout.width + 40,
+            left: layout.x + layout.width + 16,
             top: layout.y + layout.height / 2 + 16,
           }}
         >
