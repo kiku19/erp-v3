@@ -32,10 +32,6 @@ function SettingsTab({ nodeId }: SettingsTabProps) {
       <AccordionSection title="Roles & Rates" id="roles" isOpen={openSection === "roles"} onToggle={() => toggle("roles")}>
         <RolesRatesSection nodeId={nodeId} />
       </AccordionSection>
-
-      <AccordionSection title="Cost Centres" id="cost-centres" isOpen={openSection === "cost-centres"} onToggle={() => toggle("cost-centres")}>
-        <CostCentresSection nodeId={nodeId} />
-      </AccordionSection>
     </div>
   );
 }
@@ -384,70 +380,6 @@ function RolesRatesSection({ nodeId }: { nodeId: string }) {
           <Plus size={14} /> Assign Role from Catalogue
         </Button>
       )}
-    </div>
-  );
-}
-
-/* ─────────────────────── Cost Centres ───────────────────────────── */
-
-function CostCentresSection({ nodeId }: { nodeId: string }) {
-  const { state, dispatch } = useOrgSetup();
-  const node = state.nodes[nodeId];
-  const costCentres = Object.values(state.costCentres);
-
-  const ccOptions = useMemo(
-    () => costCentres.map((cc) => ({ value: cc.id, label: `${cc.code} — ${cc.description}` })),
-    [costCentres],
-  );
-
-  const handleChange = useCallback(
-    (field: "labour" | "equipment" | "material" | "overhead", value: string) => {
-      if (!node) return;
-      dispatch({
-        type: "UPDATE_NODE",
-        nodeId,
-        updates: {
-          costCentres: { ...node.costCentres, [field]: value || null },
-        },
-      });
-    },
-    [dispatch, nodeId, node],
-  );
-
-  if (costCentres.length === 0) {
-    return (
-      <div className="flex flex-col gap-2">
-        <p className="text-[13px] text-muted-foreground">No cost centres created yet.</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-fit"
-          onClick={() => dispatch({ type: "SET_GLOBAL_PANEL", panel: "costcentres" })}
-        >
-          Create Cost Centres <ExternalLink size={12} />
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <p className="text-[13px] text-muted-foreground">
-        Map finance codes to each cost type. Costs logged by people and resources in this division are automatically tagged to these codes.
-      </p>
-      {(["labour", "equipment", "material", "overhead"] as const).map((field) => (
-        <div key={field} className="flex flex-col gap-1.5">
-          <label className="text-[13px] font-medium capitalize text-foreground">
-            {field === "overhead" ? "Overhead (for LOE and support activities)" : `${field} Cost Centre`}
-          </label>
-          <Select
-            options={ccOptions}
-            value={node?.costCentres[field] ?? ""}
-            onChange={(v) => handleChange(field, v)}
-            placeholder="Select cost centre"
-          />
-        </div>
-      ))}
     </div>
   );
 }
