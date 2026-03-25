@@ -85,13 +85,6 @@ function installMockFetch(calendarsRef: { current: CalendarData[] }) {
       );
     }
 
-    // Calendar search
-    if (url.includes("/api/planner/calendars?search=")) {
-      return new Response(JSON.stringify({ calendars: [] }), {
-        status: 200, headers: { "Content-Type": "application/json" },
-      });
-    }
-
     return originalFetch(input, init);
   };
 }
@@ -130,7 +123,7 @@ function Interactive() {
         calendars={calendars}
         categories={["global"]}
         onCreate={(cal) => {
-          setCalendars((prev) => [...prev, { ...cal, id: `cal-${Date.now()}` } as CalendarData]);
+          setCalendars((prev) => [{ ...cal, id: `cal-${Date.now()}` } as CalendarData, ...prev]);
         }}
         onUpdate={(calId, updates) => {
           setCalendars((prev) =>
@@ -172,4 +165,67 @@ function Interactive() {
 
 export const Default: Story = {
   render: () => <Interactive />,
+};
+
+function InteractiveEmpty() {
+  const [open, setOpen] = useState(true);
+  const [calendars, setCalendars] = useState<CalendarData[]>([]);
+
+  return (
+    <>
+      <button
+        data-testid="open-settings"
+        onClick={() => setOpen(true)}
+        className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
+      >
+        Open Calendar Settings
+      </button>
+      <CalendarSettingsModal
+        open={open}
+        onClose={() => setOpen(false)}
+        calendars={calendars}
+        categories={["global"]}
+        onCreate={(cal) => {
+          setCalendars((prev) => [{ ...cal, id: `cal-${Date.now()}` } as CalendarData, ...prev]);
+        }}
+        onUpdate={(calId, updates) => {
+          setCalendars((prev) =>
+            prev.map((c) => (c.id === calId ? { ...c, ...updates } : c)),
+          );
+        }}
+        onDelete={(calId) => {
+          setCalendars((prev) => prev.filter((c) => c.id !== calId));
+        }}
+        onDeleteException={(calId, exId) => {
+          setCalendars((prev) =>
+            prev.map((c) =>
+              c.id === calId
+                ? { ...c, exceptions: c.exceptions.filter((e) => e.id !== exId) }
+                : c,
+            ),
+          );
+        }}
+        onCreateException={(calId, data) => {
+          setCalendars((prev) =>
+            prev.map((c) =>
+              c.id === calId
+                ? {
+                    ...c,
+                    exceptions: [
+                      ...c.exceptions,
+                      { ...data, id: `ex-${Date.now()}`, endDate: null, workHours: null } as CalendarExceptionData,
+                    ],
+                  }
+                : c,
+            ),
+          );
+        }}
+        onRefresh={() => {}}
+      />
+    </>
+  );
+}
+
+export const EmptyState: Story = {
+  render: () => <InteractiveEmpty />,
 };

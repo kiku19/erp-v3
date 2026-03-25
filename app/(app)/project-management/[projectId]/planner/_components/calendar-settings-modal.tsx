@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft } from "lucide-react";
+import { createPortal } from "react-dom";
+import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft, Check, X } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import type { CalendarData, WorkDayConfig } from "@/lib/planner/calendar-types";
+import type { CalendarData, CalendarExceptionData, WorkDayConfig } from "@/lib/planner/calendar-types";
 import { DEFAULT_WORK_DAYS } from "@/lib/planner/calendar-types";
 import { ExceptionEditorContent, DOT_CLASS_MAP } from "@/components/shared/calendar-exception-modal/exception-editor-content";
 
@@ -51,7 +52,6 @@ function DuplicateCalendarModal({ open, onClose, calendar, onSave }: DuplicateCa
   useEffect(() => {
     if (open) {
       setName(`Copy of ${calendar.name}`);
-      // Auto-focus + select on next tick
       setTimeout(() => inputRef.current?.select(), 0);
     }
   }, [open, calendar.name]);
@@ -92,167 +92,269 @@ function DuplicateCalendarModal({ open, onClose, calendar, onSave }: DuplicateCa
   );
 }
 
-/* ─────────────────────── CalendarSearchModal ─────────────────── */
+/* ─────────────────────── SpotlightSearch ─────────────────────── */
 
-interface CalendarSearchModalProps {
+interface SpotlightSearchProps {
   open: boolean;
   onClose: () => void;
   calendars: CalendarData[];
-  onAssign: (calId: string) => void;
+  onSelect: (calId: string) => void;
 }
 
-function CalendarSearchModal({ open, onClose, calendars, onAssign }: CalendarSearchModalProps) {
+function SpotlightSearch({ open, onClose, calendars, onSelect }: SpotlightSearchProps) {
   const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<CalendarData[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Show last 3 created calendars when nothing is searched
-  const displayedCalendars = query.trim()
-    ? searchResults
-    : calendars.slice(0, 3);
-
-  // Reset state when modal opens
+  // Mount/unmount animation
   useEffect(() => {
     if (open) {
+      setIsClosing(false);
+      setIsMounted(true);
       setQuery("");
-      setSearchResults([]);
-      setSelectedId(null);
+      setHighlightedIndex(0);
+    } else if (isMounted) {
+      setIsClosing(true);
     }
-  }, [open]);
+  }, [open, isMounted]);
 
-  // Debounced API search
+  // Fallback unmount (jsdom doesn't fire onAnimationEnd)
   useEffect(() => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
+    if (!isClosing) return;
+    const timer = setTimeout(() => {
+      setIsMounted(false);
+      setIsClosing(false);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isClosing]);
+
+  const handleAnimationEnd = useCallback(() => {
+    if (isClosing) {
+      setIsMounted(false);
+      setIsClosing(false);
     }
+  }, [isClosing]);
 
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  // Auto-focus input on mount
+  useEffect(() => {
+    if (isMounted && !isClosing) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isMounted, isClosing]);
 
-    debounceRef.current = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const res = await fetch(
-          `/api/planner/calendars?search=${encodeURIComponent(query.trim())}&limit=10`,
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setSearchResults(data.calendars ?? []);
-        }
-      } catch {
-        // Silently fail — local list is still visible
-      } finally {
-        setIsSearching(false);
-      }
-    }, 300);
+  // Filter calendars locally
+  const filtered = calendars.filter((c) =>
+    c.name.toLowerCase().includes(query.toLowerCase()),
+  );
 
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+  // Reset highlight when query changes
+  useEffect(() => {
+    setHighlightedIndex(0);
   }, [query]);
 
-  const handleAssign = useCallback(() => {
-    if (!selectedId) return;
-    onAssign(selectedId);
-    onClose();
-  }, [selectedId, onAssign, onClose]);
+  // Keyboard navigation
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev + 1) % Math.max(filtered.length, 1));
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev - 1 + filtered.length) % Math.max(filtered.length, 1));
+      } else if (e.key === "Enter" && filtered.length > 0) {
+        e.preventDefault();
+        onSelect(filtered[highlightedIndex].id);
+        onClose();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    },
+    [filtered, highlightedIndex, onSelect, onClose],
+  );
+
+  // Close on Escape at document level (catches Escape even when input not focused)
+  useEffect(() => {
+    if (!isMounted || isClosing) return;
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    }
+    document.addEventListener("keydown", handleEsc, true);
+    return () => document.removeEventListener("keydown", handleEsc, true);
+  }, [isMounted, isClosing, onClose]);
 
   const workingDaySummary = (cal: CalendarData) => {
     const days = cal.workDays.filter((d) => d.working).length;
-    return `${days} days/wk · ${cal.hoursPerDay}h/day`;
+    return `${cal.hoursPerDay}h/day · ${days} days/wk`;
   };
 
-  return (
-    <Modal open={open} onClose={onClose} width={500}>
-      <div className="flex flex-col gap-2 p-6 pb-0">
-        <h2 className="text-lg font-semibold text-foreground">Select Calendar</h2>
-        <p className="text-[13px] text-muted-foreground">
-          Choose a calendar to assign to this project
-        </p>
-      </div>
+  if (!isMounted) return null;
 
-      <div className="flex flex-col gap-5 p-6">
-        {/* Search Input */}
-        <div className="flex items-center gap-3 h-10 px-3 rounded-md bg-input">
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-foreground/20 backdrop-blur-sm"
+      style={{
+        zIndex: 99999,
+        animation: isClosing
+          ? "spotlight-out var(--duration-fast) var(--ease-default) forwards"
+          : "spotlight-in var(--duration-normal) var(--ease-default) forwards",
+      }}
+      onClick={onClose}
+      onAnimationEnd={handleAnimationEnd}
+    >
+      <div
+        className="mx-auto mt-[20vh] w-full max-w-[560px] rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)]"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          animation: isClosing
+            ? "spotlight-out var(--duration-fast) var(--ease-default) forwards"
+            : "spotlight-in var(--duration-normal) var(--ease-default) forwards",
+        }}
+      >
+        {/* Search input */}
+        <div className="flex items-center gap-3 h-12 px-4 border-b border-border">
           <Search size={18} className="text-muted-foreground shrink-0" />
-          <input
-            type="text"
+          <Input
+            ref={inputRef}
+            data-testid="spotlight-search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Search calendars..."
-            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="border-none bg-transparent shadow-none ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0 py-0 h-auto"
+            autoFocus
           />
         </div>
 
-        {/* Calendar List */}
-        <div className="flex flex-col gap-3">
-          {isSearching && (
-            <p className="text-[13px] text-muted-foreground text-center py-2">Searching...</p>
-          )}
-          {!isSearching && displayedCalendars.length === 0 && (
-            <p className="text-[13px] text-muted-foreground text-center py-2">
-              {query.trim() ? "No calendars found" : "No calendars available"}
+        {/* Results */}
+        <div className="max-h-[300px] overflow-auto p-2">
+          {calendars.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground text-center py-4">
+              No calendars have been added yet
             </p>
-          )}
-          {displayedCalendars.map((cal) => {
-            const isSelected = cal.id === selectedId;
-            return (
+          ) : filtered.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground text-center py-4">
+              No results found
+            </p>
+          ) : (
+            filtered.map((cal, idx) => (
               <button
                 key={cal.id}
                 type="button"
-                onClick={() => setSelectedId(cal.id)}
+                data-testid={`spotlight-item-${cal.id}`}
+                onClick={() => {
+                  onSelect(cal.id);
+                  onClose();
+                }}
                 className={cn(
-                  "flex items-center gap-3 w-full h-12 px-3.5 rounded-md text-left cursor-pointer transition-colors duration-[var(--duration-fast)]",
-                  isSelected
+                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-left cursor-pointer transition-colors duration-[var(--duration-fast)]",
+                  idx === highlightedIndex
                     ? "bg-muted"
-                    : "bg-card border border-border hover:bg-muted-hover",
+                    : "hover:bg-muted-hover",
                 )}
               >
-                <Calendar
-                  size={20}
-                  className={cn(
-                    isSelected ? "text-accent-foreground" : "text-muted-foreground",
-                  )}
-                />
+                <Calendar size={18} className="text-muted-foreground shrink-0" />
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {cal.name}
-                  </span>
-                  <span className="text-[12px] text-muted-foreground truncate">
+                  <span className="text-sm font-medium text-foreground truncate">{cal.name}</span>
+                  <span className="text-[11px] text-muted-foreground truncate">
                     {workingDaySummary(cal)}
                   </span>
                 </div>
               </button>
-            );
-          })}
+            ))
+          )}
         </div>
       </div>
+    </div>,
+    document.body,
+  );
+}
 
-      {/* Divider + Footer */}
-      <div className="h-px w-full bg-border" />
-      <div className="flex items-center justify-end gap-3 px-6 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onClose}
-          data-testid="search-modal-cancel"
-          className="w-[100px]"
+/* ─────────────────────── EmptyCalendarSvg ────────────────────── */
+
+function EmptyCalendarSvg() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 py-12 px-4" data-testid="empty-calendar-svg">
+      <div style={{ animation: "empty-float 3s ease-in-out infinite" }}>
+        <svg
+          width="80"
+          height="80"
+          viewBox="0 0 80 80"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ animation: "icon-scale-in var(--duration-slow) var(--ease-default) forwards" }}
         >
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleAssign}
-          disabled={!selectedId}
-          data-testid="search-modal-assign"
-          className="w-[100px]"
-        >
-          Assign
-        </Button>
+          {/* Calendar body */}
+          <rect
+            x="10"
+            y="16"
+            width="60"
+            height="52"
+            rx="8"
+            stroke="var(--muted-foreground)"
+            strokeWidth="1.5"
+            strokeDasharray="5 4"
+            style={{ animation: "empty-pulse 2.5s ease-in-out infinite" }}
+          />
+          {/* Header bar */}
+          <rect x="10" y="16" width="60" height="16" rx="8" fill="var(--border)" opacity="0.3" />
+          <line x1="10" y1="32" x2="70" y2="32" stroke="var(--border)" strokeWidth="1" />
+          {/* Calendar pins */}
+          <rect x="22" y="10" width="4" height="12" rx="2" fill="var(--muted-foreground)" opacity="0.5" />
+          <rect x="54" y="10" width="4" height="12" rx="2" fill="var(--muted-foreground)" opacity="0.5" />
+          {/* Grid dots */}
+          <circle cx="28" cy="42" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="40" cy="42" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="52" cy="42" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="28" cy="54" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="40" cy="54" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="52" cy="54" r="2" fill="var(--border)" opacity="0.5" />
+          {/* Plus symbol */}
+          <circle cx="58" cy="58" r="10" fill="var(--background)" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeDasharray="3 2" />
+          <line x1="58" y1="53" x2="58" y2="63" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="53" y1="58" x2="63" y2="58" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
       </div>
-    </Modal>
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-muted-foreground text-[13px] font-medium">No calendars added yet</span>
+        <span className="text-muted-foreground text-[11px]">Click + to create one</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────── SuccessAnimation ────────────────────── */
+
+function SuccessAnimation({ fading }: { fading?: boolean }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center h-full gap-4"
+      style={fading ? {
+        animation: "success-fade-out var(--duration-slow) var(--ease-default) forwards",
+      } : undefined}
+    >
+      <div
+        className="relative"
+        style={{ animation: "success-scale-in var(--duration-slow) var(--ease-default) forwards" }}
+      >
+        <Calendar size={48} className="text-foreground" />
+        <div className="absolute -bottom-1 -right-1 flex items-center justify-center w-6 h-6 rounded-full bg-[var(--color-success)]">
+          <Check
+            size={14}
+            className="text-[var(--color-success-foreground)]"
+            style={{ animation: "checkmark-draw var(--duration-slow) var(--ease-default) forwards" }}
+          />
+        </div>
+      </div>
+      <span className="text-foreground text-sm font-medium">Calendar created!</span>
+    </div>
   );
 }
 
@@ -270,21 +372,40 @@ function CalendarSettingsModal({
   onCreateException,
   onRefresh,
 }: CalendarSettingsModalProps) {
-  const [selectedCalId, setSelectedCalId] = useState<string | null>(
-    calendars.length > 0 ? calendars[0].id : null,
-  );
+  const [selectedCalId, setSelectedCalId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(true);
+  const [successAnim, setSuccessAnim] = useState(false);
+  const [successFading, setSuccessFading] = useState(false);
+  const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
   const [newCalName, setNewCalName] = useState("");
+  const [newFormWorkDays, setNewFormWorkDays] = useState<WorkDayConfig[]>(DEFAULT_WORK_DAYS);
+  const [newFormExceptions, setNewFormExceptions] = useState<CalendarExceptionData[]>([]);
+  const [addFormExceptionOpen, setAddFormExceptionOpen] = useState(false);
   const [workDays, setWorkDays] = useState<WorkDayConfig[]>(DEFAULT_WORK_DAYS);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
   const [deleteCalTarget, setDeleteCalTarget] = useState<CalendarData | null>(null);
+  const prevCalLengthRef = useRef(calendars.length);
+  const newFormExceptionIdRef = useRef(0);
 
   const selectedCal = calendars.find((c) => c.id === selectedCalId) ?? null;
+
+  // Detect new calendar added (length increased) and mark it for glow
+  useEffect(() => {
+    if (calendars.length > prevCalLengthRef.current && calendars.length > 0) {
+      const newestCal = calendars[0];
+      setNewlyCreatedId(newestCal.id);
+      const timer = setTimeout(() => setNewlyCreatedId(null), 2000);
+      return () => clearTimeout(timer);
+    }
+    prevCalLengthRef.current = calendars.length;
+  }, [calendars]);
 
   // Sync work days when selected calendar changes
   const selectCalendar = useCallback((calId: string) => {
     setSelectedCalId(calId);
+    setShowAddForm(false);
     const cal = calendars.find((c) => c.id === calId);
     if (cal) {
       setWorkDays(cal.workDays);
@@ -298,17 +419,81 @@ function CalendarSettingsModal({
       name: newCalName.trim(),
       category: categories[0] ?? "global",
       hoursPerDay: 8,
-      workDays: DEFAULT_WORK_DAYS,
-      exceptions: [],
+      workDays: newFormWorkDays,
+      exceptions: newFormExceptions,
     });
-    setNewCalName("");
-  }, [newCalName, categories, onCreate]);
+    setSuccessAnim(true);
+    setSuccessFading(false);
+    // Start fade-out after 1.2s
+    setTimeout(() => setSuccessFading(true), 1200);
+    // Unmount and reset after fade completes (~1.5s total)
+    setTimeout(() => {
+      setSuccessAnim(false);
+      setSuccessFading(false);
+      setNewCalName("");
+      setNewFormWorkDays(DEFAULT_WORK_DAYS);
+      setNewFormExceptions([]);
+    }, 1500);
+  }, [newCalName, categories, newFormWorkDays, newFormExceptions, onCreate]);
 
-  // Update work week
+  // Toggle work day in the add form
+  const handleNewFormWorkDayToggle = useCallback((dayIndex: number) => {
+    setNewFormWorkDays((prev) =>
+      prev.map((d, i) => (i === dayIndex ? { ...d, working: !d.working } : d)),
+    );
+  }, []);
+
+  // Update time in the add form
+  const handleNewFormTimeChange = useCallback((dayIndex: number, field: "startTime" | "endTime", value: string) => {
+    setNewFormWorkDays((prev) =>
+      prev.map((d, i) => (i === dayIndex ? { ...d, [field]: value } : d)),
+    );
+  }, []);
+
+  // Add exception to the add form (local)
+  const handleNewFormAddException = useCallback((data: {
+    name: string;
+    date: string;
+    exceptionType: "Holiday" | "Non-Working" | "Misc";
+    startTime: string | null;
+    endTime: string | null;
+    reason: string | null;
+    workHours: number | null;
+  }) => {
+    const newEx: CalendarExceptionData = {
+      id: `local-ex-${++newFormExceptionIdRef.current}`,
+      name: data.name,
+      date: data.date,
+      endDate: null,
+      exceptionType: data.exceptionType,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      reason: data.reason,
+      workHours: data.workHours,
+    };
+    setNewFormExceptions((prev) => [...prev, newEx]);
+  }, []);
+
+  // Delete exception from the add form (local)
+  const handleNewFormDeleteException = useCallback((exId: string) => {
+    setNewFormExceptions((prev) => prev.filter((e) => e.id !== exId));
+  }, []);
+
+  // Update work week (detail view)
   const handleWorkDayToggle = useCallback(async (dayIndex: number) => {
     if (!selectedCal) return;
     const updated = workDays.map((d, i) =>
       i === dayIndex ? { ...d, working: !d.working } : d,
+    );
+    setWorkDays(updated);
+    await onUpdate(selectedCal.id, { workDays: updated });
+  }, [selectedCal, workDays, onUpdate]);
+
+  // Update time in detail view
+  const handleTimeChange = useCallback(async (dayIndex: number, field: "startTime" | "endTime", value: string) => {
+    if (!selectedCal) return;
+    const updated = workDays.map((d, i) =>
+      i === dayIndex ? { ...d, [field]: value } : d,
     );
     setWorkDays(updated);
     await onUpdate(selectedCal.id, { workDays: updated });
@@ -325,10 +510,11 @@ function CalendarSettingsModal({
     if (!deleteCalTarget) return;
     await onDelete(deleteCalTarget.id);
     if (selectedCalId === deleteCalTarget.id) {
-      setSelectedCalId(calendars.find((c) => c.id !== deleteCalTarget.id)?.id ?? null);
+      setSelectedCalId(null);
+      setShowAddForm(true);
     }
     setDeleteCalTarget(null);
-  }, [deleteCalTarget, calendars, selectedCalId, onDelete]);
+  }, [deleteCalTarget, selectedCalId, onDelete]);
 
   // Delete exception
   const handleDeleteException = useCallback(async (exceptionId: string) => {
@@ -348,22 +534,46 @@ function CalendarSettingsModal({
     });
   }, [selectedCal, onCreate]);
 
-  // Search modal assign
-  const handleSearchAssign = useCallback((calId: string) => {
+  // Spotlight select handler
+  const handleSpotlightSelect = useCallback((calId: string) => {
     selectCalendar(calId);
   }, [selectCalendar]);
 
   const totalHoursPerWeek = workDays.filter((d) => d.working).length * (selectedCal?.hoursPerDay ?? 8);
   const workingDaysCount = workDays.filter((d) => d.working).length;
 
-  // Intercept close: collapse exception editor first, then close modal
+  const newFormTotalHours = newFormWorkDays.filter((d) => d.working).length * 8;
+  const newFormWorkingDays = newFormWorkDays.filter((d) => d.working).length;
+
+  // Ctrl+K handler
+  useEffect(() => {
+    if (!open) return;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "k" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        setSpotlightOpen(true);
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  // Intercept close: close spotlight first, then exception editor, then modal
   const handleModalClose = useCallback(() => {
+    if (spotlightOpen) {
+      setSpotlightOpen(false);
+      return;
+    }
     if (exceptionModalOpen) {
       setExceptionModalOpen(false);
       return;
     }
+    if (addFormExceptionOpen) {
+      setAddFormExceptionOpen(false);
+      return;
+    }
     onClose();
-  }, [exceptionModalOpen, onClose]);
+  }, [spotlightOpen, exceptionModalOpen, addFormExceptionOpen, onClose]);
 
   return (
     <>
@@ -378,15 +588,26 @@ function CalendarSettingsModal({
                 <span className="text-[12px] text-muted-foreground">Manage work calendars and scheduling rules</span>
               </div>
             </div>
-            <button
-              type="button"
-              data-testid="calendar-search-trigger"
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 h-10 px-4 border border-border rounded-md cursor-pointer hover:bg-muted-hover transition-colors duration-[var(--duration-fast)]"
-            >
-              <Search size={14} className="text-muted-foreground" />
-              <span className="text-[12px] text-muted-foreground">Search calendars...</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                data-testid="calendar-search-trigger"
+                onClick={() => setSpotlightOpen(true)}
+                className="gap-2"
+              >
+                <Search size={14} className="text-muted-foreground" />
+                <span className="text-[12px] text-muted-foreground">Search calendars...</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                data-testid="calendar-modal-close"
+                onClick={handleModalClose}
+                className="h-9 w-9"
+              >
+                <X size={16} />
+              </Button>
+            </div>
           </div>
 
           {/* ── Body ── */}
@@ -399,83 +620,120 @@ function CalendarSettingsModal({
                   <span className="text-[13px] font-semibold text-foreground">Calendars</span>
                   <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{calendars.length}</Badge>
                 </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setNewCalName("New Calendar")}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  data-testid="add-calendar-btn"
+                  onClick={() => {
+                    setSelectedCalId(null);
+                    setShowAddForm(true);
+                  }}
+                >
                   <Plus size={14} />
                 </Button>
               </div>
 
-              {/* New Calendar Input */}
-              <div className="flex flex-col gap-2 p-4 bg-muted border-t border-border">
-                <Input
-                  placeholder="New calendar name..."
-                  className="h-8 text-[12px]"
-                  value={newCalName}
-                  onChange={(e) => setNewCalName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                />
-              </div>
-
               {/* Calendar List */}
               <div className="flex-1 overflow-auto">
-                {categories.map((cat) => {
-                  const items = calendars.filter((c) => c.category === cat);
-                  if (items.length === 0) return null;
-                  return (
-                    <div key={cat}>
-                      <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        {cat} calendars
-                      </div>
-                      {items.map((cal) => (
-                        <div
-                          key={cal.id}
-                          className={cn(
-                            "group/cal flex items-center w-full transition-colors duration-[var(--duration-fast)]",
-                            cal.id === selectedCalId
-                              ? "bg-primary-active text-primary-active-foreground"
-                              : "hover:bg-muted-hover",
-                          )}
-                        >
-                          <button
-                            onClick={() => selectCalendar(cal.id)}
-                            className="flex flex-col gap-0.5 flex-1 min-w-0 px-4 py-2.5 text-left cursor-pointer"
-                          >
-                            <span className={cn(
-                              "text-[12px] font-medium truncate",
-                              cal.id === selectedCalId ? "text-primary-active-foreground" : "text-foreground",
-                            )}>
-                              {cal.name}
-                            </span>
-                            <span className={cn(
-                              "text-[10px]",
-                              cal.id === selectedCalId ? "text-primary-active-foreground/70" : "text-muted-foreground",
-                            )}>
-                              {cal.hoursPerDay}h/day · {cal.workDays.filter((d) => d.working).length} days/wk
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setDeleteCalTarget(cal); }}
-                            className={cn(
-                              "flex items-center justify-center h-7 w-7 mr-2 rounded-md shrink-0 opacity-0 group-hover/cal:opacity-100 transition-opacity duration-[var(--duration-fast)] cursor-pointer",
-                              cal.id === selectedCalId
-                                ? "text-primary-active-foreground/70 hover:text-primary-active-foreground hover:bg-primary-active-foreground/10"
-                                : "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
-                            )}
-                            aria-label={`Delete ${cal.name}`}
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                {calendars.length === 0 ? (
+                  <EmptyCalendarSvg />
+                ) : (
+                  categories.map((cat) => {
+                    const items = calendars.filter((c) => c.category === cat);
+                    if (items.length === 0) return null;
+                    return (
+                      <div key={cat}>
+                        <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          {cat} calendars
                         </div>
-                      ))}
-                    </div>
-                  );
-                })}
+                        {items.map((cal) => (
+                          <div
+                            key={cal.id}
+                            className={cn(
+                              "group/cal flex items-center w-full transition-colors duration-[var(--duration-fast)]",
+                              cal.id === selectedCalId
+                                ? "bg-primary-active text-primary-active-foreground"
+                                : "hover:bg-muted-hover",
+                            )}
+                            style={
+                              cal.id === newlyCreatedId
+                                ? { animation: "list-item-enter var(--duration-slow) var(--ease-default), border-glow 1.5s var(--ease-default)" }
+                                : undefined
+                            }
+                          >
+                            <button
+                              onClick={() => selectCalendar(cal.id)}
+                              className="flex flex-col gap-0.5 flex-1 min-w-0 px-4 py-2.5 text-left cursor-pointer"
+                            >
+                              <span className={cn(
+                                "text-[12px] font-medium truncate",
+                                cal.id === selectedCalId ? "text-primary-active-foreground" : "text-foreground",
+                              )}>
+                                {cal.name}
+                              </span>
+                              <span className={cn(
+                                "text-[10px]",
+                                cal.id === selectedCalId ? "text-primary-active-foreground/70" : "text-muted-foreground",
+                              )}>
+                                {cal.hoursPerDay}h/day · {cal.workDays.filter((d) => d.working).length} days/wk
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setDeleteCalTarget(cal); }}
+                              className={cn(
+                                "flex items-center justify-center h-7 w-7 mr-2 rounded-md shrink-0 opacity-0 group-hover/cal:opacity-100 transition-opacity duration-[var(--duration-fast)] cursor-pointer",
+                                cal.id === selectedCalId
+                                  ? "text-primary-active-foreground/70 hover:text-primary-active-foreground hover:bg-primary-active-foreground/10"
+                                  : "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                              )}
+                              aria-label={`Delete ${cal.name}`}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
-            {/* Right Panel — Calendar Details OR Exception Editor */}
+            {/* Right Panel */}
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              {selectedCal && exceptionModalOpen ? (
+              {successAnim ? (
+                <SuccessAnimation fading={successFading} />
+              ) : addFormExceptionOpen && !selectedCal ? (
+                /* ── Add Form Exception Editor ── */
+                <div className="flex flex-col h-full animate-[fade-in_var(--duration-normal)_var(--ease-default)]">
+                  <div className="flex items-center gap-3 h-14 px-6 border-b border-border shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setAddFormExceptionOpen(false)}
+                      className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted-hover cursor-pointer transition-colors duration-[var(--duration-fast)]"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
+                    <span className="text-[14px] font-semibold text-foreground">
+                      Exceptions & Holidays — New Calendar
+                    </span>
+                  </div>
+                  <ExceptionEditorContent
+                    calendarId="__new__"
+                    exceptions={newFormExceptions}
+                    onCreateException={(data) => {
+                      handleNewFormAddException(data);
+                    }}
+                    onDeleteException={(exId) => {
+                      handleNewFormDeleteException(exId);
+                    }}
+                    onSave={() => {}}
+                    onDone={() => setAddFormExceptionOpen(false)}
+                  />
+                </div>
+              ) : selectedCal && exceptionModalOpen ? (
                 /* ── Inline Exception Editor ── */
                 <div className="flex flex-col h-full animate-[fade-in_var(--duration-normal)_var(--ease-default)]">
                   <div className="flex items-center gap-3 h-14 px-6 border-b border-border shrink-0">
@@ -505,7 +763,7 @@ function CalendarSettingsModal({
                     onDone={() => setExceptionModalOpen(false)}
                   />
                 </div>
-              ) : selectedCal ? (
+              ) : selectedCal && !showAddForm ? (
                 <>
                   {/* Calendar Name + Actions */}
                   <div className="flex items-center justify-between h-14 px-6 border-b border-border">
@@ -530,7 +788,7 @@ function CalendarSettingsModal({
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-6 p-6">
+                  <div className="flex flex-col gap-6 p-6 overflow-auto">
                     {/* Work Week Configuration */}
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
@@ -567,14 +825,24 @@ function CalendarSettingsModal({
                             </span>
                             <span className="w-[120px]">
                               {dc.working ? (
-                                <Input value={dc.startTime} className="h-7 text-[11px] w-[100px]" readOnly />
+                                <Input
+                                  type="time"
+                                  value={dc.startTime}
+                                  onChange={(e) => handleTimeChange(idx, "startTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </span>
                             <span className="w-[120px]">
                               {dc.working ? (
-                                <Input value={dc.endTime} className="h-7 text-[11px] w-[100px]" readOnly />
+                                <Input
+                                  type="time"
+                                  value={dc.endTime}
+                                  onChange={(e) => handleTimeChange(idx, "endTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
@@ -635,8 +903,140 @@ function CalendarSettingsModal({
                   </div>
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground text-[13px]">
-                  {calendars.length === 0 ? "Create a calendar to get started" : "Select a calendar"}
+                /* ── Add Calendar Form (default) ── */
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center h-14 px-6 border-b border-border shrink-0">
+                    <span className="text-[14px] font-semibold text-foreground">Create New Calendar</span>
+                  </div>
+                  <div className="flex flex-col gap-6 p-6 overflow-auto">
+                    {/* Calendar Name */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[13px] font-medium text-foreground">Calendar Name</label>
+                      <Input
+                        placeholder="Enter calendar name..."
+                        value={newCalName}
+                        onChange={(e) => setNewCalName(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                      />
+                    </div>
+
+                    {/* Work Week Configuration */}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-semibold text-foreground">Work Week Configuration</span>
+                        <span className="text-[12px] text-muted-foreground">
+                          Total: {newFormTotalHours} hrs/wk · {newFormWorkingDays} days/wk
+                        </span>
+                      </div>
+
+                      <div className="border border-border rounded-md overflow-hidden">
+                        <div className="flex items-center h-9 bg-muted px-3 text-[11px] font-semibold text-muted-foreground">
+                          <span className="w-[120px]">Day</span>
+                          <span className="w-[80px] text-center">Workday</span>
+                          <span className="w-[120px]">Start Time</span>
+                          <span className="w-[120px]">End Time</span>
+                          <span className="w-[80px] text-right">Hrs/Day</span>
+                          <span className="w-[60px] text-center">Active</span>
+                        </div>
+                        {newFormWorkDays.map((dc, idx) => (
+                          <div
+                            key={dc.day}
+                            className="flex items-center h-10 px-3 border-t border-border text-[12px] text-foreground"
+                          >
+                            <span className="w-[120px] font-medium">{dc.day}</span>
+                            <span className="w-[80px] flex justify-center">
+                              <Checkbox checked={dc.working} onChange={() => handleNewFormWorkDayToggle(idx)} />
+                            </span>
+                            <span className="w-[120px]">
+                              {dc.working ? (
+                                <Input
+                                  type="time"
+                                  value={dc.startTime}
+                                  onChange={(e) => handleNewFormTimeChange(idx, "startTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </span>
+                            <span className="w-[120px]">
+                              {dc.working ? (
+                                <Input
+                                  type="time"
+                                  value={dc.endTime}
+                                  onChange={(e) => handleNewFormTimeChange(idx, "endTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </span>
+                            <span className="w-[80px] text-right">{dc.working ? "8h" : "0h"}</span>
+                            <span className="w-[60px] flex justify-center">
+                              <Checkbox checked={dc.working} />
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Exceptions & Holidays (local, pre-creation) */}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-semibold text-foreground">Exceptions & Holidays</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[12px]"
+                          data-testid="add-form-add-exception-btn"
+                          onClick={() => setAddFormExceptionOpen(true)}
+                        >
+                          <Plus size={12} />
+                          Add Exception
+                        </Button>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {newFormExceptions.length === 0 ? (
+                          <span className="text-[12px] text-muted-foreground py-2">No exceptions configured</span>
+                        ) : (
+                          newFormExceptions.map((ex) => (
+                            <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full shrink-0",
+                                DOT_CLASS_MAP[ex.exceptionType] ?? "bg-muted-foreground",
+                              )} />
+                              <div className="flex flex-col gap-0.5 flex-1">
+                                <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleNewFormDeleteException(ex.id)}
+                                className="flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-destructive cursor-pointer shrink-0 transition-colors duration-[var(--duration-fast)]"
+                                aria-label={`Delete ${ex.name}`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Create button */}
+                    <div className="flex justify-end">
+                      <Button
+                        data-testid="create-calendar-btn"
+                        onClick={handleCreate}
+                        disabled={!newCalName.trim()}
+                      >
+                        Create Calendar
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -654,15 +1054,13 @@ function CalendarSettingsModal({
         />
       )}
 
-      {/* Calendar Search Modal */}
-      <CalendarSearchModal
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
+      {/* Spotlight Search */}
+      <SpotlightSearch
+        open={spotlightOpen}
+        onClose={() => setSpotlightOpen(false)}
         calendars={calendars}
-        onAssign={handleSearchAssign}
+        onSelect={handleSpotlightSelect}
       />
-
-      {/* Exception editor is now rendered inline — no stacked modal */}
 
       {/* Delete Calendar Confirmation */}
       <Modal open={!!deleteCalTarget} onClose={() => setDeleteCalTarget(null)} width={400}>
@@ -688,5 +1086,5 @@ function CalendarSettingsModal({
   );
 }
 
-export { CalendarSettingsModal, DuplicateCalendarModal, CalendarSearchModal };
+export { CalendarSettingsModal, DuplicateCalendarModal, SpotlightSearch };
 export type { CalendarSettingsModalProps };
