@@ -25,11 +25,11 @@ import { cn } from "@/lib/utils";
 /* ─────────────────────── Constants ───────────────────────────────── */
 
 const LEVEL_OPTIONS = [
-  { value: "junior", label: "Junior" },
-  { value: "mid", label: "Mid" },
-  { value: "senior", label: "Senior" },
-  { value: "lead", label: "Lead" },
-  { value: "manager", label: "Manager" },
+  { value: "Junior", label: "Junior" },
+  { value: "Mid", label: "Mid" },
+  { value: "Senior", label: "Senior" },
+  { value: "Lead", label: "Lead" },
+  { value: "Principal", label: "Principal" },
 ];
 
 const PAY_TYPE_ITEMS: { value: PayType; label: string }[] = [
@@ -62,7 +62,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
   const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");
   const [codeManual, setCodeManual] = useState(false);
-  const [formLevel, setFormLevel] = useState<RoleLevel>("mid");
+  const [formLevel, setFormLevel] = useState<RoleLevel>("Mid");
   const [formPayType, setFormPayType] = useState<PayType>("hourly");
   const [formOvertimeEligible, setFormOvertimeEligible] = useState(true);
   const [formSkillTags, setFormSkillTags] = useState<string[]>([]);
@@ -79,7 +79,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
     setFormName("");
     setFormCode("");
     setCodeManual(false);
-    setFormLevel("mid");
+    setFormLevel("Mid");
     setFormPayType("hourly");
     setFormOvertimeEligible(true);
     setFormSkillTags([]);
@@ -147,42 +147,50 @@ function RolesModal({ open, onClose }: RolesModalProps) {
     setFormSkillTags((prev) => prev.filter((t) => t !== tag));
   }, []);
 
-  /* ────────── Save role (API + context) ────────── */
+  /* ────────── Save role (context first, then API) ────────── */
   const handleSave = useCallback(async () => {
     if (!formName.trim() || !formCode.trim()) return;
 
     setIsSaving(true);
-    try {
-      const roleData = {
-        name: formName.trim(),
-        code: formCode.trim().toUpperCase(),
-        level: formLevel,
-        defaultPayType: formPayType,
-        overtimeEligible: formOvertimeEligible,
-        skillTags: formSkillTags,
-      };
+    const roleData = {
+      name: formName.trim(),
+      code: formCode.trim().toUpperCase(),
+      level: formLevel,
+      defaultPayType: formPayType,
+      overtimeEligible: formOvertimeEligible,
+      skillTags: formSkillTags,
+    };
 
+    // Optimistic: update local context immediately
+    const newRoleId = generateId("role");
+    if (selectedRoleId) {
+      dispatch({
+        type: "UPDATE_ROLE",
+        roleId: selectedRoleId,
+        updates: roleData,
+      });
+    } else {
+      dispatch({
+        type: "ADD_ROLE",
+        role: { id: newRoleId, ...roleData },
+      });
+    }
+    backToList();
+
+    // Best-effort: persist to API
+    try {
       const authHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       };
 
       if (selectedRoleId) {
-        // Update existing
-        const res = await fetch(`/api/roles/${selectedRoleId}`, {
+        await fetch(`/api/roles/${selectedRoleId}`, {
           method: "PATCH",
           headers: authHeaders,
           body: JSON.stringify(roleData),
         });
-        if (res.ok) {
-          dispatch({
-            type: "UPDATE_ROLE",
-            roleId: selectedRoleId,
-            updates: roleData,
-          });
-        }
       } else {
-        // Create new
         const res = await fetch("/api/roles", {
           method: "POST",
           headers: authHeaders,
@@ -190,18 +198,18 @@ function RolesModal({ open, onClose }: RolesModalProps) {
         });
         if (res.ok) {
           const { role: created } = await res.json();
-          dispatch({
-            type: "ADD_ROLE",
-            role: {
-              id: created?.id ?? generateId("role"),
-              ...roleData,
-            },
-          });
+          // Sync the server-generated ID back into context
+          if (created?.id && created.id !== newRoleId) {
+            dispatch({ type: "REMOVE_ROLE", roleId: newRoleId });
+            dispatch({
+              type: "ADD_ROLE",
+              role: { id: created.id, ...roleData },
+            });
+          }
         }
       }
-      backToList();
     } catch (err) {
-      console.error("Failed to save role:", err);
+      console.error("Failed to persist role to API:", err);
     } finally {
       setIsSaving(false);
     }
@@ -214,21 +222,23 @@ function RolesModal({ open, onClose }: RolesModalProps) {
   const confirmDelete = useCallback(async () => {
     if (!deleteTargetId) return;
 
+    // Optimistic: remove from context immediately
+    dispatch({ type: "REMOVE_ROLE", roleId: deleteTargetId });
+    if (selectedRoleId === deleteTargetId) {
+      backToList();
+    }
+    setDeleteTargetId(null);
+
+    // Best-effort: persist to API
     try {
       await fetch(`/api/roles/${deleteTargetId}`, {
         method: "DELETE",
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
-      dispatch({ type: "REMOVE_ROLE", roleId: deleteTargetId });
-      if (selectedRoleId === deleteTargetId) {
-        backToList();
-      }
     } catch (err) {
-      console.error("Failed to delete role:", err);
-    } finally {
-      setDeleteTargetId(null);
+      console.error("Failed to delete role from API:", err);
     }
-  }, [deleteTargetId, dispatch, selectedRoleId, backToList]);
+  }, [deleteTargetId, dispatch, selectedRoleId, backToList, accessToken]);
 
   /* ────────── Search ────────── */
   const filteredRoles = searchQuery.trim()
@@ -249,10 +259,10 @@ function RolesModal({ open, onClose }: RolesModalProps) {
     onClose();
   }, [resetForm, onClose]);
 
-  /* ────────── Select first role on open ────────── */
+  /* ────────── Auto-enter create mode when no roles exist ────────── */
   useEffect(() => {
-    if (open && roles.length > 0 && !selectedRoleId && !isCreating) {
-      openEdit(roles[0]);
+    if (open && roles.length === 0 && !isCreating) {
+      openCreate();
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -316,16 +326,13 @@ function RolesModal({ open, onClose }: RolesModalProps) {
               </div>
 
               {/* Roles list */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex flex-1 flex-col overflow-y-auto">
                 {roles.length === 0 ? (
-                  <div className="flex flex-col items-center gap-3 py-12 text-center">
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
                     <Briefcase size={32} className="text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
                       No roles created yet
                     </p>
-                    <Button size="sm" onClick={openCreate}>
-                      <Plus size={14} /> Create Role
-                    </Button>
                   </div>
                 ) : (
                   roles.map((role) => (
@@ -554,17 +561,14 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                 </>
               ) : (
                 <div className="flex flex-1 items-center justify-center">
-                  <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="flex flex-col items-center gap-3 text-center px-8">
                     <Briefcase
                       size={40}
                       className="text-muted-foreground"
                     />
                     <p className="text-sm text-muted-foreground">
-                      Select a role or create a new one
+                      Select a role to edit or check more information about it
                     </p>
-                    <Button size="sm" onClick={openCreate}>
-                      <Plus size={14} /> New Role
-                    </Button>
                   </div>
                 </div>
               )}

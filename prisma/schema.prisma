@@ -401,3 +401,108 @@ model Role {
   @@unique([tenantId, code])
   @@index([tenantId, isDeleted])
 }
+
+model OBSNode {
+  id               String   @id @default(cuid())
+  tenantId         String
+  parentId         String?
+  name             String
+  code             String
+  type             String   @default("DIVISION")
+  nodeHeadPersonId String?
+  calendarId       String?
+  assignedRoles    Json     @default("[]")
+  isActive         Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  isDeleted        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  parentNode OBSNode?      @relation("OBSNodeTree", fields: [parentId], references: [id])
+  childNodes OBSNode[]     @relation("OBSNodeTree")
+  people     OBSPerson[]
+  equipment  OBSEquipment[]
+  materials  OBSMaterial[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, isDeleted])
+  @@index([tenantId, parentId, isDeleted])
+}
+
+model OBSPerson {
+  id              String    @id @default(cuid())
+  tenantId        String
+  nodeId          String
+  name            String
+  employeeId      String
+  email           String
+  roleId          String?
+  payType         String    @default("hourly")
+  standardRate    Float?
+  overtimeRate    Float?
+  overtimePay     Boolean   @default(false)
+  monthlySalary   Float?
+  dailyAllocation Float?
+  contractAmount  Float?
+  employmentType  String    @default("full-time")
+  joinDate        DateTime?
+  photoUrl        String?
+  isDeleted       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  node OBSNode @relation(fields: [nodeId], references: [id])
+
+  @@unique([tenantId, employeeId])
+  @@index([tenantId, isDeleted])
+  @@index([tenantId, nodeId, isDeleted])
+}
+
+model OBSEquipment {
+  id               String    @id @default(cuid())
+  tenantId         String
+  nodeId           String
+  name             String
+  code             String
+  category         String    @default("other")
+  ownershipType    String    @default("owned")
+  billingType      String    @default("owned-internal")
+  standardRate     Float     @default(0)
+  idleRate         Float?
+  mobilizationCost Float?
+  rentalStart      DateTime?
+  rentalEnd        DateTime?
+  isDeleted        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  node OBSNode @relation(fields: [nodeId], references: [id])
+
+  @@unique([tenantId, code])
+  @@index([tenantId, isDeleted])
+  @@index([tenantId, nodeId, isDeleted])
+}
+
+model OBSMaterial {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  nodeId              String
+  name                String
+  sku                 String
+  category            String   @default("consumable")
+  uom                 String   @default("piece")
+  standardCostPerUnit Float    @default(0)
+  costBasis           String   @default("fixed")
+  wastageStandardPct  Float    @default(0)
+  leadTimeDays        Int?
+  reorderPointQty     Int?
+  isDeleted           Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  node OBSNode @relation(fields: [nodeId], references: [id])
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, isDeleted])
+  @@index([tenantId, nodeId, isDeleted])
+}

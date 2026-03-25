@@ -52,9 +52,11 @@ describe("RolesModal", () => {
     expect(screen.queryByTestId("roles-modal")).toBeNull();
   });
 
-  it("shows empty state when no roles exist", () => {
+  it("shows create form directly when no roles exist", () => {
     renderWithProvider(<RolesModal open={true} onClose={vi.fn()} />);
     expect(screen.getByText("No roles created yet")).toBeDefined();
+    expect(screen.getByText("New Role")).toBeDefined();
+    expect(screen.getByTestId("role-name-input")).toBeDefined();
   });
 
   it("opens create form when add button clicked", () => {
@@ -67,7 +69,6 @@ describe("RolesModal", () => {
 
   it("auto-generates code when name is typed", () => {
     renderWithProvider(<RolesModal open={true} onClose={vi.fn()} />);
-    fireEvent.click(screen.getByLabelText("Add new role"));
 
     const nameInput = screen.getByTestId("role-name-input");
     fireEvent.change(nameInput, { target: { value: "Senior Painter" } });
@@ -78,7 +79,6 @@ describe("RolesModal", () => {
 
   it("calls API and saves role on form submit", async () => {
     renderWithProvider(<RolesModal open={true} onClose={vi.fn()} />);
-    fireEvent.click(screen.getByLabelText("Add new role"));
 
     fireEvent.change(screen.getByTestId("role-name-input"), {
       target: { value: "Electrician" },
@@ -105,8 +105,8 @@ describe("RolesModal", () => {
 
 describe("RolesSearchModal", () => {
   const roles = [
-    { id: "r1", name: "Painter", code: "PNT-01", level: "senior" as const, defaultPayType: "hourly" as const, overtimeEligible: true, skillTags: [] },
-    { id: "r2", name: "Electrician", code: "ELC-01", level: "mid" as const, defaultPayType: "salaried" as const, overtimeEligible: false, skillTags: [] },
+    { id: "r1", name: "Painter", code: "PNT-01", level: "Senior" as const, defaultPayType: "hourly" as const, overtimeEligible: true, skillTags: [] },
+    { id: "r2", name: "Electrician", code: "ELC-01", level: "Mid" as const, defaultPayType: "salaried" as const, overtimeEligible: false, skillTags: [] },
   ];
 
   it("renders search input and results", () => {

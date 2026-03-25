@@ -1,27 +1,19 @@
 "use client";
 
 import { useCallback } from "react";
-import { CalendarDays, Briefcase, DollarSign } from "lucide-react";
+import { CalendarDays, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
-import { AutosaveIndicator, type SaveStatus } from "@/components/ui/stale-banner";
 import { cn } from "@/lib/utils";
 import { useOrgSetup } from "./context";
 import { type GlobalPanelType } from "./types";
 
-interface HeaderProps {
-  onSaveAndContinue: () => void;
-  saveStatus: SaveStatus;
-  lastSavedAt: Date | null;
-}
-
-function Header({ onSaveAndContinue, saveStatus, lastSavedAt }: HeaderProps) {
+function Header() {
   const { state, dispatch } = useOrgSetup();
   const { globalPanelOpen } = state.ui;
 
   const calendarCount = Object.keys(state.calendars).length;
   const roleCount = Object.keys(state.roles).length;
-  const costCentreCount = Object.keys(state.costCentres).length;
 
   const toggleModal = useCallback(
     (panel: GlobalPanelType) => {
@@ -38,13 +30,11 @@ function Header({ onSaveAndContinue, saveStatus, lastSavedAt }: HeaderProps) {
       data-testid="org-setup-header"
       className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4"
     >
-      {/* Left — Logo + Save status */}
+      {/* Left — Logo */}
       <div className="flex items-center gap-3">
         <Logo size="sm" iconOnly />
         <div className="h-4 w-px bg-border" />
         <span className="text-sm font-medium text-foreground">Organisation Setup</span>
-        <div className="h-4 w-px bg-border" />
-        <AutosaveIndicator status={saveStatus} lastSavedAt={lastSavedAt} />
       </div>
 
       {/* Center — global settings buttons */}
@@ -63,21 +53,10 @@ function Header({ onSaveAndContinue, saveStatus, lastSavedAt }: HeaderProps) {
           isActive={globalPanelOpen === "roles"}
           onClick={() => toggleModal("roles")}
         />
-        <GlobalButton
-          icon={<DollarSign size={14} />}
-          label="Cost Centres"
-          count={costCentreCount}
-          isActive={globalPanelOpen === "costcentres"}
-          onClick={() => toggleModal("costcentres")}
-        />
       </div>
 
-      {/* Right */}
-      <div className="flex items-center gap-2">
-        <Button size="sm" onClick={onSaveAndContinue}>
-          Save & Continue →
-        </Button>
-      </div>
+      {/* Right — spacer for balance */}
+      <div className="w-[72px]" />
     </header>
   );
 }

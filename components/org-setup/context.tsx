@@ -8,6 +8,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { useOrgApi } from "@/hooks/use-org-api";
 import {
   type OrgSetupState,
   type OBSNode,
@@ -18,7 +19,6 @@ import {
   type Calendar,
   type CalendarExceptionData,
   type Role,
-  type CostCentre,
   type GlobalPanelType,
   type AssignedRole,
   NODE_TYPE_BY_DEPTH,
@@ -29,7 +29,7 @@ import {
 
 type Action =
   | { type: "ADD_NODE"; parentId: string; name: string; code: string; asChild: boolean }
-  | { type: "UPDATE_NODE"; nodeId: string; updates: Partial<Pick<OBSNode, "name" | "code" | "nodeHeadPersonId" | "calendarId" | "costCentres">> }
+  | { type: "UPDATE_NODE"; nodeId: string; updates: Partial<Pick<OBSNode, "name" | "code" | "nodeHeadPersonId" | "calendarId">> }
   | { type: "REMOVE_NODE"; nodeId: string }
   | { type: "ADD_PERSON"; person: Person }
   | { type: "UPDATE_PERSON"; personId: string; updates: Partial<Person> }
@@ -48,8 +48,6 @@ type Action =
   | { type: "ADD_ROLE"; role: Role }
   | { type: "UPDATE_ROLE"; roleId: string; updates: Partial<Role> }
   | { type: "REMOVE_ROLE"; roleId: string }
-  | { type: "ADD_COST_CENTRE"; costCentre: CostCentre }
-  | { type: "UPDATE_COST_CENTRE"; costCentreId: string; updates: Partial<CostCentre> }
   | { type: "ASSIGN_ROLE_TO_NODE"; nodeId: string; assignedRole: AssignedRole }
   | { type: "UPDATE_NODE_ROLE_RATE"; nodeId: string; roleId: string; standardRate: number | null; overtimeRate: number | null }
   | { type: "REMOVE_ROLE_FROM_NODE"; nodeId: string; roleId: string }
@@ -61,7 +59,8 @@ type Action =
   | { type: "SET_GLOBAL_PANEL"; panel: GlobalPanelType }
   | { type: "SET_ZOOM"; zoom: number }
   | { type: "SET_PAN"; panX: number; panY: number }
-  | { type: "LOAD_DRAFT"; state: OrgSetupState };
+  | { type: "SET_LOADING"; isLoading: boolean }
+  | { type: "HYDRATE_FROM_API"; data: { nodes: any[]; people: any[]; equipment: any[]; materials: any[]; calendars: any[]; roles: any[] } };
 
 /* ─────────────────────── Helpers ────────────────────────────────── */
 
@@ -115,7 +114,6 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         nodeHeadPersonId: null,
         calendarId: null,
         assignedRoles: [],
-        costCentres: { labour: null, equipment: null, material: null, overhead: null },
         isActive: true,
       };
 
@@ -340,18 +338,6 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
       return { ...state, roles: newRoles, nodes: updatedNodes };
     }
 
-    case "ADD_COST_CENTRE":
-      return { ...state, costCentres: { ...state.costCentres, [action.costCentre.id]: action.costCentre } };
-
-    case "UPDATE_COST_CENTRE": {
-      const cc = state.costCentres[action.costCentreId];
-      if (!cc) return state;
-      return {
-        ...state,
-        costCentres: { ...state.costCentres, [action.costCentreId]: { ...cc, ...action.updates } },
-      };
-    }
-
     case "ASSIGN_ROLE_TO_NODE": {
       const node = state.nodes[action.nodeId];
       if (!node) return state;
@@ -427,12 +413,87 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
     case "SET_PAN":
       return { ...state, ui: { ...state.ui, panX: action.panX, panY: action.panY } };
 
-    case "LOAD_DRAFT": {
-      // Autosave strips UI state — merge with defaults
-      const defaultUI = createInitialState("").ui;
+    case "SET_LOADING":
+      return { ...state, ui: { ...state.ui, isLoading: action.isLoading } };
+
+    case "HYDRATE_FROM_API": {
+      const { data } = action;
+      const nodesMap: Record<string, OBSNode> = {};
+      for (const n of data.nodes) {
+        nodesMap[n.id] = {
+          id: n.id,
+          name: n.name,
+          code: n.code,
+          type: n.type,
+          parentId: n.parentId,
+          children: [],
+          nodeHeadPersonId: n.nodeHeadPersonId,
+          calendarId: n.calendarId,
+          assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
+          isActive: n.isActive,
+        };
+      }
+      // Build children arrays from parentId
+      for (const node of Object.values(nodesMap)) {
+        if (node.parentId && nodesMap[node.parentId]) {
+          nodesMap[node.parentId].children.push(node.id);
+        }
+      }
+
+      const peopleMap: Record<string, Person> = {};
+      for (const p of data.people) {
+        peopleMap[p.id] = { ...p, nodeId: p.nodeId };
+      }
+
+      const equipmentMap: Record<string, Equipment> = {};
+      for (const e of data.equipment) {
+        equipmentMap[e.id] = { ...e, nodeId: e.nodeId };
+      }
+
+      const materialsMap: Record<string, Material> = {};
+      for (const m of data.materials) {
+        materialsMap[m.id] = { ...m, nodeId: m.nodeId };
+      }
+
+      const calendarsMap: Record<string, Calendar> = {};
+      for (const c of data.calendars) {
+        calendarsMap[c.id] = {
+          id: c.id,
+          name: c.name,
+          category: c.category ?? "global",
+          hoursPerDay: c.hoursPerDay,
+          workDays: c.workDays,
+          exceptions: c.exceptions ?? [],
+        };
+      }
+
+      const rolesMap: Record<string, Role> = {};
+      for (const r of data.roles) {
+        rolesMap[r.id] = {
+          id: r.id,
+          name: r.name,
+          code: r.code,
+          level: r.level,
+          defaultPayType: r.defaultPayType,
+          overtimeEligible: r.overtimeEligible,
+          skillTags: r.skillTags ?? [],
+        };
+      }
+
+      // Find root node
+      const rootNode = Object.values(nodesMap).find(n => n.type === "COMPANY_ROOT");
+      const rootNodeId = rootNode?.id ?? state.company.rootNodeId;
+
       return {
-        ...action.state,
-        ui: action.state.ui ?? defaultUI,
+        ...state,
+        company: { ...state.company, rootNodeId },
+        nodes: nodesMap,
+        people: peopleMap,
+        equipment: equipmentMap,
+        materials: materialsMap,
+        calendars: calendarsMap,
+        roles: rolesMap,
+        ui: { ...state.ui, isLoading: false },
       };
     }
 
@@ -464,7 +525,6 @@ function createInitialState(companyName: string): OrgSetupState {
         nodeHeadPersonId: null,
         calendarId: null,
         assignedRoles: [],
-        costCentres: { labour: null, equipment: null, material: null, overhead: null },
         isActive: true,
       },
     },
@@ -473,7 +533,6 @@ function createInitialState(companyName: string): OrgSetupState {
     materials: {},
     calendars: {},
     roles: {},
-    costCentres: {},
     ui: {
       selectedNodeId: null,
       openNodeModalId: null,
@@ -483,6 +542,7 @@ function createInitialState(companyName: string): OrgSetupState {
       panY: 0,
       addNodeTarget: null,
       globalPanelOpen: null,
+      isLoading: true,
     },
   };
 }
@@ -492,7 +552,6 @@ function createInitialState(companyName: string): OrgSetupState {
 interface OrgSetupContextValue {
   state: OrgSetupState;
   dispatch: React.Dispatch<Action>;
-  saveDraft: () => void;
   getNodePeopleCount: (nodeId: string) => number;
   getNodeRolesCount: (nodeId: string) => number;
   getNodeDepth: (nodeId: string) => number;
@@ -515,32 +574,60 @@ interface OrgSetupProviderProps {
 
 function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
   const [state, dispatch] = useReducer(reducer, companyName, createInitialState);
+  const { fetchOrgSetup, createNode: apiCreateNode } = useOrgApi();
 
-  // Load draft on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("opus_setup_draft");
-      if (raw) {
-        const parsed = JSON.parse(raw) as { state: OrgSetupState };
-        if (parsed.state && parsed.state.company) {
-          dispatch({ type: "LOAD_DRAFT", state: parsed.state });
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const data = await fetchOrgSetup();
+        if (cancelled) return;
+
+        if (data.nodes.length === 0) {
+          // First time — create root node via API
+          const rootCode = companyName
+            .split(" ")
+            .map((w: string) => w[0]?.toUpperCase() ?? "")
+            .join("")
+            .slice(0, 4) + "-ROOT";
+
+          const { node } = await apiCreateNode({
+            name: companyName,
+            code: rootCode,
+            type: "COMPANY_ROOT",
+            parentId: null,
+          });
+
+          if (!cancelled) {
+            dispatch({
+              type: "HYDRATE_FROM_API",
+              data: {
+                nodes: [node],
+                people: [],
+                equipment: [],
+                materials: [],
+                calendars: data.calendars,
+                roles: data.roles,
+              },
+            });
+          }
+        } else {
+          if (!cancelled) {
+            dispatch({ type: "HYDRATE_FROM_API", data });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load org setup:", error);
+        if (!cancelled) {
+          dispatch({ type: "SET_LOADING", isLoading: false });
         }
       }
-    } catch {
-      // ignore invalid drafts
     }
-  }, []);
 
-  const saveDraft = useCallback(() => {
-    try {
-      localStorage.setItem(
-        "opus_setup_draft",
-        JSON.stringify({ state, timestamp: new Date().toISOString() }),
-      );
-    } catch {
-      // storage full or unavailable
-    }
-  }, [state]);
+    load();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNodePeopleCount = useCallback(
     (nodeId: string) =>
@@ -563,7 +650,6 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
       value={{
         state,
         dispatch,
-        saveDraft,
         getNodePeopleCount,
         getNodeRolesCount,
         getNodeDepth: getNodeDepthFn,
