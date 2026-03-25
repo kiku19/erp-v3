@@ -5,8 +5,10 @@ import {
   useContext,
   useReducer,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
+import { useOrgApi } from "@/hooks/use-org-api";
 import {
   type OrgSetupState,
   type OBSNode,
@@ -57,7 +59,8 @@ type Action =
   | { type: "SET_GLOBAL_PANEL"; panel: GlobalPanelType }
   | { type: "SET_ZOOM"; zoom: number }
   | { type: "SET_PAN"; panX: number; panY: number }
-  | { type: "SET_LOADING"; isLoading: boolean };
+  | { type: "SET_LOADING"; isLoading: boolean }
+  | { type: "HYDRATE_FROM_API"; data: { nodes: any[]; people: any[]; equipment: any[]; materials: any[]; calendars: any[]; roles: any[] } };
 
 /* ─────────────────────── Helpers ────────────────────────────────── */
 
@@ -413,6 +416,87 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
     case "SET_LOADING":
       return { ...state, ui: { ...state.ui, isLoading: action.isLoading } };
 
+    case "HYDRATE_FROM_API": {
+      const { data } = action;
+      const nodesMap: Record<string, OBSNode> = {};
+      for (const n of data.nodes) {
+        nodesMap[n.id] = {
+          id: n.id,
+          name: n.name,
+          code: n.code,
+          type: n.type,
+          parentId: n.parentId,
+          children: [],
+          nodeHeadPersonId: n.nodeHeadPersonId,
+          calendarId: n.calendarId,
+          assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
+          isActive: n.isActive,
+        };
+      }
+      // Build children arrays from parentId
+      for (const node of Object.values(nodesMap)) {
+        if (node.parentId && nodesMap[node.parentId]) {
+          nodesMap[node.parentId].children.push(node.id);
+        }
+      }
+
+      const peopleMap: Record<string, Person> = {};
+      for (const p of data.people) {
+        peopleMap[p.id] = { ...p, nodeId: p.nodeId };
+      }
+
+      const equipmentMap: Record<string, Equipment> = {};
+      for (const e of data.equipment) {
+        equipmentMap[e.id] = { ...e, nodeId: e.nodeId };
+      }
+
+      const materialsMap: Record<string, Material> = {};
+      for (const m of data.materials) {
+        materialsMap[m.id] = { ...m, nodeId: m.nodeId };
+      }
+
+      const calendarsMap: Record<string, Calendar> = {};
+      for (const c of data.calendars) {
+        calendarsMap[c.id] = {
+          id: c.id,
+          name: c.name,
+          category: c.category ?? "global",
+          hoursPerDay: c.hoursPerDay,
+          workDays: c.workDays,
+          exceptions: c.exceptions ?? [],
+        };
+      }
+
+      const rolesMap: Record<string, Role> = {};
+      for (const r of data.roles) {
+        rolesMap[r.id] = {
+          id: r.id,
+          name: r.name,
+          code: r.code,
+          level: r.level,
+          defaultPayType: r.defaultPayType,
+          overtimeEligible: r.overtimeEligible,
+          skillTags: r.skillTags ?? [],
+        };
+      }
+
+      // Find root node
+      const rootNode = Object.values(nodesMap).find(n => n.type === "COMPANY_ROOT");
+      const rootNodeId = rootNode?.id ?? state.company.rootNodeId;
+
+      return {
+        ...state,
+        company: { ...state.company, rootNodeId },
+        nodes: nodesMap,
+        people: peopleMap,
+        equipment: equipmentMap,
+        materials: materialsMap,
+        calendars: calendarsMap,
+        roles: rolesMap,
+        ui: { ...state.ui, isLoading: false },
+      };
+    }
+
     default:
       return state;
   }
@@ -490,6 +574,60 @@ interface OrgSetupProviderProps {
 
 function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
   const [state, dispatch] = useReducer(reducer, companyName, createInitialState);
+  const { fetchOrgSetup, createNode: apiCreateNode } = useOrgApi();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const data = await fetchOrgSetup();
+        if (cancelled) return;
+
+        if (data.nodes.length === 0) {
+          // First time — create root node via API
+          const rootCode = companyName
+            .split(" ")
+            .map((w: string) => w[0]?.toUpperCase() ?? "")
+            .join("")
+            .slice(0, 4) + "-ROOT";
+
+          const { node } = await apiCreateNode({
+            name: companyName,
+            code: rootCode,
+            type: "COMPANY_ROOT",
+            parentId: null,
+          });
+
+          if (!cancelled) {
+            dispatch({
+              type: "HYDRATE_FROM_API",
+              data: {
+                nodes: [node],
+                people: [],
+                equipment: [],
+                materials: [],
+                calendars: data.calendars,
+                roles: data.roles,
+              },
+            });
+          }
+        } else {
+          if (!cancelled) {
+            dispatch({ type: "HYDRATE_FROM_API", data });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load org setup:", error);
+        if (!cancelled) {
+          dispatch({ type: "SET_LOADING", isLoading: false });
+        }
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNodePeopleCount = useCallback(
     (nodeId: string) =>
