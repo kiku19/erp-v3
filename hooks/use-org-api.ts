@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 /* ─────────────────────── Types ────────────────────────────────── */
 
@@ -11,11 +12,14 @@ interface ApiError extends Error {
 /* ─────────────────────── Hook ─────────────────────────────────── */
 
 function useOrgApi() {
+  const { accessToken } = useAuth();
+
   const apiFetch = useCallback(async (url: string, options?: RequestInit) => {
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         ...options?.headers,
       },
       credentials: "include",
@@ -31,7 +35,7 @@ function useOrgApi() {
     }
 
     return res.json();
-  }, []);
+  }, [accessToken]);
 
   /* ─── Aggregate ─── */
   const fetchOrgSetup = useCallback(
