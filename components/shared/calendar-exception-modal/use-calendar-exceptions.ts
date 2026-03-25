@@ -18,7 +18,7 @@ interface UseCalendarExceptionsReturn {
     exceptionType: ExceptionType;
     startTime?: string | null;
     endTime?: string | null;
-    reason?: string;
+    reason?: string | null;
     workHours?: number | null;
   }) => Promise<boolean>;
   deleteException: (exceptionId: string) => Promise<boolean>;
@@ -67,7 +67,7 @@ function useCalendarExceptions({
     exceptionType: ExceptionType;
     startTime?: string | null;
     endTime?: string | null;
-    reason?: string;
+    reason?: string | null;
     workHours?: number | null;
   }): Promise<boolean> => {
     try {

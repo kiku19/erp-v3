@@ -190,7 +190,7 @@ function ExceptionEditorContent({
       startTime: isFullDay ? null : (startTime || null),
       endTime: isFullDay ? null : (endTime || null),
       reason: reason.trim() || null,
-      workHours: null,
+      workHours: null as number | null,
     };
 
     if (onCreateException) {
