@@ -61,7 +61,7 @@ const GeneralTab = memo(function GeneralTab({ activity, wbsNodes, calendars, def
   );
 
   const wbsPath = useMemo(() => {
-    const wbsNodeId = (activity as Record<string, unknown>).wbsNodeId as string | undefined;
+    const wbsNodeId = (activity as unknown as Record<string, unknown>).wbsNodeId as string | undefined;
     return computeWbsPath(wbsNodeId, nodeMap);
   }, [activity, nodeMap]);
 
