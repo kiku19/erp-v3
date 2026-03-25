@@ -2,14 +2,14 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft, Check } from "lucide-react";
+import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft, Check, X } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import type { CalendarData, WorkDayConfig } from "@/lib/planner/calendar-types";
+import type { CalendarData, CalendarExceptionData, WorkDayConfig } from "@/lib/planner/calendar-types";
 import { DEFAULT_WORK_DAYS } from "@/lib/planner/calendar-types";
 import { ExceptionEditorContent, DOT_CLASS_MAP } from "@/components/shared/calendar-exception-modal/exception-editor-content";
 
@@ -281,41 +281,65 @@ function SpotlightSearch({ open, onClose, calendars, onSelect }: SpotlightSearch
 
 function EmptyCalendarSvg() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-8" data-testid="empty-calendar-svg">
-      <svg
-        width="64"
-        height="64"
-        viewBox="0 0 64 64"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <rect
-          x="8"
-          y="12"
-          width="48"
-          height="44"
-          rx="6"
-          stroke="var(--muted-foreground)"
-          strokeWidth="2"
-          strokeDasharray="4 3"
-        />
-        <line x1="8" y1="24" x2="56" y2="24" stroke="var(--border)" strokeWidth="2" />
-        <rect x="16" y="6" width="4" height="12" rx="2" fill="var(--border)" />
-        <rect x="44" y="6" width="4" height="12" rx="2" fill="var(--border)" />
-        {/* Plus symbol */}
-        <line x1="32" y1="34" x2="32" y2="48" stroke="var(--muted-foreground)" strokeWidth="2" strokeLinecap="round" />
-        <line x1="25" y1="41" x2="39" y2="41" stroke="var(--muted-foreground)" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-      <span className="text-muted-foreground text-[12px]">No calendars added yet</span>
+    <div className="flex flex-col items-center justify-center gap-4 py-12 px-4" data-testid="empty-calendar-svg">
+      <div style={{ animation: "empty-float 3s ease-in-out infinite" }}>
+        <svg
+          width="80"
+          height="80"
+          viewBox="0 0 80 80"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ animation: "icon-scale-in var(--duration-slow) var(--ease-default) forwards" }}
+        >
+          {/* Calendar body */}
+          <rect
+            x="10"
+            y="16"
+            width="60"
+            height="52"
+            rx="8"
+            stroke="var(--muted-foreground)"
+            strokeWidth="1.5"
+            strokeDasharray="5 4"
+            style={{ animation: "empty-pulse 2.5s ease-in-out infinite" }}
+          />
+          {/* Header bar */}
+          <rect x="10" y="16" width="60" height="16" rx="8" fill="var(--border)" opacity="0.3" />
+          <line x1="10" y1="32" x2="70" y2="32" stroke="var(--border)" strokeWidth="1" />
+          {/* Calendar pins */}
+          <rect x="22" y="10" width="4" height="12" rx="2" fill="var(--muted-foreground)" opacity="0.5" />
+          <rect x="54" y="10" width="4" height="12" rx="2" fill="var(--muted-foreground)" opacity="0.5" />
+          {/* Grid dots */}
+          <circle cx="28" cy="42" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="40" cy="42" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="52" cy="42" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="28" cy="54" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="40" cy="54" r="2" fill="var(--border)" opacity="0.5" />
+          <circle cx="52" cy="54" r="2" fill="var(--border)" opacity="0.5" />
+          {/* Plus symbol */}
+          <circle cx="58" cy="58" r="10" fill="var(--background)" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeDasharray="3 2" />
+          <line x1="58" y1="53" x2="58" y2="63" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="53" y1="58" x2="63" y2="58" stroke="var(--muted-foreground)" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <span className="text-muted-foreground text-[13px] font-medium">No calendars added yet</span>
+        <span className="text-muted-foreground text-[11px]">Click + to create one</span>
+      </div>
     </div>
   );
 }
 
 /* ─────────────────────── SuccessAnimation ────────────────────── */
 
-function SuccessAnimation() {
+function SuccessAnimation({ fading }: { fading?: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4">
+    <div
+      className="flex flex-col items-center justify-center h-full gap-4"
+      style={fading ? {
+        animation: "success-fade-out var(--duration-slow) var(--ease-default) forwards",
+      } : undefined}
+    >
       <div
         className="relative"
         style={{ animation: "success-scale-in var(--duration-slow) var(--ease-default) forwards" }}
@@ -351,15 +375,19 @@ function CalendarSettingsModal({
   const [selectedCalId, setSelectedCalId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(true);
   const [successAnim, setSuccessAnim] = useState(false);
+  const [successFading, setSuccessFading] = useState(false);
   const [newlyCreatedId, setNewlyCreatedId] = useState<string | null>(null);
   const [newCalName, setNewCalName] = useState("");
   const [newFormWorkDays, setNewFormWorkDays] = useState<WorkDayConfig[]>(DEFAULT_WORK_DAYS);
+  const [newFormExceptions, setNewFormExceptions] = useState<CalendarExceptionData[]>([]);
+  const [addFormExceptionOpen, setAddFormExceptionOpen] = useState(false);
   const [workDays, setWorkDays] = useState<WorkDayConfig[]>(DEFAULT_WORK_DAYS);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [spotlightOpen, setSpotlightOpen] = useState(false);
   const [exceptionModalOpen, setExceptionModalOpen] = useState(false);
   const [deleteCalTarget, setDeleteCalTarget] = useState<CalendarData | null>(null);
   const prevCalLengthRef = useRef(calendars.length);
+  const newFormExceptionIdRef = useRef(0);
 
   const selectedCal = calendars.find((c) => c.id === selectedCalId) ?? null;
 
@@ -392,15 +420,21 @@ function CalendarSettingsModal({
       category: categories[0] ?? "global",
       hoursPerDay: 8,
       workDays: newFormWorkDays,
-      exceptions: [],
+      exceptions: newFormExceptions,
     });
     setSuccessAnim(true);
+    setSuccessFading(false);
+    // Start fade-out after 1.2s
+    setTimeout(() => setSuccessFading(true), 1200);
+    // Unmount and reset after fade completes (~1.5s total)
     setTimeout(() => {
       setSuccessAnim(false);
+      setSuccessFading(false);
       setNewCalName("");
       setNewFormWorkDays(DEFAULT_WORK_DAYS);
+      setNewFormExceptions([]);
     }, 1500);
-  }, [newCalName, categories, newFormWorkDays, onCreate]);
+  }, [newCalName, categories, newFormWorkDays, newFormExceptions, onCreate]);
 
   // Toggle work day in the add form
   const handleNewFormWorkDayToggle = useCallback((dayIndex: number) => {
@@ -409,11 +443,57 @@ function CalendarSettingsModal({
     );
   }, []);
 
+  // Update time in the add form
+  const handleNewFormTimeChange = useCallback((dayIndex: number, field: "startTime" | "endTime", value: string) => {
+    setNewFormWorkDays((prev) =>
+      prev.map((d, i) => (i === dayIndex ? { ...d, [field]: value } : d)),
+    );
+  }, []);
+
+  // Add exception to the add form (local)
+  const handleNewFormAddException = useCallback((data: {
+    name: string;
+    date: string;
+    exceptionType: "Holiday" | "Non-Working" | "Misc";
+    startTime: string | null;
+    endTime: string | null;
+    reason: string | null;
+    workHours: number | null;
+  }) => {
+    const newEx: CalendarExceptionData = {
+      id: `local-ex-${++newFormExceptionIdRef.current}`,
+      name: data.name,
+      date: data.date,
+      endDate: null,
+      exceptionType: data.exceptionType,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      reason: data.reason,
+      workHours: data.workHours,
+    };
+    setNewFormExceptions((prev) => [...prev, newEx]);
+  }, []);
+
+  // Delete exception from the add form (local)
+  const handleNewFormDeleteException = useCallback((exId: string) => {
+    setNewFormExceptions((prev) => prev.filter((e) => e.id !== exId));
+  }, []);
+
   // Update work week (detail view)
   const handleWorkDayToggle = useCallback(async (dayIndex: number) => {
     if (!selectedCal) return;
     const updated = workDays.map((d, i) =>
       i === dayIndex ? { ...d, working: !d.working } : d,
+    );
+    setWorkDays(updated);
+    await onUpdate(selectedCal.id, { workDays: updated });
+  }, [selectedCal, workDays, onUpdate]);
+
+  // Update time in detail view
+  const handleTimeChange = useCallback(async (dayIndex: number, field: "startTime" | "endTime", value: string) => {
+    if (!selectedCal) return;
+    const updated = workDays.map((d, i) =>
+      i === dayIndex ? { ...d, [field]: value } : d,
     );
     setWorkDays(updated);
     await onUpdate(selectedCal.id, { workDays: updated });
@@ -488,8 +568,12 @@ function CalendarSettingsModal({
       setExceptionModalOpen(false);
       return;
     }
+    if (addFormExceptionOpen) {
+      setAddFormExceptionOpen(false);
+      return;
+    }
     onClose();
-  }, [spotlightOpen, exceptionModalOpen, onClose]);
+  }, [spotlightOpen, exceptionModalOpen, addFormExceptionOpen, onClose]);
 
   return (
     <>
@@ -504,15 +588,26 @@ function CalendarSettingsModal({
                 <span className="text-[12px] text-muted-foreground">Manage work calendars and scheduling rules</span>
               </div>
             </div>
-            <Button
-              variant="outline"
-              data-testid="calendar-search-trigger"
-              onClick={() => setSpotlightOpen(true)}
-              className="gap-2"
-            >
-              <Search size={14} className="text-muted-foreground" />
-              <span className="text-[12px] text-muted-foreground">Search calendars...</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                data-testid="calendar-search-trigger"
+                onClick={() => setSpotlightOpen(true)}
+                className="gap-2"
+              >
+                <Search size={14} className="text-muted-foreground" />
+                <span className="text-[12px] text-muted-foreground">Search calendars...</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                data-testid="calendar-modal-close"
+                onClick={handleModalClose}
+                className="h-9 w-9"
+              >
+                <X size={16} />
+              </Button>
+            </div>
           </div>
 
           {/* ── Body ── */}
@@ -609,7 +704,35 @@ function CalendarSettingsModal({
             {/* Right Panel */}
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               {successAnim ? (
-                <SuccessAnimation />
+                <SuccessAnimation fading={successFading} />
+              ) : addFormExceptionOpen && !selectedCal ? (
+                /* ── Add Form Exception Editor ── */
+                <div className="flex flex-col h-full animate-[fade-in_var(--duration-normal)_var(--ease-default)]">
+                  <div className="flex items-center gap-3 h-14 px-6 border-b border-border shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setAddFormExceptionOpen(false)}
+                      className="flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted-hover cursor-pointer transition-colors duration-[var(--duration-fast)]"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
+                    <span className="text-[14px] font-semibold text-foreground">
+                      Exceptions & Holidays — New Calendar
+                    </span>
+                  </div>
+                  <ExceptionEditorContent
+                    calendarId="__new__"
+                    exceptions={newFormExceptions}
+                    onCreateException={(data) => {
+                      handleNewFormAddException(data);
+                    }}
+                    onDeleteException={(exId) => {
+                      handleNewFormDeleteException(exId);
+                    }}
+                    onSave={() => {}}
+                    onDone={() => setAddFormExceptionOpen(false)}
+                  />
+                </div>
               ) : selectedCal && exceptionModalOpen ? (
                 /* ── Inline Exception Editor ── */
                 <div className="flex flex-col h-full animate-[fade-in_var(--duration-normal)_var(--ease-default)]">
@@ -702,14 +825,24 @@ function CalendarSettingsModal({
                             </span>
                             <span className="w-[120px]">
                               {dc.working ? (
-                                <Input value={dc.startTime} className="h-7 text-[11px] w-[100px]" readOnly />
+                                <Input
+                                  type="time"
+                                  value={dc.startTime}
+                                  onChange={(e) => handleTimeChange(idx, "startTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </span>
                             <span className="w-[120px]">
                               {dc.working ? (
-                                <Input value={dc.endTime} className="h-7 text-[11px] w-[100px]" readOnly />
+                                <Input
+                                  type="time"
+                                  value={dc.endTime}
+                                  onChange={(e) => handleTimeChange(idx, "endTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
@@ -816,14 +949,24 @@ function CalendarSettingsModal({
                             </span>
                             <span className="w-[120px]">
                               {dc.working ? (
-                                <Input value={dc.startTime} className="h-7 text-[11px] w-[100px]" readOnly />
+                                <Input
+                                  type="time"
+                                  value={dc.startTime}
+                                  onChange={(e) => handleNewFormTimeChange(idx, "startTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
                             </span>
                             <span className="w-[120px]">
                               {dc.working ? (
-                                <Input value={dc.endTime} className="h-7 text-[11px] w-[100px]" readOnly />
+                                <Input
+                                  type="time"
+                                  value={dc.endTime}
+                                  onChange={(e) => handleNewFormTimeChange(idx, "endTime", e.target.value)}
+                                  className="h-7 text-[11px] w-[100px]"
+                                />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
                               )}
@@ -834,6 +977,52 @@ function CalendarSettingsModal({
                             </span>
                           </div>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* Exceptions & Holidays (local, pre-creation) */}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[13px] font-semibold text-foreground">Exceptions & Holidays</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[12px]"
+                          data-testid="add-form-add-exception-btn"
+                          onClick={() => setAddFormExceptionOpen(true)}
+                        >
+                          <Plus size={12} />
+                          Add Exception
+                        </Button>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {newFormExceptions.length === 0 ? (
+                          <span className="text-[12px] text-muted-foreground py-2">No exceptions configured</span>
+                        ) : (
+                          newFormExceptions.map((ex) => (
+                            <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                              <div className={cn(
+                                "w-2 h-2 rounded-full shrink-0",
+                                DOT_CLASS_MAP[ex.exceptionType] ?? "bg-muted-foreground",
+                              )} />
+                              <div className="flex flex-col gap-0.5 flex-1">
+                                <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleNewFormDeleteException(ex.id)}
+                                className="flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:text-destructive cursor-pointer shrink-0 transition-colors duration-[var(--duration-fast)]"
+                                aria-label={`Delete ${ex.name}`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
 
