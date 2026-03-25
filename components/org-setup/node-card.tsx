@@ -6,34 +6,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useOrgSetup } from "./context";
 import {
-  type OBSNodeType,
   type NodeLayout,
-  NODE_TYPE_LABELS,
   MAX_DEPTH,
 } from "./types";
-
-/* ─────────────────────── Color mapping ─────────────────────────── */
-
-const NODE_DOT_COLORS: Record<OBSNodeType, string> = {
-  COMPANY_ROOT: "bg-[var(--color-obs-root)]",
-  DIVISION: "bg-[var(--color-obs-division)]",
-  DEPARTMENT: "bg-[var(--color-obs-department)]",
-  TEAM: "bg-[var(--color-obs-team)]",
-};
-
-const NODE_SELECTED_BORDER: Record<OBSNodeType, string> = {
-  COMPANY_ROOT: "border-l-[var(--color-obs-root)]",
-  DIVISION: "border-l-[var(--color-obs-division)]",
-  DEPARTMENT: "border-l-[var(--color-obs-department)]",
-  TEAM: "border-l-[var(--color-obs-team)]",
-};
-
-const NODE_SELECTED_BG: Record<OBSNodeType, string> = {
-  COMPANY_ROOT: "bg-[var(--color-obs-root-bg)]",
-  DIVISION: "bg-[var(--color-obs-division-bg)]",
-  DEPARTMENT: "bg-[var(--color-obs-department-bg)]",
-  TEAM: "bg-[var(--color-obs-team-bg)]",
-};
 
 /* ─────────────────────── Component ─────────────────────────────── */
 
@@ -99,7 +74,7 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
           "shadow-[var(--shadow-node)] hover:shadow-[var(--shadow-node-hover)]",
           "animation-[node-enter_200ms_var(--ease-default)]",
           isSelected
-            ? cn("border-l-[3px]", NODE_SELECTED_BORDER[node.type], NODE_SELECTED_BG[node.type])
+            ? "border-l-[3px] border-l-primary bg-primary-active/5"
             : "border-border",
         )}
         style={{
@@ -111,12 +86,9 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
         onClick={handleSelect}
       >
         {/* Header */}
-        <div className="flex items-start gap-2 px-3 pt-3 pb-2">
-          <div className={cn("mt-1 h-2.5 w-2.5 shrink-0 rounded-full", NODE_DOT_COLORS[node.type])} />
-          <div className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-semibold text-foreground">{node.name}</span>
-            <span className="font-mono text-[11px] text-muted-foreground">{node.code}</span>
-          </div>
+        <div className="flex min-w-0 flex-col px-3 pt-3 pb-2">
+          <span className="truncate text-sm font-semibold text-foreground">{node.name}</span>
+          <span className="font-mono text-[11px] text-muted-foreground">{node.code}</span>
         </div>
 
         {/* Divider */}
@@ -201,11 +173,11 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
             top: layout.y + layout.height / 2 + 16,
           }}
         >
-          Click <strong>+</strong> to add your first division.
+          Click <strong>+</strong> to add your first node.
         </div>
       )}
     </>
   );
 }
 
-export { NodeCard, NODE_DOT_COLORS, NODE_TYPE_LABELS };
+export { NodeCard };
