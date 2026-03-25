@@ -142,7 +142,7 @@ function WbsIconSettingsModal({ open, onClose, icons, onSave }: WbsIconSettingsM
           Cancel
         </Button>
         <Button
-          variant="primary"
+          variant="default"
           size="sm"
           onClick={handleSave}
           disabled={selected.length === 0}
