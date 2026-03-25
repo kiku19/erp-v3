@@ -221,15 +221,14 @@ function SpotlightSearch({ open, onClose, calendars, onSelect }: SpotlightSearch
         {/* Search input */}
         <div className="flex items-center gap-3 h-12 px-4 border-b border-border">
           <Search size={18} className="text-muted-foreground shrink-0" />
-          <input
+          <Input
             ref={inputRef}
-            type="text"
             data-testid="spotlight-search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search calendars..."
-            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            className="border-none bg-transparent shadow-none ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0 py-0 h-auto"
             autoFocus
           />
         </div>
@@ -505,15 +504,15 @@ function CalendarSettingsModal({
                 <span className="text-[12px] text-muted-foreground">Manage work calendars and scheduling rules</span>
               </div>
             </div>
-            <button
-              type="button"
+            <Button
+              variant="outline"
               data-testid="calendar-search-trigger"
               onClick={() => setSpotlightOpen(true)}
-              className="flex items-center gap-2 h-10 px-4 border border-border rounded-md cursor-pointer hover:bg-muted-hover transition-colors duration-[var(--duration-fast)]"
+              className="gap-2"
             >
               <Search size={14} className="text-muted-foreground" />
               <span className="text-[12px] text-muted-foreground">Search calendars...</span>
-            </button>
+            </Button>
           </div>
 
           {/* ── Body ── */}
@@ -564,7 +563,7 @@ function CalendarSettingsModal({
                             )}
                             style={
                               cal.id === newlyCreatedId
-                                ? { animation: "list-item-enter 300ms var(--ease-default), border-glow 1.5s ease-out" }
+                                ? { animation: "list-item-enter var(--duration-slow) var(--ease-default), border-glow 1.5s var(--ease-default)" }
                                 : undefined
                             }
                           >
