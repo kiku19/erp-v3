@@ -3,7 +3,6 @@
 import { useCallback } from "react";
 import { Settings, Plus, Users, Briefcase, CalendarDays, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useOrgSetup } from "./context";
 import {
@@ -53,7 +52,6 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
   const isRoot = node.type === "COMPANY_ROOT";
   const depth = getNodeDepth(nodeId);
   const canAddChild = depth < MAX_DEPTH;
-  const canAddSibling = !isRoot;
   const peopleCount = getNodePeopleCount(nodeId);
   const rolesCount = getNodeRolesCount(nodeId);
   const calendar = node.calendarId ? state.calendars[node.calendarId] : null;
@@ -84,10 +82,6 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
 
   const handleAddChild = useCallback(() => {
     dispatch({ type: "SET_ADD_NODE_TARGET", target: { parentId: nodeId, type: "child" } });
-  }, [dispatch, nodeId]);
-
-  const handleAddSibling = useCallback(() => {
-    dispatch({ type: "SET_ADD_NODE_TARGET", target: { parentId: nodeId, type: "sibling" } });
   }, [dispatch, nodeId]);
 
   const handleSelect = useCallback(() => {
@@ -169,42 +163,56 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
             <Settings size={12} />
             Open
           </Button>
-          {canAddChild && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-7 gap-1 px-2 text-[12px]",
-                hasNoDivisions && "animate-[pulse-attention_2s_ease-in-out_infinite]",
-              )}
-              onClick={handleAddChild}
-            >
-              <Plus size={12} />
-              {isRoot ? "Add Division" : "Child"}
-            </Button>
-          )}
-          {canAddSibling && (
-            <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-[12px]" onClick={handleAddSibling}>
-              <Plus size={12} />
-              Sibling
-            </Button>
-          )}
         </div>
       </div>
+
+      {/* Right-edge add-child button with extending line */}
+      {canAddChild && (
+        <div
+          data-testid={`add-child-${nodeId}`}
+          className="absolute flex items-center"
+          style={{
+            left: layout.x + layout.width,
+            top: layout.y + layout.height / 2,
+            transform: "translateY(-50%)",
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleAddChild();
+          }}
+        >
+          {/* Extending line */}
+          <div
+            className="h-px w-6"
+            style={{ backgroundColor: "var(--color-connector)" }}
+          />
+          {/* Plus circle */}
+          <button
+            className={cn(
+              "flex h-5 w-5 items-center justify-center rounded-full",
+              "border border-[var(--color-connector)] bg-card text-muted-foreground",
+              "transition-all duration-[var(--duration-fast)] ease-[var(--ease-default)]",
+              "hover:border-primary hover:text-primary hover:shadow-[var(--shadow-node-hover)]",
+              "cursor-pointer",
+              hasNoDivisions && "animate-[pulse-attention_2s_ease-in-out_infinite]",
+            )}
+            aria-label={`Add child to ${node.name}`}
+          >
+            <Plus size={12} />
+          </button>
+        </div>
+      )}
 
       {/* Empty state hint — only for root with no divisions */}
       {hasNoDivisions && isFirstNode && (
         <div
           className="absolute text-center text-sm text-muted-foreground"
           style={{
-            left: layout.x,
-            top: layout.y + layout.height + 16,
-            width: layout.width,
+            left: layout.x + layout.width + 40,
+            top: layout.y + layout.height / 2 + 16,
           }}
         >
-          Start by adding your first division.
-          <br />
-          Click <strong>+ Add Division</strong> above.
+          Click <strong>+</strong> to add your first division.
         </div>
       )}
     </>
