@@ -9,3 +9,4 @@ storybook-static
 .mcp.json
 .claude/worktrees
 test-results
+.vercel
