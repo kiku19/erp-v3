@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal";
 import { useOrgSetup } from "./context";
-import { NODE_TYPE_BY_DEPTH, NODE_TYPE_LABELS } from "./types";
+import { NODE_TYPE_BY_DEPTH } from "./types";
 
 function AddNodeModal() {
   const { state, dispatch, getNodeDepth } = useOrgSetup();
@@ -21,7 +21,6 @@ function AddNodeModal() {
   const parentDepth = target ? getNodeDepth(target.parentId) : 0;
   const newDepth = target?.type === "child" ? parentDepth + 1 : parentDepth;
   const nodeType = NODE_TYPE_BY_DEPTH[newDepth] ?? "TEAM";
-  const nodeTypeLabel = NODE_TYPE_LABELS[nodeType];
 
   // Auto-generate code from name
   useEffect(() => {
@@ -66,13 +65,9 @@ function AddNodeModal() {
   }, [target, name, code, dispatch, handleClose, state.nodes]);
 
   // Build title
-  let title = `Add ${nodeTypeLabel}`;
+  let title = "Add Node";
   if (target?.type === "child" && parentNode) {
-    title = parentNode.type === "COMPANY_ROOT"
-      ? `Add Division`
-      : `Add ${nodeTypeLabel} under ${parentNode.name}`;
-  } else if (target?.type === "sibling" && parentNode) {
-    title = `Add ${nodeTypeLabel} (same level as ${parentNode.name})`;
+    title = `Add Node under ${parentNode.name}`;
   }
 
   return (
@@ -111,7 +106,7 @@ function AddNodeModal() {
           Cancel
         </Button>
         <Button size="sm" onClick={handleSubmit} disabled={!name.trim() || !code.trim()}>
-          Add {nodeTypeLabel}
+          Add Node
         </Button>
       </ModalFooter>
     </Modal>

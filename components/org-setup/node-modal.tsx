@@ -5,20 +5,11 @@ import { X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from "@/components/ui/tabs";
 import { useOrgSetup } from "./context";
-import { NODE_TYPE_LABELS, type OBSNodeType } from "./types";
 import { PeopleTab } from "./people-tab";
 import { ResourcesTab } from "./resources-tab";
 import { SettingsTab } from "./settings-tab";
-
-const NODE_DOT_COLORS: Record<OBSNodeType, string> = {
-  COMPANY_ROOT: "bg-[var(--color-obs-root)]",
-  DIVISION: "bg-[var(--color-obs-division)]",
-  DEPARTMENT: "bg-[var(--color-obs-department)]",
-  TEAM: "bg-[var(--color-obs-team)]",
-};
 
 function NodeModal() {
   const { state, dispatch } = useOrgSetup();
@@ -64,10 +55,8 @@ function NodeModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className={cn("h-3 w-3 rounded-full", NODE_DOT_COLORS[node.type])} />
             <span className="text-base font-semibold text-foreground">{node.name}</span>
             <span className="font-mono text-[12px] text-muted-foreground">{node.code}</span>
-            <Badge variant="secondary">{NODE_TYPE_LABELS[node.type]}</Badge>
           </div>
           <Button
             variant="outline"
