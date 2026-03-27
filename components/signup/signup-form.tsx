@@ -6,6 +6,7 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Divider } from "@/components/ui/divider";
+import { Logo } from "@/components/ui/logo";
 import { PasswordStrength } from "@/components/ui/password-strength";
 import { signupSchema, type SignupInput } from "@/lib/validations/auth";
 
@@ -55,15 +56,18 @@ function SignupForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-[28px] font-semibold text-foreground">
+      {/* Logo + Title */}
+      <div className="flex flex-col items-center gap-2">
+        <Logo size="lg" variant="dark" />
+        <h1 className="text-[24px] font-semibold text-card-foreground">
           Create your account
         </h1>
-        <p className="text-[15px] text-muted-foreground">
+        <p className="text-[14px] text-muted-foreground">
           Get started with your free account
         </p>
       </div>
 
+      {/* Fields */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <label
@@ -159,6 +163,7 @@ function SignupForm({
         </div>
       )}
 
+      {/* Actions */}
       <div className="flex flex-col gap-4">
         <Button type="submit" disabled={isLoading || emailExists} className="w-full">
           {isLoading ? (
