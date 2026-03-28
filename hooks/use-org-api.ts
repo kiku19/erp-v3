@@ -117,6 +117,29 @@ function useOrgApi() {
     [apiFetch],
   );
 
+  const fetchAllPeople = useCallback(
+    (params?: { search?: string; nodeId?: string; excludeNodeId?: string; limit?: number; offset?: number }) => {
+      const searchParams = new URLSearchParams();
+      if (params?.search) searchParams.set("search", params.search);
+      if (params?.nodeId) searchParams.set("nodeId", params.nodeId);
+      if (params?.excludeNodeId) searchParams.set("excludeNodeId", params.excludeNodeId);
+      if (params?.limit) searchParams.set("limit", String(params.limit));
+      if (params?.offset) searchParams.set("offset", String(params.offset));
+      const qs = searchParams.toString();
+      return apiFetch(`/api/org-setup/people${qs ? `?${qs}` : ""}`);
+    },
+    [apiFetch],
+  );
+
+  const batchAssignPeople = useCallback(
+    (personIds: string[], targetNodeId: string) =>
+      apiFetch("/api/org-setup/people/batch-assign", {
+        method: "POST",
+        body: JSON.stringify({ personIds, targetNodeId }),
+      }),
+    [apiFetch],
+  );
+
   /* ─── Equipment ─── */
   const createEquipment = useCallback(
     (data: Record<string, unknown>) =>
@@ -228,6 +251,8 @@ function useOrgApi() {
     createPerson,
     updatePerson,
     deletePerson,
+    fetchAllPeople,
+    batchAssignPeople,
     createEquipment,
     updateEquipment,
     deleteEquipment,

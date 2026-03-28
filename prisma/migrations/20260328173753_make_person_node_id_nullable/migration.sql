@@ -1,0 +1,8 @@
+-- DropForeignKey
+ALTER TABLE "OBSPerson" DROP CONSTRAINT "OBSPerson_nodeId_fkey";
+
+-- AlterTable
+ALTER TABLE "OBSPerson" ALTER COLUMN "nodeId" DROP NOT NULL;
+
+-- AddForeignKey
+ALTER TABLE "OBSPerson" ADD CONSTRAINT "OBSPerson_nodeId_fkey" FOREIGN KEY ("nodeId") REFERENCES "OBSNode"("id") ON DELETE SET NULL ON UPDATE CASCADE;

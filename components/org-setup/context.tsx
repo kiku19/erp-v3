@@ -190,7 +190,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
       const newEquipment = { ...state.equipment };
       const newMaterials = { ...state.materials };
       for (const [id, p] of Object.entries(newPeople)) {
-        if (toRemove.has(p.nodeId)) delete newPeople[id];
+        if (p.nodeId && toRemove.has(p.nodeId)) delete newPeople[id];
       }
       for (const [id, e] of Object.entries(newEquipment)) {
         if (toRemove.has(e.nodeId)) delete newEquipment[id];
@@ -434,8 +434,21 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
     case "SET_SELECTED_NODE":
       return { ...state, ui: { ...state.ui, selectedNodeId: action.nodeId } };
 
-    case "OPEN_NODE_MODAL":
-      return { ...state, ui: { ...state.ui, openNodeModalId: action.nodeId, activeModalTab: "people" } };
+    case "OPEN_NODE_MODAL": {
+      const currentLoading = state.ui.nodeLoading[action.nodeId] ?? { people: false, equipment: false, materials: false };
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          openNodeModalId: action.nodeId,
+          activeModalTab: "people",
+          nodeLoading: {
+            ...state.ui.nodeLoading,
+            [action.nodeId]: { ...currentLoading, people: true },
+          },
+        },
+      };
+    }
 
     case "CLOSE_NODE_MODAL":
       return { ...state, ui: { ...state.ui, openNodeModalId: null } };

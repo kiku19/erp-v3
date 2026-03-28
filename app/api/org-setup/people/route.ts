@@ -7,6 +7,123 @@ import { emitOBSEvent, OBS_EVENTS } from "@/lib/events/org-events";
 /**
  * @swagger
  * /api/org-setup/people:
+ *   get:
+ *     summary: Fetch all OBS people for the authenticated tenant
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Filter by name or employee ID (case-insensitive)
+ *       - in: query
+ *         name: nodeId
+ *         schema:
+ *           type: string
+ *         description: Filter to only people in this node
+ *       - in: query
+ *         name: excludeNodeId
+ *         schema:
+ *           type: string
+ *         description: Exclude people assigned to this node
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: List of people
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 people:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 total:
+ *                   type: integer
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+export async function GET(request: NextRequest): Promise<Response> {
+  try {
+    const auth = await authenticateRequest(request);
+    if (isAuthError(auth)) return auth;
+
+    const { tenantId } = auth;
+    const url = request.nextUrl;
+    const search = url.searchParams.get("search");
+    const nodeId = url.searchParams.get("nodeId");
+    const excludeNodeId = url.searchParams.get("excludeNodeId");
+    const limit = Math.min(Number(url.searchParams.get("limit")) || 100, 500);
+    const offset = Number(url.searchParams.get("offset")) || 0;
+
+    const where: Record<string, unknown> = {
+      tenantId,
+      isDeleted: false,
+    };
+
+    const andClauses: Record<string, unknown>[] = [];
+
+    if (search) {
+      andClauses.push({
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { employeeId: { contains: search, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    if (nodeId) {
+      where.nodeId = nodeId;
+    }
+
+    if (excludeNodeId) {
+      andClauses.push({
+        OR: [
+          { nodeId: null },
+          { NOT: { nodeId: excludeNodeId } },
+        ],
+      });
+    }
+
+    if (andClauses.length > 0) {
+      where.AND = andClauses;
+    }
+
+    const [people, total] = await Promise.all([
+      prisma.oBSPerson.findMany({
+        where,
+        include: { node: { select: { id: true, name: true } } },
+        orderBy: { name: "asc" },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.oBSPerson.count({ where }),
+    ]);
+
+    return NextResponse.json({ people, total });
+  } catch (error) {
+    console.error("GET /api/org-setup/people error:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * @swagger
+ * /api/org-setup/people:
  *   post:
  *     summary: Create a new OBS person for the authenticated tenant
  *     requestBody:
@@ -16,13 +133,13 @@ import { emitOBSEvent, OBS_EVENTS } from "@/lib/events/org-events";
  *           schema:
  *             type: object
  *             required:
- *               - nodeId
  *               - name
  *               - employeeId
  *               - email
  *             properties:
  *               nodeId:
  *                 type: string
+ *                 nullable: true
  *               name:
  *                 type: string
  *               employeeId:
@@ -97,16 +214,18 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    // Verify node exists
-    const node = await prisma.oBSNode.findFirst({
-      where: { id: parsed.data.nodeId, tenantId, isDeleted: false },
-    });
+    // Verify node exists only if nodeId is provided
+    if (parsed.data.nodeId) {
+      const node = await prisma.oBSNode.findFirst({
+        where: { id: parsed.data.nodeId, tenantId, isDeleted: false },
+      });
 
-    if (!node) {
-      return NextResponse.json(
-        { message: "Node not found" },
-        { status: 400 },
-      );
+      if (!node) {
+        return NextResponse.json(
+          { message: "Node not found" },
+          { status: 400 },
+        );
+      }
     }
 
     // Check duplicate employeeId

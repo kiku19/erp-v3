@@ -26,6 +26,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  *             properties:
  *               nodeId:
  *                 type: string
+ *                 nullable: true
  *               name:
  *                 type: string
  *               employeeId:
@@ -115,9 +116,37 @@ export async function PATCH(
       );
     }
 
+    // Validate target node exists when changing nodeId to a non-null value
+    if (parsed.data.nodeId !== undefined && parsed.data.nodeId !== null) {
+      const node = await prisma.oBSNode.findFirst({
+        where: { id: parsed.data.nodeId, tenantId, isDeleted: false },
+      });
+
+      if (!node) {
+        return NextResponse.json(
+          { message: "Node not found" },
+          { status: 400 },
+        );
+      }
+    }
+
+    // Prisma checked updates use relation-level ops, not scalar FK fields.
+    // When nodeId is explicitly null, use node: { disconnect: true } instead.
+    const updateData: Record<string, unknown> = { ...parsed.data };
+    if ("nodeId" in updateData) {
+      if (updateData.nodeId === null) {
+        delete updateData.nodeId;
+        updateData.node = { disconnect: true };
+      } else {
+        const targetNodeId = updateData.nodeId;
+        delete updateData.nodeId;
+        updateData.node = { connect: { id: targetNodeId } };
+      }
+    }
+
     const person = await prisma.oBSPerson.update({
       where: { id },
-      data: parsed.data,
+      data: updateData,
     });
 
     emitOBSEvent(OBS_EVENTS.PERSON_UPDATED, tenantId, person.id, {
@@ -126,7 +155,7 @@ export async function PATCH(
     });
 
     return NextResponse.json({ person });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("PATCH /api/org-setup/people/[id] error:", error);
     return NextResponse.json(
       { message: "Internal server error" },

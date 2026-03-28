@@ -48,7 +48,7 @@ const updateNodeSchema = z.object({
 /* ─────────────────────── Person ───────────────────────────────── */
 
 const createPersonSchema = z.object({
-  nodeId: z.string().min(1),
+  nodeId: z.string().min(1).nullable().default(null),
   name: z.string().min(1, "Name is required").max(100),
   employeeId: z.string().min(1, "Employee ID is required").max(50),
   email: z.string().email("Invalid email"),
@@ -66,7 +66,7 @@ const createPersonSchema = z.object({
 });
 
 const updatePersonSchema = z.object({
-  nodeId: z.string().min(1).optional(),
+  nodeId: z.string().min(1).nullable().optional(),
   name: z.string().min(1).max(100).optional(),
   employeeId: z.string().min(1).max(50).optional(),
   email: z.string().email().optional(),
@@ -81,6 +81,11 @@ const updatePersonSchema = z.object({
   employmentType: z.enum(EMPLOYMENT_TYPES).optional(),
   joinDate: z.string().nullable().optional(),
   photoUrl: z.string().nullable().optional(),
+});
+
+const batchAssignPeopleSchema = z.object({
+  personIds: z.array(z.string().min(1)).min(1, "At least one person ID is required"),
+  targetNodeId: z.string().min(1, "Target node ID is required"),
 });
 
 /* ─────────────────────── Equipment ────────────────────────────── */
@@ -148,6 +153,7 @@ export {
   updateNodeSchema,
   createPersonSchema,
   updatePersonSchema,
+  batchAssignPeopleSchema,
   createEquipmentSchema,
   updateEquipmentSchema,
   createMaterialSchema,

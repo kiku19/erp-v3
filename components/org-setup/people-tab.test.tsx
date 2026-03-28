@@ -179,11 +179,11 @@ describe("PeopleTab — API-first mutations", () => {
     fireEvent.click(screen.getByText("Save Person"));
 
     await waitFor(() => {
-      const postCalls = mockFetch.mock.calls.filter(
-        ([url, opts]: [string, RequestInit?]) => url === "/api/org-setup/people" && opts?.method === "POST",
+      const postCalls = (mockFetch.mock.calls as [string, RequestInit?][]).filter(
+        ([url, opts]) => url === "/api/org-setup/people" && opts?.method === "POST",
       );
       expect(postCalls.length).toBe(1);
-      const body = JSON.parse(postCalls[0][1].body as string);
+      const body = JSON.parse(postCalls[0][1]!.body as string);
       expect(body.name).toBe("Bob Jones");
       expect(body.employeeId).toBe("EMP-999");
       expect(body.email).toBe("bob@test.com");
@@ -211,16 +211,16 @@ describe("PeopleTab — API-first mutations", () => {
     fireEvent.click(screen.getByText("Update Person"));
 
     await waitFor(() => {
-      const patchCalls = mockFetch.mock.calls.filter(
-        ([url, opts]: [string, RequestInit?]) => url === "/api/org-setup/people/person-1" && opts?.method === "PATCH",
+      const patchCalls = (mockFetch.mock.calls as [string, RequestInit?][]).filter(
+        ([url, opts]) => url === "/api/org-setup/people/person-1" && opts?.method === "PATCH",
       );
       expect(patchCalls.length).toBe(1);
-      const body = JSON.parse(patchCalls[0][1].body as string);
+      const body = JSON.parse(patchCalls[0][1]!.body as string);
       expect(body.name).toBe("Alice Johnson");
     });
   });
 
-  it("calls DELETE API when removing a person", async () => {
+  it("calls PATCH API with nodeId:null when unassigning a person from node", async () => {
     setupMockFetch();
     renderPeopleTab();
 
@@ -236,10 +236,13 @@ describe("PeopleTab — API-first mutations", () => {
     fireEvent.click(screen.getByText("Remove"));
 
     await waitFor(() => {
-      const deleteCalls = mockFetch.mock.calls.filter(
-        ([url, opts]: [string, RequestInit?]) => url === "/api/org-setup/people/person-1" && opts?.method === "DELETE",
+      const patchCalls = (mockFetch.mock.calls as [string, RequestInit?][]).filter(
+        ([url, opts]) => url === "/api/org-setup/people/person-1" && opts?.method === "PATCH",
       );
-      expect(deleteCalls.length).toBe(1);
+      expect(patchCalls.length).toBeGreaterThanOrEqual(1);
+      const lastPatch = patchCalls[patchCalls.length - 1];
+      const body = JSON.parse(lastPatch[1]!.body as string);
+      expect(body.nodeId).toBeNull();
     });
   });
 
@@ -259,8 +262,8 @@ describe("PeopleTab — API-first mutations", () => {
 
     // After save, loadNodePeople should be called (fetches /api/org-setup/nodes/:id/people)
     await waitFor(() => {
-      const peopleFetches = mockFetch.mock.calls.filter(
-        ([url, opts]: [string, RequestInit?]) =>
+      const peopleFetches = (mockFetch.mock.calls as [string, RequestInit?][]).filter(
+        ([url, opts]) =>
           url.includes("/api/org-setup/nodes/node-root/people") && (!opts?.method || opts.method === "GET"),
       );
       // At least one fetch after the POST
@@ -363,7 +366,7 @@ describe("PeopleTab — API-first mutations", () => {
     });
   });
 
-  it("refreshes people list after successful delete", async () => {
+  it("refreshes people list after successful unassign", async () => {
     setupMockFetch();
     renderPeopleTab();
 
@@ -375,10 +378,10 @@ describe("PeopleTab — API-first mutations", () => {
     fireEvent.click(unassignBtn);
     fireEvent.click(screen.getByText("Remove"));
 
-    // After delete, loadNodePeople should be called
+    // After unassign, loadNodePeople should be called to refresh the list
     await waitFor(() => {
-      const peopleFetches = mockFetch.mock.calls.filter(
-        ([url, opts]: [string, RequestInit?]) =>
+      const peopleFetches = (mockFetch.mock.calls as [string, RequestInit?][]).filter(
+        ([url, opts]) =>
           url.includes("/api/org-setup/nodes/node-root/people") && (!opts?.method || opts.method === "GET"),
       );
       expect(peopleFetches.length).toBeGreaterThanOrEqual(1);

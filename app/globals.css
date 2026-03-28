@@ -224,6 +224,15 @@
   }
 }
 
+@keyframes modal-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes inline-node-in {
   from {
     opacity: 0;

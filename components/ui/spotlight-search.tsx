@@ -256,14 +256,14 @@ function SpotlightSearch<T extends SpotlightSearchItem>({
       <div
         data-testid="spotlight-search"
         className={cn(
-          "mx-auto mt-[10vh] w-full h-[80vh] rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)]",
+          "mx-auto mt-[10vh] w-full h-[80vh] rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)] overflow-hidden",
           isMulti ? "max-w-[860px] flex" : "max-w-[560px] flex flex-col",
         )}
         onClick={(e) => e.stopPropagation()}
         style={animStyle}
       >
         {/* Left panel — search + results */}
-        <div className={cn("flex flex-col flex-1 min-w-0")}>
+        <div className={cn("flex flex-col flex-1 min-w-0 overflow-hidden")}>
           {/* Search input */}
           <div className="flex items-center gap-3 h-12 px-4 border-b border-border">
             <Search size={18} className="text-muted-foreground shrink-0" />

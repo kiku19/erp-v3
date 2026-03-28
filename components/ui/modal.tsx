@@ -142,7 +142,7 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
         style={{
           zIndex: overlayZ,
           animation: isClosing
-            ? "dropdown-out var(--duration-fast) var(--ease-default) forwards"
+            ? "modal-out var(--duration-fast) var(--ease-default) forwards"
             : "dropdown-in var(--duration-normal) var(--ease-default) forwards",
         }}
         onClick={onClose}
@@ -157,7 +157,7 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
           zIndex: dialogZ,
           width: `${width}px`,
           animation: isClosing
-            ? "dropdown-out var(--duration-fast) var(--ease-default) forwards"
+            ? "modal-out var(--duration-fast) var(--ease-default) forwards"
             : "dropdown-in var(--duration-normal) var(--ease-default) forwards",
         }}
         className={cn(
