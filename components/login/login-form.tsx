@@ -2,11 +2,12 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Globe, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Divider } from "@/components/ui/divider";
+import { Logo } from "@/components/ui/logo";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
 interface LoginFormProps {
@@ -42,16 +43,19 @@ function LoginForm({ onSubmit, isLoading = false, serverError }: LoginFormProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-[28px] font-semibold text-foreground">
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
+      {/* Logo + Title */}
+      <div className="flex flex-col items-center gap-2">
+        <Logo size="lg" variant="dark" />
+        <h1 className="text-[24px] font-semibold text-card-foreground">
           Welcome back
         </h1>
-        <p className="text-[15px] text-muted-foreground">
+        <p className="text-[14px] text-muted-foreground text-center">
           Enter your credentials to access your account
         </p>
       </div>
 
+      {/* Fields */}
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-1.5">
           <label
@@ -113,6 +117,7 @@ function LoginForm({ onSubmit, isLoading = false, serverError }: LoginFormProps)
         </div>
       )}
 
+      {/* Actions */}
       <div className="flex flex-col gap-4">
         <Button type="submit" disabled={isLoading} className="w-full">
           {isLoading ? (
@@ -130,6 +135,11 @@ function LoginForm({ onSubmit, isLoading = false, serverError }: LoginFormProps)
           <span className="text-[13px] text-muted-foreground">or</span>
           <Divider className="flex-1" />
         </div>
+
+        <Button variant="outline" type="button" className="w-full">
+          <Globe className="h-4 w-4" />
+          Continue with Google
+        </Button>
 
         <div className="flex items-center justify-center gap-1">
           <span className="text-sm text-muted-foreground">

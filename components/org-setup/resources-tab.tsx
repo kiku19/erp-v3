@@ -84,6 +84,8 @@ interface ResourcesTabProps {
 function ResourcesTab({ nodeId }: ResourcesTabProps) {
   const { state, dispatch } = useOrgSetup();
   const node = state.nodes[nodeId];
+  const isLoadingEquipment = state.ui.nodeLoading[nodeId]?.equipment ?? false;
+  const isLoadingMaterials = state.ui.nodeLoading[nodeId]?.materials ?? false;
 
   const equipment = useMemo(
     () => Object.values(state.equipment).filter((e) => e.nodeId === nodeId),
@@ -115,6 +117,7 @@ function ResourcesTab({ nodeId }: ResourcesTabProps) {
         onCancel={() => { setEqForm(false); setEqEditId(null); }}
         state={state}
         dispatch={dispatch}
+        isLoading={isLoadingEquipment}
       />
 
       <div className="h-px bg-border" />
@@ -131,7 +134,28 @@ function ResourcesTab({ nodeId }: ResourcesTabProps) {
         onCancel={() => { setMatForm(false); setMatEditId(null); }}
         state={state}
         dispatch={dispatch}
+        isLoading={isLoadingMaterials}
       />
+    </div>
+  );
+}
+
+/* ─────────────────────── Resource Skeleton ─────────────────────── */
+
+function ResourceSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between rounded-md border border-border px-3 py-2 animate-pulse">
+          <div className="flex flex-col gap-1.5">
+            <div className="h-3.5 w-28 rounded bg-muted" />
+            <div className="h-2.5 w-40 rounded bg-muted" />
+          </div>
+          <div className="flex gap-1">
+            <div className="h-7 w-7 rounded bg-muted" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -140,7 +164,7 @@ function ResourcesTab({ nodeId }: ResourcesTabProps) {
 
 function EquipmentSection({
   nodeId, nodeName, equipment, showForm, editId,
-  onShowForm, onEdit, onCancel, state, dispatch,
+  onShowForm, onEdit, onCancel, state, dispatch, isLoading,
 }: {
   nodeId: string;
   nodeName: string;
@@ -152,6 +176,7 @@ function EquipmentSection({
   onCancel: () => void;
   state: import("./types").OrgSetupState;
   dispatch: React.Dispatch<import("./context").Action>;
+  isLoading: boolean;
 }) {
   const [fName, setFName] = useState("");
   const [fCode, setFCode] = useState("");
@@ -282,7 +307,9 @@ function EquipmentSection({
         <h4 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">Equipment</h4>
         <Button variant="ghost" size="sm" onClick={onShowForm}><Plus size={14} /> Add Equipment</Button>
       </div>
-      {equipment.length === 0 ? (
+      {isLoading ? (
+        <ResourceSkeleton />
+      ) : equipment.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-4 text-center">
           <Wrench size={24} className="text-muted-foreground" />
           <p className="text-[13px] text-muted-foreground">No equipment registered for {nodeName}.</p>
@@ -311,7 +338,7 @@ function EquipmentSection({
 
 function MaterialsSection({
   nodeId, nodeName, materials, showForm, editId,
-  onShowForm, onEdit, onCancel, state, dispatch,
+  onShowForm, onEdit, onCancel, state, dispatch, isLoading,
 }: {
   nodeId: string;
   nodeName: string;
@@ -323,6 +350,7 @@ function MaterialsSection({
   onCancel: () => void;
   state: import("./types").OrgSetupState;
   dispatch: React.Dispatch<import("./context").Action>;
+  isLoading: boolean;
 }) {
   const [fName, setFName] = useState("");
   const [fSku, setFSku] = useState("");
@@ -432,7 +460,9 @@ function MaterialsSection({
         <h4 className="text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">Materials</h4>
         <Button variant="ghost" size="sm" onClick={onShowForm}><Plus size={14} /> Add Material</Button>
       </div>
-      {materials.length === 0 ? (
+      {isLoading ? (
+        <ResourceSkeleton />
+      ) : materials.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-4 text-center">
           <Package size={24} className="text-muted-foreground" />
           <p className="text-[13px] text-muted-foreground">No materials in {nodeName} catalogue.</p>

@@ -19,6 +19,7 @@ const mockPrisma = {
   oBSMaterial: { findMany: vi.fn() },
   calendar: { findMany: vi.fn() },
   role: { findMany: vi.fn() },
+  costCenter: { findMany: vi.fn() },
 };
 
 vi.mock("@/lib/prisma", () => ({ prisma: mockPrisma }));
@@ -35,6 +36,7 @@ describe("GET /api/org-setup", () => {
     mockPrisma.oBSMaterial.findMany.mockResolvedValue([]);
     mockPrisma.calendar.findMany.mockResolvedValue([]);
     mockPrisma.role.findMany.mockResolvedValue([]);
+    mockPrisma.costCenter.findMany.mockResolvedValue([]);
 
     const req = new NextRequest("http://localhost/api/org-setup", {
       headers: { authorization: "Bearer valid-token" },
@@ -49,6 +51,7 @@ describe("GET /api/org-setup", () => {
     expect(body).toHaveProperty("materials");
     expect(body).toHaveProperty("calendars");
     expect(body).toHaveProperty("roles");
+    expect(body).toHaveProperty("costCenters");
   });
 
   it("filters calendars to global only (projectId null)", async () => {
@@ -60,6 +63,7 @@ describe("GET /api/org-setup", () => {
     mockPrisma.oBSMaterial.findMany.mockResolvedValue([]);
     mockPrisma.calendar.findMany.mockResolvedValue([]);
     mockPrisma.role.findMany.mockResolvedValue([]);
+    mockPrisma.costCenter.findMany.mockResolvedValue([]);
 
     const req = new NextRequest("http://localhost/api/org-setup", {
       headers: { authorization: "Bearer valid-token" },

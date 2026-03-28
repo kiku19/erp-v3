@@ -10,6 +10,7 @@ import { AddNodeModal } from "./add-node-modal";
 import { NodeModal } from "./node-modal";
 import { CalendarsModal } from "./calendars-modal";
 import { RolesModal } from "./roles-modal";
+import { CostCenterModal } from "./cost-center-modal";
 
 /* ─────────────────────── Inner Screen ──────────────────────────── */
 
@@ -43,6 +44,10 @@ function OrgSetupScreenInner() {
       />
       <RolesModal
         open={state.ui.globalPanelOpen === "roles"}
+        onClose={closeGlobalModal}
+      />
+      <CostCenterModal
+        open={state.ui.globalPanelOpen === "cost-centers"}
         onClose={closeGlobalModal}
       />
     </div>

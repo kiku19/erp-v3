@@ -1,12 +1,17 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { Search, Plus, Pencil, X, Users } from "lucide-react";
+import { Search, Plus, UserMinus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
-import { useOrgSetup, generateId } from "./context";
+import { Badge } from "@/components/ui/badge";
+import { SpotlightSearch } from "@/components/ui/spotlight-search";
+import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useOrgApi } from "@/hooks/use-org-api";
+import { useOrgSetup } from "./context";
 import { type Person, type PayType, type EmploymentType } from "./types";
 
 const PAY_TYPE_OPTIONS = [
@@ -27,11 +32,14 @@ interface PeopleTabProps {
 }
 
 function PeopleTab({ nodeId }: PeopleTabProps) {
-  const { state, dispatch } = useOrgSetup();
+  const { state, loadNodePeople } = useOrgSetup();
+  const { createPerson: apiCreatePerson, updatePerson: apiUpdatePerson, deletePerson: apiDeletePerson } = useOrgApi();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -49,21 +57,10 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
   const [formJoinDate, setFormJoinDate] = useState("");
 
   const node = state.nodes[nodeId];
+  const isLoadingPeople = state.ui.nodeLoading[nodeId]?.people ?? false;
   const people = useMemo(
     () => Object.values(state.people).filter((p) => p.nodeId === nodeId),
     [state.people, nodeId],
-  );
-
-  const filteredPeople = useMemo(
-    () =>
-      search
-        ? people.filter(
-            (p) =>
-              p.name.toLowerCase().includes(search.toLowerCase()) ||
-              p.employeeId.toLowerCase().includes(search.toLowerCase()),
-          )
-        : people,
-    [people, search],
   );
 
   const roleOptions = useMemo(
@@ -77,6 +74,9 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
   );
 
   const selectedRole = formRoleId ? state.roles[formRoleId] : null;
+
+  // Auto-show add form when no people exist
+  const shouldShowFormByDefault = people.length === 0 && !showForm && !editingId;
 
   const resetForm = useCallback(() => {
     setFormName("");
@@ -122,11 +122,10 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
     [],
   );
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!formName.trim() || !formEmployeeId.trim() || !formEmail.trim()) return;
 
-    const person: Person = {
-      id: editingId ?? generateId("person"),
+    const personData = {
       nodeId: formNodeId,
       name: formName.trim(),
       employeeId: formEmployeeId.trim(),
@@ -144,24 +143,54 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
       photoUrl: null,
     };
 
-    if (editingId) {
-      dispatch({ type: "UPDATE_PERSON", personId: editingId, updates: person });
-    } else {
-      dispatch({ type: "ADD_PERSON", person });
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      if (editingId) {
+        await apiUpdatePerson(editingId, personData);
+      } else {
+        await apiCreatePerson(personData);
+      }
+      await loadNodePeople(nodeId);
+      resetForm();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save person");
+    } finally {
+      setIsSaving(false);
     }
-    resetForm();
   }, [
-    dispatch, editingId, formName, formEmployeeId, formEmail, formNodeId,
+    apiCreatePerson, apiUpdatePerson, loadNodePeople, nodeId,
+    editingId, formName, formEmployeeId, formEmail, formNodeId,
     formRoleId, formPayType, formStdRate, formOtRate, formOtPay,
     formSalary, formContractAmt, formEmploymentType, formJoinDate, resetForm,
   ]);
 
   const handleRemove = useCallback(
-    (personId: string) => {
-      dispatch({ type: "REMOVE_PERSON", personId });
+    async (personId: string) => {
       setConfirmRemoveId(null);
+      setSaveError(null);
+
+      try {
+        await apiDeletePerson(personId);
+        await loadNodePeople(nodeId);
+        if (editingId === personId) resetForm();
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : "Failed to remove person");
+      }
     },
-    [dispatch],
+    [apiDeletePerson, loadNodePeople, nodeId, editingId, resetForm],
+  );
+
+  // When pay type changes, lock employment type to "contract" if contract
+  const handlePayTypeChange = useCallback(
+    (payType: PayType) => {
+      setFormPayType(payType);
+      if (payType === "contract") {
+        setFormEmploymentType("contract");
+      }
+    },
+    [],
   );
 
   // When role changes, auto-fill pay type
@@ -170,72 +199,85 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
       setFormRoleId(roleId);
       const role = state.roles[roleId];
       if (role) {
-        setFormPayType(role.defaultPayType);
+        handlePayTypeChange(role.defaultPayType);
         setFormOtPay(role.overtimeEligible);
       }
     },
-    [state.roles],
+    [state.roles, handlePayTypeChange],
   );
 
-  if (showForm) {
-    return (
-      <div className="flex flex-col gap-4 p-4">
-        <h3 className="text-sm font-semibold text-foreground">
-          {editingId ? "Edit Person" : "Add Person"}
-        </h3>
+  const handleSearchSelect = useCallback(
+    (person: Person) => {
+      openEdit(person);
+      setShowSearch(false);
+    },
+    [openEdit],
+  );
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-foreground">Full Name *</label>
-            <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Full name" autoFocus />
-          </div>
+  const isFormVisible = showForm || editingId !== null || shouldShowFormByDefault;
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-foreground">Employee ID *</label>
-            <Input value={formEmployeeId} onChange={(e) => setFormEmployeeId(e.target.value)} placeholder="EMP-001" className="font-mono" />
-          </div>
+  /* ─────────────────── Form Panel ─────────────────── */
+  const formPanel = (
+    <div className="flex flex-col gap-4 p-5 overflow-auto">
+      <h3 className="text-sm font-semibold text-foreground">
+        {editingId ? "Edit Person" : "Add Person"}
+      </h3>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-foreground">Email *</label>
-            <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="name@company.com" />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-foreground">OBS Node</label>
-            <Select options={nodeOptions} value={formNodeId} onChange={setFormNodeId} />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-foreground">Role *</label>
-            <Select
-              options={roleOptions}
-              value={formRoleId}
-              onChange={handleRoleChange}
-              placeholder="Select a role"
-            />
-            {roleOptions.length === 0 && (
-              <p className="text-[11px] text-warning-foreground">Create roles first in the Roles panel</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-foreground">Pay Type *</label>
-            <Select options={PAY_TYPE_OPTIONS} value={formPayType} onChange={(v) => setFormPayType(v as PayType)} />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-foreground">Employment Type *</label>
-            <Select options={EMPLOYMENT_TYPE_OPTIONS} value={formEmploymentType} onChange={(v) => setFormEmploymentType(v as EmploymentType)} />
-          </div>
+      {/* Required fields */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 flex flex-col gap-1.5">
+          <label className="text-[13px] font-medium text-foreground">Full Name *</label>
+          <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Full name" autoFocus />
         </div>
 
-        {/* Conditional pay fields */}
-        <div className="h-px bg-border" />
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[13px] font-medium text-foreground">Employee ID *</label>
+          <Input value={formEmployeeId} onChange={(e) => setFormEmployeeId(e.target.value)} placeholder="EMP-001" className="font-mono" />
+        </div>
 
-        {formPayType === "hourly" && (
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[13px] font-medium text-foreground">Email *</label>
+          <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="name@company.com" />
+        </div>
+      </div>
+
+      <div className="h-px bg-border" />
+
+      {/* Assignment & classification */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[13px] font-medium text-foreground">OBS Node</label>
+          <Select options={nodeOptions} value={formNodeId} onChange={setFormNodeId} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[13px] font-medium text-foreground">Role</label>
+          <Select
+            options={roleOptions}
+            value={formRoleId}
+            onChange={handleRoleChange}
+            placeholder="Select a role"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[13px] font-medium text-foreground">Pay Type</label>
+          <Select options={PAY_TYPE_OPTIONS} value={formPayType} onChange={(v) => handlePayTypeChange(v as PayType)} />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[13px] font-medium text-foreground">Employment Type</label>
+          <Select options={EMPLOYMENT_TYPE_OPTIONS} value={formEmploymentType} onChange={(v) => setFormEmploymentType(v as EmploymentType)} disabled={formPayType === "contract"} />
+        </div>
+      </div>
+
+      {/* Conditional pay fields */}
+      {formPayType === "hourly" && (
+        <>
+          <div className="h-px bg-border" />
+          <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-foreground">Standard Rate (₹/hr) *</label>
+              <label className="text-[13px] font-medium text-foreground">Standard Rate (₹/hr)</label>
               <Input type="number" value={formStdRate} onChange={(e) => setFormStdRate(e.target.value)} placeholder="0.00" min={0.01} step={0.01} />
             </div>
             {selectedRole?.overtimeEligible !== false && (
@@ -244,14 +286,17 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
                 <Input type="number" value={formOtRate} onChange={(e) => setFormOtRate(e.target.value)} placeholder="0.00" />
               </div>
             )}
-            <Toggle checked={formOtPay} onChange={setFormOtPay} label="Pay overtime premium" />
           </div>
-        )}
+          <Toggle checked={formOtPay} onChange={setFormOtPay} label="Pay overtime premium" />
+        </>
+      )}
 
-        {formPayType === "salaried" && (
+      {formPayType === "salaried" && (
+        <>
+          <div className="h-px bg-border" />
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-foreground">Monthly Salary (₹/month) *</label>
+              <label className="text-[13px] font-medium text-foreground">Monthly Salary (₹/month)</label>
               <Input type="number" value={formSalary} onChange={(e) => setFormSalary(e.target.value)} placeholder="0.00" />
             </div>
             {formSalary && (
@@ -264,118 +309,234 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
             )}
             <p className="text-[12px] text-muted-foreground">No overtime pay for salaried employees</p>
           </div>
-        )}
+        </>
+      )}
 
-        {formPayType === "contract" && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-foreground">Contract Amount (₹) *</label>
+      {formPayType === "contract" && (
+        <>
+          <div className="h-px bg-border" />
+          <div className="flex flex-wrap gap-3">
+            <div className="flex flex-1 min-w-[160px] flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-foreground">Contract Amount (₹)</label>
               <Input type="number" value={formContractAmt} onChange={(e) => setFormContractAmt(e.target.value)} placeholder="0.00" />
             </div>
+            <div className="flex flex-1 min-w-[160px] flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-foreground">Join Date</label>
+              <Input type="date" value={formJoinDate} onChange={(e) => setFormJoinDate(e.target.value)} />
+            </div>
           </div>
-        )}
+        </>
+      )}
 
+      {formPayType !== "contract" && (
         <div className="flex flex-col gap-1.5">
           <label className="text-[13px] font-medium text-foreground">Join Date</label>
           <Input type="date" value={formJoinDate} onChange={(e) => setFormJoinDate(e.target.value)} />
         </div>
+      )}
 
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <Button variant="outline" size="sm" onClick={resetForm}>Cancel</Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!formName.trim() || !formEmployeeId.trim() || !formEmail.trim()}
-          >
-            {editingId ? "Update Person" : "Save Person"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
+      {saveError && (
+        <p className="text-[12px] text-error-foreground">{saveError}</p>
+      )}
 
-  return (
-    <div className="flex flex-col gap-3 p-4">
-      {/* Search + Add */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search people..."
-            className="pl-8"
-          />
-        </div>
-        <Button size="sm" onClick={openNew}>
-          <Plus size={14} /> Add Person
+      <div className="flex items-center justify-end gap-2 pt-2">
+        {(showForm || editingId) && (
+          <Button variant="outline" size="sm" onClick={resetForm} disabled={isSaving}>Cancel</Button>
+        )}
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={!formName.trim() || !formEmployeeId.trim() || !formEmail.trim() || isSaving}
+        >
+          {isSaving ? "Saving..." : editingId ? "Update Person" : "Save Person"}
         </Button>
       </div>
+    </div>
+  );
 
-      {/* List */}
-      {filteredPeople.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <Users size={32} className="text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {search ? "No people match your search." : `No people in ${node?.name ?? "this node"} yet.`}
-          </p>
-          {!search && (
-            <Button size="sm" variant="outline" onClick={openNew}>
-              <Plus size={14} /> Add Person
+  return (
+    <div className="flex flex-1 min-h-0">
+      {/* Left Panel — People List */}
+      <div className="w-[280px] border-r border-border flex flex-col shrink-0">
+        {/* List Header */}
+        <div className="flex items-center justify-between h-12 px-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] font-semibold text-foreground">People</span>
+            <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{people.length}</Badge>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setShowSearch(true)}
+              aria-label="Search people"
+            >
+              <Search size={14} />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={openNew}
+              aria-label="Add person"
+            >
+              <Plus size={14} />
+            </Button>
+          </div>
+        </div>
+
+        {/* People List */}
+        <div className="flex-1 min-h-0 overflow-auto">
+          {isLoadingPeople ? (
+            <div className="flex flex-col gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-border animate-pulse">
+                  <div className="h-7 w-7 rounded-full bg-muted" />
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="h-3 w-24 rounded bg-muted" />
+                    <div className="h-2.5 w-32 rounded bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : people.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 px-5 py-8 text-center">
+              <Users size={24} className="text-muted-foreground" />
+              <p className="text-[12px] text-muted-foreground">No people added</p>
+            </div>
+          ) : (
+            people.map((person) => {
+              const role = person.roleId ? state.roles[person.roleId] : null;
+              const isConfirming = confirmRemoveId === person.id;
+              const isEditing = editingId === person.id;
+
+              return (
+                <div
+                  key={person.id}
+                  className={cn(
+                    "group/person flex items-center justify-between w-full px-4 py-2.5 border-b border-border last:border-0 cursor-pointer transition-colors duration-[var(--duration-fast)]",
+                    isEditing
+                      ? "bg-primary-active text-primary-active-foreground"
+                      : "hover:bg-muted-hover",
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+                    onClick={() => openEdit(person)}
+                  >
+                    <div className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full shrink-0",
+                      isEditing ? "bg-primary-active-foreground/15" : "bg-muted",
+                    )}>
+                      <span className={cn(
+                        "text-[10px] font-semibold",
+                        isEditing ? "text-primary-active-foreground" : "text-muted-foreground",
+                      )}>
+                        {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <span className={cn(
+                        "text-[12px] font-medium truncate",
+                        isEditing ? "text-primary-active-foreground" : "text-foreground",
+                      )}>
+                        {person.name}
+                      </span>
+                      <span className={cn(
+                        "text-[10px] truncate",
+                        isEditing ? "text-primary-active-foreground/70" : "text-muted-foreground",
+                      )}>
+                        {person.employeeId} · {role?.name ?? "No role"}
+                      </span>
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {isConfirming ? (
+                      <>
+                        <Button variant="destructive" size="sm" className="h-6 text-[11px] px-2" onClick={() => handleRemove(person.id)}>
+                          Remove
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-6 text-[11px] px-2" onClick={() => setConfirmRemoveId(null)}>
+                          No
+                        </Button>
+                      </>
+                    ) : (
+                      <Tooltip content="Unassign from this node" side="right">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setConfirmRemoveId(person.id); }}
+                          className={cn(
+                            "flex items-center justify-center h-6 w-6 rounded-md shrink-0 opacity-0 group-hover/person:opacity-100 transition-opacity duration-[var(--duration-fast)] cursor-pointer",
+                            isEditing
+                              ? "text-primary-active-foreground/70 hover:text-primary-active-foreground"
+                              : "text-muted-foreground hover:text-destructive",
+                          )}
+                          aria-label={`Unassign ${person.name} from this node`}
+                        >
+                          <UserMinus size={13} />
+                        </button>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
-      ) : (
-        <div className="flex flex-col gap-1">
-          {filteredPeople.map((person) => {
-            const role = person.roleId ? state.roles[person.roleId] : null;
-            const isConfirming = confirmRemoveId === person.id;
+      </div>
 
-            return (
-              <div
-                key={person.id}
-                className="flex items-center justify-between rounded-md border border-border px-3 py-2"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                    <span className="text-[11px] font-semibold text-muted-foreground">
-                      {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-foreground">{person.name}</span>
-                    <span className="text-[12px] text-muted-foreground">
-                      {person.employeeId} · {role?.name ?? "No role"} · {person.payType}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  {isConfirming ? (
-                    <>
-                      <span className="mr-2 text-[12px] text-muted-foreground">Remove?</span>
-                      <Button variant="destructive" size="sm" className="h-7" onClick={() => handleRemove(person.id)}>
-                        Remove
-                      </Button>
-                      <Button variant="outline" size="sm" className="h-7" onClick={() => setConfirmRemoveId(null)}>
-                        Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(person)}>
-                        <Pencil size={13} />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setConfirmRemoveId(person.id)}>
-                        <X size={13} />
-                      </Button>
-                    </>
-                  )}
-                </div>
+      {/* Right Panel — Form / Empty */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-background">
+        {isFormVisible ? (
+          formPanel
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
+            <Users size={32} className="text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Select a person to edit or click <strong>+</strong> to add one.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Spotlight search */}
+      <SpotlightSearch<Person>
+        open={showSearch}
+        onClose={() => setShowSearch(false)}
+        placeholder="Search people..."
+        items={people}
+        onSelect={handleSearchSelect}
+        filterFn={(person, q) => {
+          const lower = q.toLowerCase();
+          return person.name.toLowerCase().includes(lower) || person.employeeId.toLowerCase().includes(lower);
+        }}
+        renderItem={(person, isActive) => {
+          const role = person.roleId ? state.roles[person.roleId] : null;
+          return (
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-full shrink-0",
+                isActive ? "bg-primary-active-foreground/15" : "bg-muted",
+              )}>
+                <span className={cn(
+                  "text-[10px] font-semibold",
+                  isActive ? "text-primary-active-foreground" : "text-muted-foreground",
+                )}>
+                  {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      )}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">{person.name}</span>
+                <span className={cn("text-[11px]", isActive ? "text-primary-active-foreground/70" : "text-muted-foreground")}>
+                  {person.employeeId} · {role?.name ?? "No role"}
+                </span>
+              </div>
+            </div>
+          );
+        }}
+      />
     </div>
   );
 }

@@ -19,8 +19,10 @@ import {
   type Calendar,
   type CalendarExceptionData,
   type Role,
+  type CostCenter,
   type GlobalPanelType,
   type AssignedRole,
+  type NodeLoadingState,
   NODE_TYPE_BY_DEPTH,
   MAX_DEPTH,
 } from "./types";
@@ -29,7 +31,7 @@ import {
 
 type Action =
   | { type: "ADD_NODE"; parentId: string; name: string; code: string; asChild: boolean }
-  | { type: "UPDATE_NODE"; nodeId: string; updates: Partial<Pick<OBSNode, "name" | "code" | "nodeHeadPersonId" | "calendarId">> }
+  | { type: "UPDATE_NODE"; nodeId: string; updates: Partial<Pick<OBSNode, "name" | "code" | "nodeHeadPersonId" | "calendarId" | "costCenterId">> }
   | { type: "REMOVE_NODE"; nodeId: string }
   | { type: "ADD_PERSON"; person: Person }
   | { type: "UPDATE_PERSON"; personId: string; updates: Partial<Person> }
@@ -48,6 +50,9 @@ type Action =
   | { type: "ADD_ROLE"; role: Role }
   | { type: "UPDATE_ROLE"; roleId: string; updates: Partial<Role> }
   | { type: "REMOVE_ROLE"; roleId: string }
+  | { type: "ADD_COST_CENTER"; costCenter: CostCenter }
+  | { type: "UPDATE_COST_CENTER"; costCenterId: string; updates: Partial<CostCenter> }
+  | { type: "REMOVE_COST_CENTER"; costCenterId: string }
   | { type: "ASSIGN_ROLE_TO_NODE"; nodeId: string; assignedRole: AssignedRole }
   | { type: "UPDATE_NODE_ROLE_RATE"; nodeId: string; roleId: string; standardRate: number | null; overtimeRate: number | null }
   | { type: "REMOVE_ROLE_FROM_NODE"; nodeId: string; roleId: string }
@@ -60,7 +65,12 @@ type Action =
   | { type: "SET_ZOOM"; zoom: number }
   | { type: "SET_PAN"; panX: number; panY: number }
   | { type: "SET_LOADING"; isLoading: boolean }
-  | { type: "HYDRATE_FROM_API"; data: { nodes: any[]; people: any[]; equipment: any[]; materials: any[]; calendars: any[]; roles: any[] } };
+  | { type: "SET_NODE_LOADING"; nodeId: string; resource: keyof NodeLoadingState; loading: boolean }
+  | { type: "HYDRATE_FROM_API"; data: { nodes: any[]; people: any[]; equipment: any[]; materials: any[]; calendars: any[]; roles: any[]; costCenters?: any[] } }
+  | { type: "HYDRATE_NODES"; nodes: any[]; calendars: any[]; roles: any[]; costCenters?: any[] }
+  | { type: "SET_NODE_PEOPLE"; nodeId: string; people: any[]; total: number }
+  | { type: "SET_NODE_EQUIPMENT"; nodeId: string; equipment: any[]; total: number }
+  | { type: "SET_NODE_MATERIALS"; nodeId: string; materials: any[]; total: number };
 
 /* ─────────────────────── Helpers ────────────────────────────────── */
 
@@ -113,8 +123,15 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         children: [],
         nodeHeadPersonId: null,
         calendarId: null,
+        costCenterId: null,
         assignedRoles: [],
         isActive: true,
+        peopleCount: 0,
+        equipmentCount: 0,
+        materialCount: 0,
+        nodeHeadName: null,
+        calendarName: null,
+        costCenterName: null,
       };
 
       const updatedParent = {
@@ -338,6 +355,31 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
       return { ...state, roles: newRoles, nodes: updatedNodes };
     }
 
+    case "ADD_COST_CENTER":
+      return { ...state, costCenters: { ...state.costCenters, [action.costCenter.id]: action.costCenter } };
+
+    case "UPDATE_COST_CENTER": {
+      const cc = state.costCenters[action.costCenterId];
+      if (!cc) return state;
+      return {
+        ...state,
+        costCenters: { ...state.costCenters, [action.costCenterId]: { ...cc, ...action.updates } },
+      };
+    }
+
+    case "REMOVE_COST_CENTER": {
+      const newCCs = { ...state.costCenters };
+      delete newCCs[action.costCenterId];
+      // Clear costCenterId on any nodes that referenced this cost center
+      const updatedNodes = { ...state.nodes };
+      for (const [nid, node] of Object.entries(updatedNodes)) {
+        if (node.costCenterId === action.costCenterId) {
+          updatedNodes[nid] = { ...node, costCenterId: null };
+        }
+      }
+      return { ...state, costCenters: newCCs, nodes: updatedNodes };
+    }
+
     case "ASSIGN_ROLE_TO_NODE": {
       const node = state.nodes[action.nodeId];
       if (!node) return state;
@@ -416,6 +458,145 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
     case "SET_LOADING":
       return { ...state, ui: { ...state.ui, isLoading: action.isLoading } };
 
+    case "SET_NODE_LOADING": {
+      const current = state.ui.nodeLoading[action.nodeId] ?? { people: false, equipment: false, materials: false };
+      return {
+        ...state,
+        ui: {
+          ...state.ui,
+          nodeLoading: {
+            ...state.ui.nodeLoading,
+            [action.nodeId]: { ...current, [action.resource]: action.loading },
+          },
+        },
+      };
+    }
+
+    case "HYDRATE_NODES": {
+      const nodesMap: Record<string, OBSNode> = {};
+      for (const n of action.nodes) {
+        nodesMap[n.id] = {
+          id: n.id,
+          name: n.name,
+          code: n.code,
+          type: n.type,
+          parentId: n.parentId,
+          children: [],
+          nodeHeadPersonId: n.nodeHeadPersonId,
+          calendarId: n.calendarId,
+          costCenterId: n.costCenterId ?? null,
+          assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
+          isActive: n.isActive,
+          peopleCount: n.peopleCount ?? 0,
+          equipmentCount: n.equipmentCount ?? 0,
+          materialCount: n.materialCount ?? 0,
+          nodeHeadName: n.nodeHeadName ?? null,
+          calendarName: n.calendarName ?? null,
+          costCenterName: n.costCenterName ?? null,
+        };
+      }
+      for (const node of Object.values(nodesMap)) {
+        if (node.parentId && nodesMap[node.parentId]) {
+          nodesMap[node.parentId].children.push(node.id);
+        }
+      }
+
+      const calendarsMap: Record<string, Calendar> = {};
+      for (const c of action.calendars) {
+        calendarsMap[c.id] = {
+          id: c.id,
+          name: c.name,
+          category: c.category ?? "global",
+          hoursPerDay: c.hoursPerDay,
+          workDays: c.workDays,
+          exceptions: c.exceptions ?? [],
+        };
+      }
+
+      const rolesMap: Record<string, Role> = {};
+      for (const r of action.roles) {
+        rolesMap[r.id] = {
+          id: r.id,
+          name: r.name,
+          code: r.code,
+          level: r.level,
+          defaultPayType: r.defaultPayType,
+          overtimeEligible: r.overtimeEligible,
+          skillTags: r.skillTags ?? [],
+        };
+      }
+
+      const costCentersMap: Record<string, CostCenter> = {};
+      for (const cc of (action.costCenters ?? [])) {
+        costCentersMap[cc.id] = {
+          id: cc.id,
+          name: cc.name,
+          code: cc.code,
+          description: cc.description ?? "",
+        };
+      }
+
+      const rootNode = Object.values(nodesMap).find(n => n.type === "COMPANY_ROOT");
+      const rootNodeId = rootNode?.id ?? state.company.rootNodeId;
+
+      return {
+        ...state,
+        company: { ...state.company, rootNodeId },
+        nodes: nodesMap,
+        calendars: calendarsMap,
+        roles: rolesMap,
+        costCenters: costCentersMap,
+        ui: { ...state.ui, isLoading: false },
+      };
+    }
+
+    case "SET_NODE_PEOPLE": {
+      const peopleMap = { ...state.people };
+      // Remove existing people for this node, then add fresh
+      for (const [id, p] of Object.entries(peopleMap)) {
+        if (p.nodeId === action.nodeId) delete peopleMap[id];
+      }
+      for (const p of action.people) {
+        peopleMap[p.id] = { ...p, nodeId: p.nodeId ?? action.nodeId };
+      }
+      // Update the node's people count
+      const nodeForPeople = state.nodes[action.nodeId];
+      const updatedNodes = nodeForPeople
+        ? { ...state.nodes, [action.nodeId]: { ...nodeForPeople, peopleCount: action.total } }
+        : state.nodes;
+      return { ...state, people: peopleMap, nodes: updatedNodes };
+    }
+
+    case "SET_NODE_EQUIPMENT": {
+      const equipmentMap = { ...state.equipment };
+      for (const [id, e] of Object.entries(equipmentMap)) {
+        if (e.nodeId === action.nodeId) delete equipmentMap[id];
+      }
+      for (const e of action.equipment) {
+        equipmentMap[e.id] = { ...e, nodeId: e.nodeId ?? action.nodeId };
+      }
+      const nodeForEquipment = state.nodes[action.nodeId];
+      const updatedEquipmentNodes = nodeForEquipment
+        ? { ...state.nodes, [action.nodeId]: { ...nodeForEquipment, equipmentCount: action.total } }
+        : state.nodes;
+      return { ...state, equipment: equipmentMap, nodes: updatedEquipmentNodes };
+    }
+
+    case "SET_NODE_MATERIALS": {
+      const materialsMap = { ...state.materials };
+      for (const [id, m] of Object.entries(materialsMap)) {
+        if (m.nodeId === action.nodeId) delete materialsMap[id];
+      }
+      for (const m of action.materials) {
+        materialsMap[m.id] = { ...m, nodeId: m.nodeId ?? action.nodeId };
+      }
+      const nodeForMaterials = state.nodes[action.nodeId];
+      const updatedMaterialNodes = nodeForMaterials
+        ? { ...state.nodes, [action.nodeId]: { ...nodeForMaterials, materialCount: action.total } }
+        : state.nodes;
+      return { ...state, materials: materialsMap, nodes: updatedMaterialNodes };
+    }
+
     case "HYDRATE_FROM_API": {
       const { data } = action;
       const nodesMap: Record<string, OBSNode> = {};
@@ -429,8 +610,15 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           children: [],
           nodeHeadPersonId: n.nodeHeadPersonId,
           calendarId: n.calendarId,
+          costCenterId: n.costCenterId ?? null,
           assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
           isActive: n.isActive,
+          peopleCount: n.peopleCount ?? 0,
+          equipmentCount: n.equipmentCount ?? 0,
+          materialCount: n.materialCount ?? 0,
+          nodeHeadName: n.nodeHeadName ?? null,
+          calendarName: n.calendarName ?? null,
+          costCenterName: n.costCenterName ?? null,
         };
       }
       // Build children arrays from parentId
@@ -480,6 +668,16 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         };
       }
 
+      const costCentersMap: Record<string, CostCenter> = {};
+      for (const cc of (data.costCenters ?? [])) {
+        costCentersMap[cc.id] = {
+          id: cc.id,
+          name: cc.name,
+          code: cc.code,
+          description: cc.description ?? "",
+        };
+      }
+
       // Find root node
       const rootNode = Object.values(nodesMap).find(n => n.type === "COMPANY_ROOT");
       const rootNodeId = rootNode?.id ?? state.company.rootNodeId;
@@ -493,6 +691,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         materials: materialsMap,
         calendars: calendarsMap,
         roles: rolesMap,
+        costCenters: costCentersMap,
         ui: { ...state.ui, isLoading: false },
       };
     }
@@ -524,8 +723,15 @@ function createInitialState(companyName: string): OrgSetupState {
         children: [],
         nodeHeadPersonId: null,
         calendarId: null,
+        costCenterId: null,
         assignedRoles: [],
         isActive: true,
+        peopleCount: 0,
+        equipmentCount: 0,
+        materialCount: 0,
+        nodeHeadName: null,
+        calendarName: null,
+        costCenterName: null,
       },
     },
     people: {},
@@ -533,6 +739,7 @@ function createInitialState(companyName: string): OrgSetupState {
     materials: {},
     calendars: {},
     roles: {},
+    costCenters: {},
     ui: {
       selectedNodeId: null,
       openNodeModalId: null,
@@ -543,6 +750,7 @@ function createInitialState(companyName: string): OrgSetupState {
       addNodeTarget: null,
       globalPanelOpen: null,
       isLoading: true,
+      nodeLoading: {},
     },
   };
 }
@@ -555,6 +763,9 @@ interface OrgSetupContextValue {
   getNodePeopleCount: (nodeId: string) => number;
   getNodeRolesCount: (nodeId: string) => number;
   getNodeDepth: (nodeId: string) => number;
+  loadNodePeople: (nodeId: string, limit?: number, offset?: number) => Promise<void>;
+  loadNodeEquipment: (nodeId: string, limit?: number, offset?: number) => Promise<void>;
+  loadNodeMaterials: (nodeId: string, limit?: number, offset?: number) => Promise<void>;
 }
 
 const OrgSetupContext = createContext<OrgSetupContextValue | null>(null);
@@ -574,17 +785,28 @@ interface OrgSetupProviderProps {
 
 function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
   const [state, dispatch] = useReducer(reducer, companyName, createInitialState);
-  const { fetchOrgSetup, createNode: apiCreateNode } = useOrgApi();
+  const {
+    fetchOrgSetup,
+    fetchNodes,
+    fetchNodePeople,
+    fetchNodeEquipment,
+    fetchNodeMaterials,
+    createNode: apiCreateNode,
+  } = useOrgApi();
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const data = await fetchOrgSetup();
+        // Fetch nodes with counts + global config (calendars, roles, costCenters)
+        const [nodesData, orgData] = await Promise.all([
+          fetchNodes(),
+          fetchOrgSetup(),
+        ]);
         if (cancelled) return;
 
-        if (data.nodes.length === 0) {
+        if (nodesData.nodes.length === 0) {
           // First time — create root node via API
           const rootCode = companyName
             .split(" ")
@@ -601,20 +823,22 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
 
           if (!cancelled) {
             dispatch({
-              type: "HYDRATE_FROM_API",
-              data: {
-                nodes: [node],
-                people: [],
-                equipment: [],
-                materials: [],
-                calendars: data.calendars,
-                roles: data.roles,
-              },
+              type: "HYDRATE_NODES",
+              nodes: [node],
+              calendars: orgData.calendars,
+              roles: orgData.roles,
+              costCenters: orgData.costCenters,
             });
           }
         } else {
           if (!cancelled) {
-            dispatch({ type: "HYDRATE_FROM_API", data });
+            dispatch({
+              type: "HYDRATE_NODES",
+              nodes: nodesData.nodes,
+              calendars: orgData.calendars,
+              roles: orgData.roles,
+              costCenters: orgData.costCenters,
+            });
           }
         }
       } catch (error) {
@@ -630,9 +854,8 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getNodePeopleCount = useCallback(
-    (nodeId: string) =>
-      Object.values(state.people).filter((p) => p.nodeId === nodeId).length,
-    [state.people],
+    (nodeId: string) => state.nodes[nodeId]?.peopleCount ?? 0,
+    [state.nodes],
   );
 
   const getNodeRolesCount = useCallback(
@@ -645,6 +868,45 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
     [state.nodes],
   );
 
+  const loadNodePeople = useCallback(
+    async (nodeId: string, limit = 20, offset = 0) => {
+      dispatch({ type: "SET_NODE_LOADING", nodeId, resource: "people", loading: true });
+      try {
+        const data = await fetchNodePeople(nodeId, limit, offset);
+        dispatch({ type: "SET_NODE_PEOPLE", nodeId, people: data.people, total: data.total });
+      } finally {
+        dispatch({ type: "SET_NODE_LOADING", nodeId, resource: "people", loading: false });
+      }
+    },
+    [fetchNodePeople],
+  );
+
+  const loadNodeEquipment = useCallback(
+    async (nodeId: string, limit = 20, offset = 0) => {
+      dispatch({ type: "SET_NODE_LOADING", nodeId, resource: "equipment", loading: true });
+      try {
+        const data = await fetchNodeEquipment(nodeId, limit, offset);
+        dispatch({ type: "SET_NODE_EQUIPMENT", nodeId, equipment: data.equipment, total: data.total });
+      } finally {
+        dispatch({ type: "SET_NODE_LOADING", nodeId, resource: "equipment", loading: false });
+      }
+    },
+    [fetchNodeEquipment],
+  );
+
+  const loadNodeMaterials = useCallback(
+    async (nodeId: string, limit = 20, offset = 0) => {
+      dispatch({ type: "SET_NODE_LOADING", nodeId, resource: "materials", loading: true });
+      try {
+        const data = await fetchNodeMaterials(nodeId, limit, offset);
+        dispatch({ type: "SET_NODE_MATERIALS", nodeId, materials: data.materials, total: data.total });
+      } finally {
+        dispatch({ type: "SET_NODE_LOADING", nodeId, resource: "materials", loading: false });
+      }
+    },
+    [fetchNodeMaterials],
+  );
+
   return (
     <OrgSetupContext.Provider
       value={{
@@ -653,6 +915,9 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
         getNodePeopleCount,
         getNodeRolesCount,
         getNodeDepth: getNodeDepthFn,
+        loadNodePeople,
+        loadNodeEquipment,
+        loadNodeMaterials,
       }}
     >
       {children}

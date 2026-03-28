@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { CalendarDays, Briefcase } from "lucide-react";
+import { CalendarDays, Briefcase, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ function Header() {
 
   const calendarCount = Object.keys(state.calendars).length;
   const roleCount = Object.keys(state.roles).length;
+  const costCenterCount = Object.keys(state.costCenters).length;
 
   const toggleModal = useCallback(
     (panel: GlobalPanelType) => {
@@ -52,6 +53,13 @@ function Header() {
           count={roleCount}
           isActive={globalPanelOpen === "roles"}
           onClick={() => toggleModal("roles")}
+        />
+        <GlobalButton
+          icon={<Wallet size={14} />}
+          label="Cost Centers"
+          count={costCenterCount}
+          isActive={globalPanelOpen === "cost-centers"}
+          onClick={() => toggleModal("cost-centers")}
         />
       </div>
 

@@ -43,6 +43,30 @@ function useOrgApi() {
     [apiFetch],
   );
 
+  /* ─── Lazy-loading ─── */
+  const fetchNodes = useCallback(
+    () => apiFetch("/api/org-setup/nodes"),
+    [apiFetch],
+  );
+
+  const fetchNodePeople = useCallback(
+    (nodeId: string, limit = 20, offset = 0) =>
+      apiFetch(`/api/org-setup/nodes/${nodeId}/people?limit=${limit}&offset=${offset}`),
+    [apiFetch],
+  );
+
+  const fetchNodeEquipment = useCallback(
+    (nodeId: string, limit = 20, offset = 0) =>
+      apiFetch(`/api/org-setup/nodes/${nodeId}/equipment?limit=${limit}&offset=${offset}`),
+    [apiFetch],
+  );
+
+  const fetchNodeMaterials = useCallback(
+    (nodeId: string, limit = 20, offset = 0) =>
+      apiFetch(`/api/org-setup/nodes/${nodeId}/materials?limit=${limit}&offset=${offset}`),
+    [apiFetch],
+  );
+
   /* ─── Nodes ─── */
   const createNode = useCallback(
     (data: Record<string, unknown>) =>
@@ -168,8 +192,36 @@ function useOrgApi() {
     [apiFetch],
   );
 
+  const createCostCenter = useCallback(
+    (data: Record<string, unknown>) =>
+      apiFetch("/api/cost-centers", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    [apiFetch],
+  );
+
+  const updateCostCenter = useCallback(
+    (id: string, data: Record<string, unknown>) =>
+      apiFetch(`/api/cost-centers/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    [apiFetch],
+  );
+
+  const deleteCostCenter = useCallback(
+    (id: string) =>
+      apiFetch(`/api/cost-centers/${id}`, { method: "DELETE" }),
+    [apiFetch],
+  );
+
   return {
     fetchOrgSetup,
+    fetchNodes,
+    fetchNodePeople,
+    fetchNodeEquipment,
+    fetchNodeMaterials,
     createNode,
     updateNode,
     deleteNode,
@@ -185,6 +237,9 @@ function useOrgApi() {
     createCalendar,
     updateCalendar,
     deleteCalendar,
+    createCostCenter,
+    updateCostCenter,
+    deleteCostCenter,
   };
 }
 

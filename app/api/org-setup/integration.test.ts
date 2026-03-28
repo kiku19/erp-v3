@@ -220,6 +220,9 @@ const mockPrisma = {
   role: {
     findMany: vi.fn().mockResolvedValue([]),
   },
+  costCenter: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
   $transaction: vi.fn((fns: Promise<unknown>[]) => Promise.all(fns)),
 };
 

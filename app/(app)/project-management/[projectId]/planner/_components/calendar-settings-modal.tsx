@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft, Check, X } from "lucide-react";
 import { Modal, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { SpotlightSearch } from "@/components/ui/spotlight-search";
 import type { CalendarData, CalendarExceptionData, WorkDayConfig } from "@/lib/planner/calendar-types";
 import { DEFAULT_WORK_DAYS } from "@/lib/planner/calendar-types";
 import { ExceptionEditorContent, DOT_CLASS_MAP } from "@/components/shared/calendar-exception-modal/exception-editor-content";
@@ -92,190 +92,7 @@ function DuplicateCalendarModal({ open, onClose, calendar, onSave }: DuplicateCa
   );
 }
 
-/* ─────────────────────── SpotlightSearch ─────────────────────── */
-
-interface SpotlightSearchProps {
-  open: boolean;
-  onClose: () => void;
-  calendars: CalendarData[];
-  onSelect: (calId: string) => void;
-}
-
-function SpotlightSearch({ open, onClose, calendars, onSelect }: SpotlightSearchProps) {
-  const [query, setQuery] = useState("");
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const [isMounted, setIsMounted] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Mount/unmount animation
-  useEffect(() => {
-    if (open) {
-      setIsClosing(false);
-      setIsMounted(true);
-      setQuery("");
-      setHighlightedIndex(0);
-    } else if (isMounted) {
-      setIsClosing(true);
-    }
-  }, [open, isMounted]);
-
-  // Fallback unmount (jsdom doesn't fire onAnimationEnd)
-  useEffect(() => {
-    if (!isClosing) return;
-    const timer = setTimeout(() => {
-      setIsMounted(false);
-      setIsClosing(false);
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [isClosing]);
-
-  const handleAnimationEnd = useCallback(() => {
-    if (isClosing) {
-      setIsMounted(false);
-      setIsClosing(false);
-    }
-  }, [isClosing]);
-
-  // Auto-focus input on mount
-  useEffect(() => {
-    if (isMounted && !isClosing) {
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [isMounted, isClosing]);
-
-  // Filter calendars locally
-  const filtered = calendars.filter((c) =>
-    c.name.toLowerCase().includes(query.toLowerCase()),
-  );
-
-  // Reset highlight when query changes
-  useEffect(() => {
-    setHighlightedIndex(0);
-  }, [query]);
-
-  // Keyboard navigation
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setHighlightedIndex((prev) => (prev + 1) % Math.max(filtered.length, 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setHighlightedIndex((prev) => (prev - 1 + filtered.length) % Math.max(filtered.length, 1));
-      } else if (e.key === "Enter" && filtered.length > 0) {
-        e.preventDefault();
-        onSelect(filtered[highlightedIndex].id);
-        onClose();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    },
-    [filtered, highlightedIndex, onSelect, onClose],
-  );
-
-  // Close on Escape at document level (catches Escape even when input not focused)
-  useEffect(() => {
-    if (!isMounted || isClosing) return;
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }
-    }
-    document.addEventListener("keydown", handleEsc, true);
-    return () => document.removeEventListener("keydown", handleEsc, true);
-  }, [isMounted, isClosing, onClose]);
-
-  const workingDaySummary = (cal: CalendarData) => {
-    const days = cal.workDays.filter((d) => d.working).length;
-    return `${cal.hoursPerDay}h/day · ${days} days/wk`;
-  };
-
-  if (!isMounted) return null;
-
-  return createPortal(
-    <div
-      className="fixed inset-0 bg-foreground/20 backdrop-blur-sm"
-      style={{
-        zIndex: 99999,
-        animation: isClosing
-          ? "spotlight-out var(--duration-fast) var(--ease-default) forwards"
-          : "spotlight-in var(--duration-normal) var(--ease-default) forwards",
-      }}
-      onClick={onClose}
-      onAnimationEnd={handleAnimationEnd}
-    >
-      <div
-        className="mx-auto mt-[20vh] w-full max-w-[560px] rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)]"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          animation: isClosing
-            ? "spotlight-out var(--duration-fast) var(--ease-default) forwards"
-            : "spotlight-in var(--duration-normal) var(--ease-default) forwards",
-        }}
-      >
-        {/* Search input */}
-        <div className="flex items-center gap-3 h-12 px-4 border-b border-border">
-          <Search size={18} className="text-muted-foreground shrink-0" />
-          <Input
-            ref={inputRef}
-            data-testid="spotlight-search-input"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search calendars..."
-            className="border-none bg-transparent shadow-none ring-0 ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-0 py-0 h-auto"
-            autoFocus
-          />
-        </div>
-
-        {/* Results */}
-        <div className="max-h-[300px] overflow-auto p-2">
-          {calendars.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground text-center py-4">
-              No calendars have been added yet
-            </p>
-          ) : filtered.length === 0 ? (
-            <p className="text-[13px] text-muted-foreground text-center py-4">
-              No results found
-            </p>
-          ) : (
-            filtered.map((cal, idx) => (
-              <button
-                key={cal.id}
-                type="button"
-                data-testid={`spotlight-item-${cal.id}`}
-                onClick={() => {
-                  onSelect(cal.id);
-                  onClose();
-                }}
-                className={cn(
-                  "flex items-center gap-3 w-full px-3 py-2.5 rounded-md text-left cursor-pointer transition-colors duration-[var(--duration-fast)]",
-                  idx === highlightedIndex
-                    ? "bg-muted"
-                    : "hover:bg-muted-hover",
-                )}
-              >
-                <Calendar size={18} className="text-muted-foreground shrink-0" />
-                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                  <span className="text-sm font-medium text-foreground truncate">{cal.name}</span>
-                  <span className="text-[11px] text-muted-foreground truncate">
-                    {workingDaySummary(cal)}
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body,
-  );
-}
+/* ─────────────────────── CalendarSettingsModal ──────────────────── */
 
 /* ─────────────────────── EmptyCalendarSvg ────────────────────── */
 
@@ -1055,11 +872,24 @@ function CalendarSettingsModal({
       )}
 
       {/* Spotlight Search */}
-      <SpotlightSearch
+      <SpotlightSearch<CalendarData>
         open={spotlightOpen}
         onClose={() => setSpotlightOpen(false)}
-        calendars={calendars}
-        onSelect={handleSpotlightSelect}
+        placeholder="Search calendars..."
+        items={calendars}
+        onSelect={(cal) => handleSpotlightSelect(cal.id)}
+        filterFn={(cal, q) => cal.name.toLowerCase().includes(q.toLowerCase())}
+        renderItem={(cal) => (
+          <>
+            <Calendar size={18} className="text-muted-foreground shrink-0" />
+            <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span className="text-sm font-medium truncate">{cal.name}</span>
+              <span className="text-[11px] text-muted-foreground truncate">
+                {cal.hoursPerDay}h/day · {cal.workDays.filter((d) => d.working).length} days/wk
+              </span>
+            </div>
+          </>
+        )}
       />
 
       {/* Delete Calendar Confirmation */}
@@ -1086,5 +916,5 @@ function CalendarSettingsModal({
   );
 }
 
-export { CalendarSettingsModal, DuplicateCalendarModal, SpotlightSearch };
+export { CalendarSettingsModal, DuplicateCalendarModal };
 export type { CalendarSettingsModalProps };
