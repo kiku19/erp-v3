@@ -357,7 +357,7 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
   return (
     <div className="flex flex-1 min-h-0">
       {/* Left Panel — People List */}
-      <div className="w-[280px] border-r border-border flex flex-col shrink-0">
+      <div className="w-[360px] border-r border-border flex flex-col shrink-0">
         {/* List Header */}
         <div className="flex items-center justify-between h-12 px-4 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
