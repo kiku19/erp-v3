@@ -39,6 +39,18 @@ type RouteContext = { params: Promise<{ id: string }> };
  *                 type: array
  *                 items:
  *                   type: string
+ *               costRateMin:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Minimum estimated cost rate for planning (optional)
+ *               costRateMax:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Maximum estimated cost rate for planning (optional)
+ *               costRateCurrency:
+ *                 type: string
+ *                 nullable: true
+ *                 description: 3-letter currency code (e.g. USD, EUR). Optional.
  *     responses:
  *       200:
  *         description: Role updated

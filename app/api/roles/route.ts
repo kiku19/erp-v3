@@ -43,6 +43,18 @@ import { createRoleSchema, generateRoleCode } from "@/lib/validations/role";
  *                         type: array
  *                         items:
  *                           type: string
+ *                       costRateMin:
+ *                         type: number
+ *                         nullable: true
+ *                         description: Minimum estimated cost rate for planning
+ *                       costRateMax:
+ *                         type: number
+ *                         nullable: true
+ *                         description: Maximum estimated cost rate for planning
+ *                       costRateCurrency:
+ *                         type: string
+ *                         nullable: true
+ *                         description: Currency code (e.g. USD, EUR)
  *                       createdAt:
  *                         type: string
  *                         format: date-time
@@ -121,6 +133,18 @@ export async function GET(request: NextRequest): Promise<Response> {
  *                 type: array
  *                 items:
  *                   type: string
+ *               costRateMin:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Minimum estimated cost rate for planning (optional)
+ *               costRateMax:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Maximum estimated cost rate for planning (optional)
+ *               costRateCurrency:
+ *                 type: string
+ *                 nullable: true
+ *                 description: 3-letter currency code (e.g. USD, EUR). Optional.
  *     responses:
  *       201:
  *         description: Role created successfully
@@ -156,8 +180,10 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const { name, code, level, defaultPayType, overtimeEligible, skillTags } =
-      parsed.data;
+    const {
+      name, code, level, defaultPayType, overtimeEligible, skillTags,
+      costRateMin, costRateMax, costRateCurrency,
+    } = parsed.data;
 
     const roleCode = code || generateRoleCode(name);
 
@@ -182,6 +208,9 @@ export async function POST(request: NextRequest): Promise<Response> {
         defaultPayType,
         overtimeEligible,
         skillTags,
+        costRateMin: costRateMin ?? null,
+        costRateMax: costRateMax ?? null,
+        costRateCurrency: costRateCurrency ?? null,
       },
     });
 

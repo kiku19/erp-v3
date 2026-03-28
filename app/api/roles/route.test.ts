@@ -165,6 +165,122 @@ describe("POST /api/roles", () => {
     expect(res.status).toBe(400);
   });
 
+  it("creates a role with cost range fields", async () => {
+    const { POST } = await import("./route");
+    mockPrisma.role.findFirst.mockResolvedValue(null);
+    mockPrisma.role.create.mockResolvedValue({
+      id: "role-cost",
+      tenantId: "tenant-1",
+      name: "Project Manager",
+      code: "PROJ-MA",
+      level: "Senior",
+      defaultPayType: "salaried",
+      overtimeEligible: false,
+      skillTags: [],
+      costRateMin: 80,
+      costRateMax: 120,
+      costRateCurrency: "USD",
+      isDeleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const req = new NextRequest("http://localhost/api/roles", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer valid-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        name: "Project Manager",
+        level: "Senior",
+        defaultPayType: "salaried",
+        costRateMin: 80,
+        costRateMax: 120,
+        costRateCurrency: "USD",
+      }),
+    });
+    const res = await POST(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(body.role.costRateMin).toBe(80);
+    expect(body.role.costRateMax).toBe(120);
+    expect(body.role.costRateCurrency).toBe("USD");
+    expect(mockPrisma.role.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          costRateMin: 80,
+          costRateMax: 120,
+          costRateCurrency: "USD",
+        }),
+      }),
+    );
+  });
+
+  it("creates a role with null cost range when not provided", async () => {
+    const { POST } = await import("./route");
+    mockPrisma.role.findFirst.mockResolvedValue(null);
+    mockPrisma.role.create.mockResolvedValue({
+      id: "role-no-cost",
+      tenantId: "tenant-1",
+      name: "Painter",
+      code: "PAIN-01",
+      level: "Junior",
+      defaultPayType: "hourly",
+      overtimeEligible: false,
+      skillTags: [],
+      costRateMin: null,
+      costRateMax: null,
+      costRateCurrency: null,
+      isDeleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const req = new NextRequest("http://localhost/api/roles", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer valid-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ name: "Painter" }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(201);
+    expect(mockPrisma.role.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          costRateMin: null,
+          costRateMax: null,
+          costRateCurrency: null,
+        }),
+      }),
+    );
+  });
+
+  it("returns 400 when costRateMax is less than costRateMin", async () => {
+    const { POST } = await import("./route");
+
+    const req = new NextRequest("http://localhost/api/roles", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer valid-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        name: "Senior Developer",
+        costRateMin: 120,
+        costRateMax: 80,
+        costRateCurrency: "USD",
+      }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 409 for duplicate role code", async () => {
     const { POST } = await import("./route");
     mockPrisma.role.findFirst.mockResolvedValue({ id: "existing" });

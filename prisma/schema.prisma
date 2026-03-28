@@ -393,6 +393,9 @@ model Role {
   defaultPayType   String   @default("hourly")
   overtimeEligible Boolean  @default(false)
   skillTags        String[] @default([])
+  costRateMin      Float?
+  costRateMax      Float?
+  costRateCurrency String?
   isDeleted        Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

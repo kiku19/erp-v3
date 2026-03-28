@@ -70,6 +70,74 @@ describe("PATCH /api/roles/[id]", () => {
     expect(body.role.name).toBe("Updated Painter");
   });
 
+  it("updates cost range fields", async () => {
+    const { PATCH } = await import("./route");
+    mockPrisma.role.findFirst.mockResolvedValue({
+      id: "role-1",
+      tenantId: "tenant-1",
+      name: "Developer",
+      code: "DEV-01",
+      isDeleted: false,
+    });
+    mockPrisma.role.update.mockResolvedValue({
+      id: "role-1",
+      tenantId: "tenant-1",
+      name: "Developer",
+      code: "DEV-01",
+      level: "Senior",
+      defaultPayType: "hourly",
+      overtimeEligible: false,
+      skillTags: [],
+      costRateMin: 90,
+      costRateMax: 150,
+      costRateCurrency: "EUR",
+      isDeleted: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    const req = new NextRequest("http://localhost/api/roles/role-1", {
+      method: "PATCH",
+      headers: {
+        authorization: "Bearer valid-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        costRateMin: 90,
+        costRateMax: 150,
+        costRateCurrency: "EUR",
+      }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "role-1" }) });
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.role.costRateMin).toBe(90);
+    expect(body.role.costRateMax).toBe(150);
+    expect(body.role.costRateCurrency).toBe("EUR");
+  });
+
+  it("rejects cost range update when max < min", async () => {
+    const { PATCH } = await import("./route");
+    mockPrisma.role.findFirst.mockResolvedValue({
+      id: "role-1",
+      tenantId: "tenant-1",
+      isDeleted: false,
+    });
+
+    const req = new NextRequest("http://localhost/api/roles/role-1", {
+      method: "PATCH",
+      headers: {
+        authorization: "Bearer valid-token",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ costRateMin: 100, costRateMax: 50 }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "role-1" }) });
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 404 when role not found", async () => {
     const { PATCH } = await import("./route");
     mockPrisma.role.findFirst.mockResolvedValue(null);

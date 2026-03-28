@@ -106,6 +106,9 @@ interface Role {
   defaultPayType: PayType;
   overtimeEligible: boolean;
   skillTags: string[];
+  costRateMin: number | null;
+  costRateMax: number | null;
+  costRateCurrency: string | null;
 }
 
 interface CostCenter {

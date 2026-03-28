@@ -94,6 +94,38 @@ describe("RolesModal", () => {
     });
   });
 
+  it("renders cost range section in create form", () => {
+    renderWithProvider(<RolesModal open={true} onClose={vi.fn()} />);
+    expect(screen.getByText("Cost Range")).toBeDefined();
+    expect(screen.getByTestId("cost-rate-min-input")).toBeDefined();
+    expect(screen.getByTestId("cost-rate-max-input")).toBeDefined();
+  });
+
+  it("includes cost range fields in API call on save", async () => {
+    renderWithProvider(<RolesModal open={true} onClose={vi.fn()} />);
+
+    fireEvent.change(screen.getByTestId("role-name-input"), {
+      target: { value: "Project Manager" },
+    });
+
+    const minInput = screen.getByTestId("cost-rate-min-input");
+    const maxInput = screen.getByTestId("cost-rate-max-input");
+    fireEvent.change(minInput, { target: { value: "80" } });
+    fireEvent.change(maxInput, { target: { value: "120" } });
+
+    fireEvent.click(screen.getByTestId("save-role-btn"));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/roles",
+        expect.objectContaining({
+          method: "POST",
+          body: expect.stringContaining('"costRateMin":80'),
+        }),
+      );
+    });
+  });
+
   it("shows search modal when search button clicked", () => {
     renderWithProvider(<RolesModal open={true} onClose={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("Search roles"));
@@ -105,8 +137,8 @@ describe("RolesModal", () => {
 
 describe("RolesSearchModal", () => {
   const roles = [
-    { id: "r1", name: "Painter", code: "PNT-01", level: "Senior" as const, defaultPayType: "hourly" as const, overtimeEligible: true, skillTags: [] },
-    { id: "r2", name: "Electrician", code: "ELC-01", level: "Mid" as const, defaultPayType: "salaried" as const, overtimeEligible: false, skillTags: [] },
+    { id: "r1", name: "Painter", code: "PNT-01", level: "Senior" as const, defaultPayType: "hourly" as const, overtimeEligible: true, skillTags: [], costRateMin: null, costRateMax: null, costRateCurrency: null },
+    { id: "r2", name: "Electrician", code: "ELC-01", level: "Mid" as const, defaultPayType: "salaried" as const, overtimeEligible: false, skillTags: [], costRateMin: 50, costRateMax: 80, costRateCurrency: "USD" },
   ];
 
   it("renders search input and results", () => {

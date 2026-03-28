@@ -19,7 +19,7 @@ import { Modal } from "@/components/ui/modal";
 import { SpotlightSearch } from "@/components/ui/spotlight-search";
 import { useOrgSetup, generateId } from "./context";
 import { type Role, type PayType, type RoleLevel } from "./types";
-import { generateRoleCode } from "@/lib/validations/role";
+import { generateRoleCode, CURRENCY_OPTIONS } from "@/lib/validations/role";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +38,11 @@ const PAY_TYPE_ITEMS: { value: PayType; label: string }[] = [
   { value: "salaried", label: "Salaried" },
   { value: "contract", label: "Contract" },
 ];
+
+const CURRENCY_SELECT_OPTIONS = CURRENCY_OPTIONS.map((c) => ({
+  value: c,
+  label: c,
+}));
 
 /* ─────────────────────── Types ───────────────────────────────────── */
 
@@ -68,6 +73,9 @@ function RolesModal({ open, onClose }: RolesModalProps) {
   const [formOvertimeEligible, setFormOvertimeEligible] = useState(true);
   const [formSkillTags, setFormSkillTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [formCostRateMin, setFormCostRateMin] = useState<number | null>(null);
+  const [formCostRateMax, setFormCostRateMax] = useState<number | null>(null);
+  const [formCostRateCurrency, setFormCostRateCurrency] = useState<string>("USD");
 
   // API state
   const [isSaving, setIsSaving] = useState(false);
@@ -85,6 +93,9 @@ function RolesModal({ open, onClose }: RolesModalProps) {
     setFormOvertimeEligible(true);
     setFormSkillTags([]);
     setTagInput("");
+    setFormCostRateMin(null);
+    setFormCostRateMax(null);
+    setFormCostRateCurrency("USD");
   }, []);
 
   /* ────────── Open create ────────── */
@@ -105,6 +116,9 @@ function RolesModal({ open, onClose }: RolesModalProps) {
       setFormOvertimeEligible(role.overtimeEligible);
       setFormSkillTags([...role.skillTags]);
       setTagInput("");
+      setFormCostRateMin(role.costRateMin);
+      setFormCostRateMax(role.costRateMax);
+      setFormCostRateCurrency(role.costRateCurrency ?? "USD");
       setSelectedRoleId(role.id);
       setIsCreating(false);
     },
@@ -160,6 +174,9 @@ function RolesModal({ open, onClose }: RolesModalProps) {
       defaultPayType: formPayType,
       overtimeEligible: formOvertimeEligible,
       skillTags: formSkillTags,
+      costRateMin: formCostRateMin,
+      costRateMax: formCostRateMax,
+      costRateCurrency: formCostRateMin != null || formCostRateMax != null ? formCostRateCurrency : null,
     };
 
     // Optimistic: update local context immediately
@@ -216,7 +233,8 @@ function RolesModal({ open, onClose }: RolesModalProps) {
     }
   }, [
     formName, formCode, formLevel, formPayType, formOvertimeEligible,
-    formSkillTags, selectedRoleId, dispatch, backToList, accessToken,
+    formSkillTags, formCostRateMin, formCostRateMax, formCostRateCurrency,
+    selectedRoleId, dispatch, backToList, accessToken,
   ]);
 
   /* ────────── Delete role ────────── */
@@ -272,7 +290,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
   return (
     <>
       {/* Main Roles Modal */}
-      <Modal open={open} onClose={handleClose} width={1152} className="h-[720px]">
+      <Modal open={open} onClose={handleClose} width={1152} className="h-[85vh]">
         <div className="flex h-full flex-col" data-testid="roles-modal">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-6 py-5">
@@ -488,6 +506,72 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                         />
                       </div>
 
+                      {/* Cost Range (optional) */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium text-foreground">
+                            Cost Range
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            Estimated cost rate for project planning — actual rates are set per division
+                          </span>
+                        </div>
+                        <div className="flex items-end gap-3">
+                          <div className="flex flex-1 flex-col gap-1">
+                            <label className="text-xs text-muted-foreground">
+                              Min
+                            </label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={formCostRateMin ?? ""}
+                              onChange={(e) =>
+                                setFormCostRateMin(
+                                  e.target.value === "" ? null : Number(e.target.value),
+                                )
+                              }
+                              placeholder="0"
+                              data-testid="cost-rate-min-input"
+                            />
+                          </div>
+                          <span className="pb-2.5 text-sm text-muted-foreground">—</span>
+                          <div className="flex flex-1 flex-col gap-1">
+                            <label className="text-xs text-muted-foreground">
+                              Max
+                            </label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={formCostRateMax ?? ""}
+                              onChange={(e) =>
+                                setFormCostRateMax(
+                                  e.target.value === "" ? null : Number(e.target.value),
+                                )
+                              }
+                              placeholder="0"
+                              data-testid="cost-rate-max-input"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs text-muted-foreground">
+                              Currency
+                            </label>
+                            <Select
+                              options={CURRENCY_SELECT_OPTIONS}
+                              value={formCostRateCurrency}
+                              onChange={setFormCostRateCurrency}
+                            />
+                          </div>
+                        </div>
+                        {formCostRateMin != null &&
+                          formCostRateMax != null &&
+                          formCostRateMax < formCostRateMin && (
+                            <p className="text-xs text-error">
+                              Max rate must be greater than or equal to min rate
+                            </p>
+                          )}
+                      </div>
+
                       {/* Skill Tags */}
                       <div className="flex flex-col gap-1.5">
                         <label className="text-sm font-medium text-foreground">
@@ -548,7 +632,12 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                     <Button
                       onClick={handleSave}
                       disabled={
-                        !formName.trim() || !formCode.trim() || isSaving
+                        !formName.trim() ||
+                        !formCode.trim() ||
+                        isSaving ||
+                        (formCostRateMin != null &&
+                          formCostRateMax != null &&
+                          formCostRateMax < formCostRateMin)
                       }
                       data-testid="save-role-btn"
                     >
