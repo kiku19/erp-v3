@@ -11,8 +11,16 @@ interface OBSNode {
   children: string[];
   nodeHeadPersonId: string | null;
   calendarId: string | null;
+  costCenterId: string | null;
   assignedRoles: AssignedRole[];
   isActive: boolean;
+  /* Server-computed counts (from GET /api/org-setup/nodes) */
+  peopleCount: number;
+  equipmentCount: number;
+  materialCount: number;
+  nodeHeadName: string | null;
+  calendarName: string | null;
+  costCenterName: string | null;
 }
 
 interface AssignedRole {
@@ -100,9 +108,22 @@ interface Role {
   skillTags: string[];
 }
 
+interface CostCenter {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+}
+
 /* ─────────────────────── UI State ───────────────────────────────── */
 
-type GlobalPanelType = "calendars" | "roles" | null;
+type GlobalPanelType = "calendars" | "roles" | "cost-centers" | null;
+
+interface NodeLoadingState {
+  people: boolean;
+  equipment: boolean;
+  materials: boolean;
+}
 
 interface UIState {
   selectedNodeId: string | null;
@@ -114,6 +135,7 @@ interface UIState {
   addNodeTarget: { parentId: string; type: "child" | "sibling" } | null;
   globalPanelOpen: GlobalPanelType;
   isLoading: boolean;
+  nodeLoading: Record<string, NodeLoadingState>;
 }
 
 /* ─────────────────────── Root State ─────────────────────────────── */
@@ -129,6 +151,7 @@ interface OrgSetupState {
   materials: Record<string, Material>;
   calendars: Record<string, Calendar>;
   roles: Record<string, Role>;
+  costCenters: Record<string, CostCenter>;
   ui: UIState;
 }
 
@@ -185,7 +208,9 @@ export {
   type CalendarExceptionData,
   type RoleLevel,
   type Role,
+  type CostCenter,
   type GlobalPanelType,
+  type NodeLoadingState,
   type UIState,
   type OrgSetupState,
   type NodeLayout,

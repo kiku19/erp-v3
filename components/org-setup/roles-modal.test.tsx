@@ -97,7 +97,7 @@ describe("RolesModal", () => {
   it("shows search modal when search button clicked", () => {
     renderWithProvider(<RolesModal open={true} onClose={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("Search roles"));
-    expect(screen.getByTestId("roles-search-modal")).toBeDefined();
+    expect(screen.getByTestId("spotlight-search")).toBeDefined();
   });
 });
 

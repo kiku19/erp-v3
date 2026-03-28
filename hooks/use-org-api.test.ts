@@ -3,6 +3,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useOrgApi } from "./use-org-api";
 
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ accessToken: "test-token" }),
+}));
+
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 
@@ -330,5 +334,104 @@ describe("useOrgApi", () => {
       "/api/org-setup/calendars/c1",
       expect.objectContaining({ method: "DELETE" }),
     );
+  });
+
+  /* ─── Lazy-loading fetch functions ─── */
+
+  it("fetchNodes calls GET /api/org-setup/nodes", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          nodes: [{ id: "n1", name: "HQ", peopleCount: 3 }],
+        }),
+    });
+
+    const { result } = renderHook(() => useOrgApi());
+    const data = await result.current.fetchNodes();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/org-setup/nodes",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(data.nodes).toHaveLength(1);
+  });
+
+  it("fetchNodePeople calls GET /api/org-setup/nodes/:id/people with pagination", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          people: [{ id: "p1", name: "Alice" }],
+          total: 1,
+        }),
+    });
+
+    const { result } = renderHook(() => useOrgApi());
+    const data = await result.current.fetchNodePeople("node-1", 10, 20);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/org-setup/nodes/node-1/people?limit=10&offset=20",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(data.people).toHaveLength(1);
+    expect(data.total).toBe(1);
+  });
+
+  it("fetchNodePeople uses default limit and offset", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ people: [], total: 0 }),
+    });
+
+    const { result } = renderHook(() => useOrgApi());
+    await result.current.fetchNodePeople("node-1");
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/org-setup/nodes/node-1/people?limit=20&offset=0",
+      expect.objectContaining({ credentials: "include" }),
+    );
+  });
+
+  it("fetchNodeEquipment calls GET /api/org-setup/nodes/:id/equipment with pagination", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          equipment: [{ id: "e1", name: "Crane" }],
+          total: 1,
+        }),
+    });
+
+    const { result } = renderHook(() => useOrgApi());
+    const data = await result.current.fetchNodeEquipment("node-1", 5, 10);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/org-setup/nodes/node-1/equipment?limit=5&offset=10",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(data.equipment).toHaveLength(1);
+    expect(data.total).toBe(1);
+  });
+
+  it("fetchNodeMaterials calls GET /api/org-setup/nodes/:id/materials with pagination", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          materials: [{ id: "m1", name: "Concrete" }],
+          total: 1,
+        }),
+    });
+
+    const { result } = renderHook(() => useOrgApi());
+    const data = await result.current.fetchNodeMaterials("node-1", 15, 0);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/org-setup/nodes/node-1/materials?limit=15&offset=0",
+      expect.objectContaining({ credentials: "include" }),
+    );
+    expect(data.materials).toHaveLength(1);
+    expect(data.total).toBe(1);
   });
 });

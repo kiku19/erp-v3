@@ -17,7 +17,17 @@ vi.mock("@/lib/api-auth", () => ({
 const mockPrisma = {
   oBSNode: {
     findFirst: vi.fn(),
+    findMany: vi.fn(),
     create: vi.fn(),
+  },
+  oBSPerson: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  calendar: {
+    findMany: vi.fn().mockResolvedValue([]),
+  },
+  costCenter: {
+    findMany: vi.fn().mockResolvedValue([]),
   },
 };
 
@@ -137,5 +147,157 @@ describe("POST /api/org-setup/nodes", () => {
     expect(res.status).toBe(409);
     const body = await res.json();
     expect(body.message).toContain("ENG");
+  });
+});
+
+/* ─────────────────────── GET /api/org-setup/nodes ──────────────── */
+
+describe("GET /api/org-setup/nodes", () => {
+  it("returns nodes with computed counts (200)", async () => {
+    const { GET } = await import("./route");
+    mockPrisma.oBSNode.findMany.mockResolvedValue([
+      {
+        id: "node-1",
+        tenantId: "tenant-1",
+        parentId: null,
+        name: "HQ",
+        code: "HQ",
+        type: "COMPANY_ROOT",
+        nodeHeadPersonId: "person-1",
+        calendarId: "cal-1",
+        costCenterId: "cc-1",
+        assignedRoles: [],
+        isActive: true,
+        sortOrder: 0,
+        isDeleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { people: 3, equipment: 2, materials: 5 },
+      },
+    ]);
+    mockPrisma.oBSPerson.findMany.mockResolvedValue([
+      { id: "person-1", name: "John Smith" },
+    ]);
+    mockPrisma.calendar.findMany.mockResolvedValue([
+      { id: "cal-1", name: "Default Calendar" },
+    ]);
+    mockPrisma.costCenter.findMany.mockResolvedValue([
+      { id: "cc-1", name: "Admin", code: "ADM" },
+    ]);
+
+    const req = new NextRequest("http://localhost/api/org-setup/nodes", {
+      headers: { authorization: "Bearer valid-token" },
+    });
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.nodes).toHaveLength(1);
+    expect(body.nodes[0]).toMatchObject({
+      id: "node-1",
+      name: "HQ",
+      code: "HQ",
+      peopleCount: 3,
+      equipmentCount: 2,
+      materialCount: 5,
+      nodeHeadName: "John Smith",
+      calendarName: "Default Calendar",
+      costCenterName: "Admin",
+    });
+  });
+
+  it("returns empty array for tenant with no nodes", async () => {
+    const { GET } = await import("./route");
+    mockPrisma.oBSNode.findMany.mockResolvedValue([]);
+
+    const req = new NextRequest("http://localhost/api/org-setup/nodes", {
+      headers: { authorization: "Bearer valid-token" },
+    });
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.nodes).toEqual([]);
+  });
+
+  it("queries with tenant isolation and soft-delete filter", async () => {
+    const { GET } = await import("./route");
+    mockPrisma.oBSNode.findMany.mockResolvedValue([]);
+
+    const req = new NextRequest("http://localhost/api/org-setup/nodes", {
+      headers: { authorization: "Bearer valid-token" },
+    });
+    await GET(req);
+
+    expect(mockPrisma.oBSNode.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { tenantId: "tenant-1", isDeleted: false },
+      }),
+    );
+  });
+
+  it("includes _count for people, equipment, materials (excluding soft-deleted)", async () => {
+    const { GET } = await import("./route");
+    mockPrisma.oBSNode.findMany.mockResolvedValue([]);
+
+    const req = new NextRequest("http://localhost/api/org-setup/nodes", {
+      headers: { authorization: "Bearer valid-token" },
+    });
+    await GET(req);
+
+    expect(mockPrisma.oBSNode.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: expect.objectContaining({
+          _count: {
+            select: {
+              people: { where: { isDeleted: false } },
+              equipment: { where: { isDeleted: false } },
+              materials: { where: { isDeleted: false } },
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  it("handles null nodeHead, calendar, costCenter gracefully", async () => {
+    const { GET } = await import("./route");
+    mockPrisma.oBSNode.findMany.mockResolvedValue([
+      {
+        id: "node-2",
+        tenantId: "tenant-1",
+        parentId: null,
+        name: "Empty Node",
+        code: "EMPTY",
+        type: "DIVISION",
+        nodeHeadPersonId: null,
+        calendarId: null,
+        costCenterId: null,
+        assignedRoles: [],
+        isActive: true,
+        sortOrder: 0,
+        isDeleted: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        _count: { people: 0, equipment: 0, materials: 0 },
+      },
+    ]);
+
+    const req = new NextRequest("http://localhost/api/org-setup/nodes", {
+      headers: { authorization: "Bearer valid-token" },
+    });
+    const res = await GET(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.nodes[0]).toMatchObject({
+      id: "node-2",
+      peopleCount: 0,
+      equipmentCount: 0,
+      materialCount: 0,
+      nodeHeadName: null,
+      calendarName: null,
+      costCenterName: null,
+    });
   });
 });

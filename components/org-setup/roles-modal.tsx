@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Plus,
   X,
@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { SpotlightSearch } from "@/components/ui/spotlight-search";
 import { useOrgSetup, generateId } from "./context";
 import { type Role, type PayType, type RoleLevel } from "./types";
 import { generateRoleCode } from "@/lib/validations/role";
@@ -621,139 +622,48 @@ interface RolesSearchModalProps {
 function RolesSearchModal({
   open,
   onClose,
-  query,
-  onQueryChange,
   roles,
   onSelect,
 }: RolesSearchModalProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (open) {
-      setActiveIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 100);
-    }
-  }, [open]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setActiveIndex((prev) => Math.min(prev + 1, roles.length - 1));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setActiveIndex((prev) => Math.max(prev - 1, 0));
-      } else if (e.key === "Enter" && roles.length > 0) {
-        e.preventDefault();
-        onSelect(roles[activeIndex]);
-      }
-    },
-    [roles, activeIndex, onSelect],
-  );
-
   return (
-    <Modal open={open} onClose={onClose} width={480}>
-      <div className="flex flex-col" data-testid="roles-search-modal">
-        {/* Search bar */}
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <Search size={16} className="shrink-0 text-muted-foreground" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Search Roles"
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-          />
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground cursor-pointer"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Results */}
-        <div className="max-h-[400px] overflow-y-auto">
-          {query.trim() && roles.length === 0 && (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              No results for &ldquo;{query}&rdquo;
-            </div>
-          )}
-
-          {!query.trim() && (
-            <div className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Recently Added
-            </div>
-          )}
-
-          {roles.map((role, idx) => (
-            <button
-              key={role.id}
-              type="button"
-              data-testid={`search-result-${role.id}`}
+    <SpotlightSearch
+      open={open}
+      onClose={onClose}
+      placeholder="Search Roles"
+      items={roles}
+      onSelect={onSelect}
+      filterFn={(role, q) =>
+        role.name.toLowerCase().includes(q.toLowerCase()) ||
+        role.code.toLowerCase().includes(q.toLowerCase())
+      }
+      renderItem={(role, isActive) => (
+        <>
+          <Briefcase size={14} className="shrink-0" />
+          <div className="flex flex-1 flex-col min-w-0">
+            <span className="text-sm font-medium truncate">
+              {role.name}
+            </span>
+            <span
               className={cn(
-                "flex w-full items-center gap-3 px-4 py-2.5 text-left cursor-pointer transition-colors duration-[var(--duration-fast)]",
-                idx === activeIndex
-                  ? "bg-primary-active text-primary-active-foreground"
-                  : "hover:bg-muted-hover",
+                "text-[11px] font-mono truncate",
+                isActive
+                  ? "text-primary-active-foreground/70"
+                  : "text-muted-foreground",
               )}
-              onClick={() => onSelect(role)}
-              onMouseEnter={() => setActiveIndex(idx)}
             >
-              <Briefcase size={14} className="shrink-0" />
-              <div className="flex flex-1 flex-col min-w-0">
-                <span className="text-sm font-medium truncate">
-                  {role.name}
-                </span>
-                <span
-                  className={cn(
-                    "text-[11px] font-mono truncate",
-                    idx === activeIndex
-                      ? "text-primary-active-foreground/70"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {role.code}
-                </span>
-              </div>
-              <Badge
-                variant="success"
-                className="shrink-0 text-[10px]"
-              >
-                {LEVEL_OPTIONS.find((l) => l.value === role.level)?.label ??
-                  role.level}
-              </Badge>
-            </button>
-          ))}
-        </div>
-
-        {/* Footer hint */}
-        {roles.length > 0 && (
-          <div className="flex items-center gap-4 border-t border-border px-4 py-2">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <kbd className="rounded-[3px] border border-border bg-muted px-1 py-px text-[9px] font-medium">
-                ↑↓
-              </kbd>
-              <span className="text-[10px]">navigate</span>
-            </div>
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <kbd className="rounded-[3px] border border-border bg-muted px-1 py-px text-[9px] font-medium">
-                ↵
-              </kbd>
-              <span className="text-[10px]">select</span>
-            </div>
+              {role.code}
+            </span>
           </div>
-        )}
-      </div>
-    </Modal>
+          <Badge
+            variant="success"
+            className="shrink-0 text-[10px]"
+          >
+            {LEVEL_OPTIONS.find((l) => l.value === role.level)?.label ??
+              role.level}
+          </Badge>
+        </>
+      )}
+    />
   );
 }
 

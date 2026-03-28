@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { ChevronDown, ChevronRight, Plus, Pencil, X, ExternalLink, Info } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Pencil, X, ExternalLink, Info, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -27,6 +27,10 @@ function SettingsTab({ nodeId }: SettingsTabProps) {
 
       <AccordionSection title="Calendar" id="calendar" isOpen={openSection === "calendar"} onToggle={() => toggle("calendar")}>
         <CalendarSection nodeId={nodeId} />
+      </AccordionSection>
+
+      <AccordionSection title="Cost Center" id="cost-center" isOpen={openSection === "cost-center"} onToggle={() => toggle("cost-center")}>
+        <CostCenterSection nodeId={nodeId} />
       </AccordionSection>
 
       <AccordionSection title="Roles & Rates" id="roles" isOpen={openSection === "roles"} onToggle={() => toggle("roles")}>
@@ -179,6 +183,74 @@ function CalendarSection({ nodeId }: { nodeId: string }) {
               {selectedCalendar.exceptions.length > 0 && (
                 <p className="text-[12px] text-muted-foreground">
                   Exceptions: {selectedCalendar.exceptions.length} dates
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────── Cost Center ─────────────────────────────── */
+
+function CostCenterSection({ nodeId }: { nodeId: string }) {
+  const { state, dispatch } = useOrgSetup();
+  const node = state.nodes[nodeId];
+  const costCenters = Object.values(state.costCenters);
+
+  const costCenterOptions = useMemo(
+    () => costCenters.map((cc) => ({ value: cc.id, label: cc.name })),
+    [costCenters],
+  );
+
+  const selectedCC = node?.costCenterId ? state.costCenters[node.costCenterId] : null;
+
+  const handleChange = useCallback(
+    (ccId: string) => {
+      dispatch({ type: "UPDATE_NODE", nodeId, updates: { costCenterId: ccId } });
+    },
+    [dispatch, nodeId],
+  );
+
+  return (
+    <div className="flex flex-col gap-3">
+      {costCenters.length === 0 ? (
+        <div className="flex flex-col gap-2 rounded-md bg-muted p-3">
+          <p className="text-[13px] text-muted-foreground">No cost centers created yet.</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-fit"
+            onClick={() => dispatch({ type: "SET_GLOBAL_PANEL", panel: "cost-centers" })}
+          >
+            Create a Cost Center <ExternalLink size={12} />
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-foreground">Assign Cost Center</label>
+            <Select
+              options={costCenterOptions}
+              value={node?.costCenterId ?? ""}
+              onChange={handleChange}
+              placeholder="Select cost center"
+            />
+          </div>
+          {selectedCC && (
+            <div className="rounded-md border border-border p-3">
+              <div className="flex items-center gap-2">
+                <Wallet size={14} className="text-muted-foreground" />
+                <p className="text-sm font-medium text-foreground">{selectedCC.name}</p>
+              </div>
+              <p className="mt-1 font-mono text-[12px] text-muted-foreground">
+                {selectedCC.code}
+              </p>
+              {selectedCC.description && (
+                <p className="mt-1 text-[12px] text-muted-foreground">
+                  {selectedCC.description}
                 </p>
               )}
             </div>

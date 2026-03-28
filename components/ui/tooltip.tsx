@@ -87,7 +87,7 @@ function Tooltip({
           <div
             role="tooltip"
             className={cn(
-              "fixed z-50 whitespace-nowrap rounded-[var(--radius-sm)] bg-primary px-2 py-1 text-xs text-primary-foreground shadow-[var(--shadow-dropdown)] animate-tooltip-in pointer-events-none",
+              "fixed z-[400] whitespace-nowrap rounded-[var(--radius-sm)] bg-primary px-2 py-1 text-xs text-primary-foreground shadow-[var(--shadow-dropdown)] animate-tooltip-in pointer-events-none",
               translateClass,
               className,
             )}

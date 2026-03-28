@@ -40,6 +40,10 @@ import { authenticateRequest, isAuthError } from "@/lib/api-auth";
  *                   type: array
  *                   items:
  *                     type: object
+ *                 costCenters:
+ *                   type: array
+ *                   items:
+ *                     type: object
  *       401:
  *         description: Unauthorized
  *       500:
@@ -52,7 +56,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     const { tenantId } = auth;
 
-    const [nodes, people, equipment, materials, calendars, roles] =
+    const [nodes, people, equipment, materials, calendars, roles, costCenters] =
       await Promise.all([
         prisma.oBSNode.findMany({
           where: { tenantId, isDeleted: false },
@@ -79,6 +83,10 @@ export async function GET(request: NextRequest): Promise<Response> {
           where: { tenantId, isDeleted: false },
           orderBy: { createdAt: "desc" },
         }),
+        prisma.costCenter.findMany({
+          where: { tenantId, isDeleted: false },
+          orderBy: { createdAt: "desc" },
+        }),
       ]);
 
     return NextResponse.json({
@@ -88,6 +96,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       materials,
       calendars,
       roles,
+      costCenters,
     });
   } catch (error) {
     console.error("GET /api/org-setup error:", error);
