@@ -4,6 +4,7 @@ import { useCallback, useState, useMemo } from "react";
 import { Plus, Users, Briefcase, CalendarDays, AlertTriangle, User, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SpotlightSearch } from "@/components/ui/spotlight-search";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useOrgSetup } from "./context";
 import {
   type NodeLayout,
@@ -174,32 +175,36 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
 
         {/* Actions */}
         <div className="flex items-center gap-1 px-2 py-2" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            data-testid={`assign-node-head-${nodeId}`}
-            aria-label="Assign Node Head"
-            className={cn(
-              "flex h-6 w-6 items-center justify-center rounded-md cursor-pointer",
-              "text-muted-foreground hover:bg-muted-hover hover:text-foreground",
-              "transition-colors duration-[var(--duration-fast)]",
-            )}
-            onClick={() => { loadNodePeople(nodeId); setShowNodeHeadSearch(true); }}
-          >
-            <User size={14} />
-          </button>
-          <button
-            type="button"
-            data-testid={`assign-cost-center-${nodeId}`}
-            aria-label="Assign Cost Center"
-            className={cn(
-              "flex h-6 w-6 items-center justify-center rounded-md cursor-pointer",
-              "text-muted-foreground hover:bg-muted-hover hover:text-foreground",
-              "transition-colors duration-[var(--duration-fast)]",
-            )}
-            onClick={() => setShowCostCenterSearch(true)}
-          >
-            <Wallet size={14} />
-          </button>
+          <Tooltip content="Assign Node Head" side="bottom">
+            <button
+              type="button"
+              data-testid={`assign-node-head-${nodeId}`}
+              aria-label="Assign Node Head"
+              className={cn(
+                "flex h-6 w-6 items-center justify-center rounded-md cursor-pointer",
+                "text-muted-foreground hover:bg-muted-hover hover:text-foreground",
+                "transition-colors duration-[var(--duration-fast)]",
+              )}
+              onClick={() => { loadNodePeople(nodeId); setShowNodeHeadSearch(true); }}
+            >
+              <User size={14} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Assign Cost Center" side="bottom">
+            <button
+              type="button"
+              data-testid={`assign-cost-center-${nodeId}`}
+              aria-label="Assign Cost Center"
+              className={cn(
+                "flex h-6 w-6 items-center justify-center rounded-md cursor-pointer",
+                "text-muted-foreground hover:bg-muted-hover hover:text-foreground",
+                "transition-colors duration-[var(--duration-fast)]",
+              )}
+              onClick={() => setShowCostCenterSearch(true)}
+            >
+              <Wallet size={14} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -253,11 +258,11 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
           const lower = q.toLowerCase();
           return person.name.toLowerCase().includes(lower) || person.employeeId.toLowerCase().includes(lower);
         }}
-        renderItem={(person, isActive) => (
+        renderItem={(person) => (
           <div className="flex items-center gap-2">
-            <User size={14} className={isActive ? "text-primary-active-foreground" : "text-muted-foreground"} />
-            <span className="text-sm font-medium">{person.name}</span>
-            <span className={cn("text-xs", isActive ? "text-primary-active-foreground/70" : "text-muted-foreground")}>
+            <User size={14} className="text-muted-foreground" />
+            <span className="text-[12px] font-medium text-foreground">{person.name}</span>
+            <span className="text-[10px] text-muted-foreground">
               {person.employeeId}
             </span>
           </div>
@@ -275,11 +280,11 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
           const lower = q.toLowerCase();
           return cc.name.toLowerCase().includes(lower) || cc.code.toLowerCase().includes(lower);
         }}
-        renderItem={(cc, isActive) => (
+        renderItem={(cc) => (
           <div className="flex items-center gap-2">
-            <Wallet size={14} className={isActive ? "text-primary-active-foreground" : "text-muted-foreground"} />
-            <span className="text-sm font-medium">{cc.name}</span>
-            <span className={cn("text-xs", isActive ? "text-primary-active-foreground/70" : "text-muted-foreground")}>
+            <Wallet size={14} className="text-muted-foreground" />
+            <span className="text-[12px] font-medium text-foreground">{cc.name}</span>
+            <span className="text-[10px] text-muted-foreground">
               {cc.code}
             </span>
           </div>
