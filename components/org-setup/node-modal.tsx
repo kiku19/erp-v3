@@ -75,7 +75,7 @@ function NodeModal() {
         data-testid="node-modal"
         className={cn(
           "fixed left-1/2 top-1/2 z-[300] -translate-x-1/2 -translate-y-1/2",
-          "flex w-[80vw] h-[80vh] flex-col overflow-hidden",
+          "flex w-[65vw] max-w-[1100px] h-[80vh] flex-col overflow-hidden",
           "rounded-lg border border-border bg-card shadow-[var(--shadow-modal)]",
         )}
         style={{ animation: "modal-enter 180ms var(--ease-default)" }}

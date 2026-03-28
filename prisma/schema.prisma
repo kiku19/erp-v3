@@ -453,7 +453,7 @@ model OBSNode {
 model OBSPerson {
   id              String    @id @default(cuid())
   tenantId        String
-  nodeId          String
+  nodeId          String?
   name            String
   employeeId      String
   email           String
@@ -472,7 +472,7 @@ model OBSPerson {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  node OBSNode @relation(fields: [nodeId], references: [id])
+  node OBSNode? @relation(fields: [nodeId], references: [id])
 
   @@unique([tenantId, employeeId])
   @@index([tenantId, isDeleted])

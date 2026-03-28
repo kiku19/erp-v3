@@ -36,7 +36,7 @@ type EmploymentType = "full-time" | "part-time" | "contract" | "consultant";
 
 interface Person {
   id: string;
-  nodeId: string;
+  nodeId: string | null;
   name: string;
   employeeId: string;
   email: string;
@@ -120,7 +120,7 @@ interface CostCenter {
 
 /* ─────────────────────── UI State ───────────────────────────────── */
 
-type GlobalPanelType = "calendars" | "roles" | "cost-centers" | null;
+type GlobalPanelType = "calendars" | "roles" | "cost-centers" | "people" | null;
 
 interface NodeLoadingState {
   people: boolean;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { Search, Plus, UserMinus, Users } from "lucide-react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { Search, Plus, UserMinus, Users, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useOrgApi } from "@/hooks/use-org-api";
 import { useOrgSetup } from "./context";
+import { ConflictResolutionModal, type ConflictPerson } from "./conflict-resolution-modal";
 import { type Person, type PayType, type EmploymentType } from "./types";
 
 const PAY_TYPE_OPTIONS = [
@@ -27,19 +28,39 @@ const EMPLOYMENT_TYPE_OPTIONS = [
   { value: "consultant", label: "Consultant" },
 ];
 
+/* ─────────────────────── Types ───────────────────────────────────── */
+
+interface PersonWithNode extends Person {
+  nodeName?: string | null;
+}
+
 interface PeopleTabProps {
   nodeId: string;
 }
 
+/* ─────────────────────── Component ───────────────────────────────── */
+
 function PeopleTab({ nodeId }: PeopleTabProps) {
   const { state, loadNodePeople } = useOrgSetup();
-  const { createPerson: apiCreatePerson, updatePerson: apiUpdatePerson, deletePerson: apiDeletePerson } = useOrgApi();
+  const {
+    createPerson: apiCreatePerson,
+    updatePerson: apiUpdatePerson,
+    deletePerson: apiDeletePerson,
+    fetchAllPeople,
+    batchAssignPeople,
+  } = useOrgApi();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Assign flow state
+  const [showAssignSearch, setShowAssignSearch] = useState(false);
+  const [recentPeople, setRecentPeople] = useState<PersonWithNode[]>([]);
+  const [conflictPeople, setConflictPeople] = useState<ConflictPerson[]>([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -75,8 +96,8 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
 
   const selectedRole = formRoleId ? state.roles[formRoleId] : null;
 
-  // Auto-show add form when no people exist
-  const shouldShowFormByDefault = people.length === 0 && !showForm && !editingId;
+  // Auto-show add form when no people exist (but not while loading)
+  const shouldShowFormByDefault = people.length === 0 && !showForm && !editingId && !isLoadingPeople;
 
   const resetForm = useCallback(() => {
     setFormName("");
@@ -96,17 +117,12 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
     setShowForm(false);
   }, [nodeId]);
 
-  const openNew = useCallback(() => {
-    resetForm();
-    setShowForm(true);
-  }, [resetForm]);
-
   const openEdit = useCallback(
     (person: Person) => {
       setFormName(person.name);
       setFormEmployeeId(person.employeeId);
       setFormEmail(person.email);
-      setFormNodeId(person.nodeId);
+      setFormNodeId(person.nodeId ?? nodeId);
       setFormRoleId(person.roleId ?? "");
       setFormPayType(person.payType);
       setFormStdRate(person.standardRate?.toString() ?? "");
@@ -119,7 +135,7 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
       setEditingId(person.id);
       setShowForm(true);
     },
-    [],
+    [nodeId],
   );
 
   const handleSave = useCallback(async () => {
@@ -172,14 +188,14 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
       setSaveError(null);
 
       try {
-        await apiDeletePerson(personId);
+        await apiUpdatePerson(personId, { nodeId: null });
         await loadNodePeople(nodeId);
         if (editingId === personId) resetForm();
       } catch (err) {
         setSaveError(err instanceof Error ? err.message : "Failed to remove person");
       }
     },
-    [apiDeletePerson, loadNodePeople, nodeId, editingId, resetForm],
+    [apiUpdatePerson, loadNodePeople, nodeId, editingId, resetForm],
   );
 
   // When pay type changes, lock employment type to "contract" if contract
@@ -212,6 +228,105 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
       setShowSearch(false);
     },
     [openEdit],
+  );
+
+  /* ─────── Assign Flow ─────── */
+
+  const mapPeopleResponse = useCallback((people: Record<string, unknown>[]): PersonWithNode[] => {
+    return people.map((p) => ({
+      id: p.id as string,
+      nodeId: (p.nodeId as string | null) ?? null,
+      name: p.name as string,
+      employeeId: p.employeeId as string,
+      email: p.email as string,
+      roleId: (p.roleId as string | null) ?? null,
+      payType: (p.payType as PayType) ?? "hourly",
+      standardRate: (p.standardRate as number | null) ?? null,
+      overtimeRate: (p.overtimeRate as number | null) ?? null,
+      overtimePay: (p.overtimePay as boolean) ?? false,
+      monthlySalary: (p.monthlySalary as number | null) ?? null,
+      dailyAllocation: (p.dailyAllocation as number | null) ?? null,
+      contractAmount: (p.contractAmount as number | null) ?? null,
+      employmentType: (p.employmentType as EmploymentType) ?? "full-time",
+      joinDate: (p.joinDate as string | null) ?? null,
+      photoUrl: (p.photoUrl as string | null) ?? null,
+      nodeName: (p.node as Record<string, unknown> | null)?.name as string | null ?? null,
+    }));
+  }, []);
+
+  const openAssignSearch = useCallback(async () => {
+    setShowAssignSearch(true);
+    try {
+      const result = await fetchAllPeople({ excludeNodeId: nodeId, limit: 20 });
+      setRecentPeople(mapPeopleResponse(result.people));
+    } catch {
+      setRecentPeople([]);
+    }
+  }, [fetchAllPeople, nodeId, mapPeopleResponse]);
+
+  const searchAssignablePeople = useCallback(async (query: string): Promise<PersonWithNode[]> => {
+    const result = await fetchAllPeople({ excludeNodeId: nodeId, search: query, limit: 50 });
+    return mapPeopleResponse(result.people);
+  }, [fetchAllPeople, nodeId, mapPeopleResponse]);
+
+  const handleAssignConfirm = useCallback(
+    async (selectedPeople: PersonWithNode[]) => {
+      setShowAssignSearch(false);
+
+      const unassigned = selectedPeople.filter((p) => !p.nodeId);
+      const conflicting = selectedPeople.filter((p) => p.nodeId && p.nodeId !== nodeId);
+
+      // Assign unassigned people directly
+      if (unassigned.length > 0) {
+        try {
+          await batchAssignPeople(unassigned.map((p) => p.id), nodeId);
+          await loadNodePeople(nodeId);
+        } catch {
+          setSaveError("Failed to assign people");
+        }
+      }
+
+      // Show conflict modal for people in other nodes
+      if (conflicting.length > 0) {
+        const conflicts: ConflictPerson[] = conflicting.map((p) => ({
+          id: p.id,
+          name: p.name,
+          employeeId: p.employeeId,
+          currentNodeId: p.nodeId!,
+          currentNodeName: p.nodeName ?? state.nodes[p.nodeId!]?.name ?? "Unknown",
+        }));
+        setConflictPeople(conflicts);
+        setShowConflictModal(true);
+      }
+    },
+    [batchAssignPeople, loadNodePeople, nodeId, state.nodes],
+  );
+
+  const handleOverrideAll = useCallback(async () => {
+    setShowConflictModal(false);
+    try {
+      await batchAssignPeople(conflictPeople.map((p) => p.id), nodeId);
+      await loadNodePeople(nodeId);
+    } catch {
+      setSaveError("Failed to reassign people");
+    }
+    setConflictPeople([]);
+  }, [batchAssignPeople, loadNodePeople, nodeId, conflictPeople]);
+
+  const handleConflictResolve = useCallback(
+    async (acceptedIds: string[]) => {
+      setShowConflictModal(false);
+      if (acceptedIds.length > 0) {
+        try {
+          await batchAssignPeople(acceptedIds, nodeId);
+          await loadNodePeople(nodeId);
+        } catch {
+          setSaveError("Failed to reassign people");
+        }
+      }
+      setConflictPeople([]);
+    },
+    [batchAssignPeople, loadNodePeople, nodeId],
   );
 
   const isFormVisible = showForm || editingId !== null || shouldShowFormByDefault;
@@ -378,8 +493,8 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={openNew}
-              aria-label="Add person"
+              onClick={openAssignSearch}
+              aria-label="Assign people"
             >
               <Plus size={14} />
             </Button>
@@ -403,7 +518,10 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
           ) : people.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-5 py-8 text-center">
               <Users size={24} className="text-muted-foreground" />
-              <p className="text-[12px] text-muted-foreground">No people added</p>
+              <p className="text-[12px] text-muted-foreground">No people assigned</p>
+              <Button variant="outline" size="sm" onClick={openAssignSearch}>
+                <Plus size={12} className="mr-1" /> Assign People
+              </Button>
             </div>
           ) : (
             people.map((person) => {
@@ -487,55 +605,111 @@ function PeopleTab({ nodeId }: PeopleTabProps) {
         </div>
       </div>
 
-      {/* Right Panel — Form / Empty */}
+      {/* Right Panel — Form / Loader / Empty */}
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
-        {isFormVisible ? (
+        {isLoadingPeople ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3">
+            <Loader2 size={24} className="animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Loading people…</p>
+          </div>
+        ) : isFormVisible ? (
           formPanel
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
             <Users size={32} className="text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Select a person to edit or click <strong>+</strong> to add one.
+              Select a person to edit or click <strong>+</strong> to assign people.
             </p>
           </div>
         )}
       </div>
 
-      {/* Spotlight search */}
+      {/* Spotlight search — search within node people */}
       <SpotlightSearch<Person>
         open={showSearch}
         onClose={() => setShowSearch(false)}
-        placeholder="Search people..."
+        placeholder="Search people in this node..."
         items={people}
         onSelect={handleSearchSelect}
         filterFn={(person, q) => {
           const lower = q.toLowerCase();
           return person.name.toLowerCase().includes(lower) || person.employeeId.toLowerCase().includes(lower);
         }}
-        renderItem={(person, isActive) => {
+        renderItem={(person) => {
           const role = person.roleId ? state.roles[person.roleId] : null;
           return (
             <div className="flex items-center gap-3">
-              <div className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full shrink-0",
-                isActive ? "bg-primary-active-foreground/15" : "bg-muted",
-              )}>
-                <span className={cn(
-                  "text-[10px] font-semibold",
-                  isActive ? "text-primary-active-foreground" : "text-muted-foreground",
-                )}>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted shrink-0">
+                <span className="text-[10px] font-semibold text-muted-foreground">
                   {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                 </span>
               </div>
               <div className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium">{person.name}</span>
-                <span className={cn("text-[11px]", isActive ? "text-primary-active-foreground/70" : "text-muted-foreground")}>
+                <span className="text-[12px] font-medium text-foreground">{person.name}</span>
+                <span className="text-[10px] text-muted-foreground">
                   {person.employeeId} · {role?.name ?? "No role"}
                 </span>
               </div>
             </div>
           );
         }}
+      />
+
+      {/* Spotlight search — assign people (multiselect) */}
+      <SpotlightSearch<PersonWithNode>
+        open={showAssignSearch}
+        onClose={() => setShowAssignSearch(false)}
+        mode="multi"
+        placeholder={`Search people to assign to ${node?.name ?? "this node"}...`}
+        items={recentPeople}
+        onSelect={() => {}}
+        onConfirm={handleAssignConfirm}
+        emptyLabel="Recently Added"
+        onSearch={searchAssignablePeople}
+        renderItem={(person) => {
+          const role = person.roleId ? state.roles[person.roleId] : null;
+          return (
+            <div className="flex items-center gap-3 w-full">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted shrink-0">
+                <span className="text-[10px] font-semibold text-muted-foreground">
+                  {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                <span className="text-[12px] font-medium text-foreground truncate">{person.name}</span>
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {person.employeeId} · {role?.name ?? "No role"}
+                </span>
+              </div>
+              <Badge variant="secondary" className="text-[9px] shrink-0">
+                {person.nodeName ?? "Unassigned"}
+              </Badge>
+            </div>
+          );
+        }}
+        renderSelectedItem={(person) => (
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted shrink-0">
+              <span className="text-[9px] font-semibold text-muted-foreground">
+                {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0 flex-1 min-w-0">
+              <span className="text-[12px] font-medium text-foreground truncate">{person.name}</span>
+              <span className="text-[10px] text-muted-foreground truncate">{person.employeeId}</span>
+            </div>
+          </div>
+        )}
+      />
+
+      {/* Conflict resolution modal */}
+      <ConflictResolutionModal
+        open={showConflictModal}
+        onClose={() => { setShowConflictModal(false); setConflictPeople([]); }}
+        people={conflictPeople}
+        targetNodeName={node?.name ?? ""}
+        onOverrideAll={handleOverrideAll}
+        onResolve={handleConflictResolve}
       />
     </div>
   );
