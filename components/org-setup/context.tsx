@@ -523,6 +523,9 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           defaultPayType: r.defaultPayType,
           overtimeEligible: r.overtimeEligible,
           skillTags: r.skillTags ?? [],
+          costRateMin: r.costRateMin ?? null,
+          costRateMax: r.costRateMax ?? null,
+          costRateCurrency: r.costRateCurrency ?? null,
         };
       }
 
@@ -665,6 +668,9 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           defaultPayType: r.defaultPayType,
           overtimeEligible: r.overtimeEligible,
           skillTags: r.skillTags ?? [],
+          costRateMin: r.costRateMin ?? null,
+          costRateMax: r.costRateMax ?? null,
+          costRateCurrency: r.costRateCurrency ?? null,
         };
       }
 

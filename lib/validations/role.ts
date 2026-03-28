@@ -27,6 +27,7 @@ function generateRoleCode(name: string): string {
 
 const LEVEL_OPTIONS = ["Junior", "Mid", "Senior", "Lead", "Principal"] as const;
 const PAY_TYPE_OPTIONS = ["hourly", "salaried", "contract"] as const;
+const CURRENCY_OPTIONS = ["USD", "EUR", "GBP", "INR", "AED", "SAR", "CAD", "AUD"] as const;
 
 const createRoleSchema = z.object({
   name: z
@@ -42,7 +43,18 @@ const createRoleSchema = z.object({
   defaultPayType: z.enum(PAY_TYPE_OPTIONS).default("hourly"),
   overtimeEligible: z.boolean().default(false),
   skillTags: z.array(z.string().max(50)).max(20).default([]),
-});
+  costRateMin: z.number().min(0, "Cost rate min must be >= 0").nullable().optional(),
+  costRateMax: z.number().min(0, "Cost rate max must be >= 0").nullable().optional(),
+  costRateCurrency: z.string().min(3).max(3).nullable().optional(),
+}).refine(
+  (data) => {
+    if (data.costRateMin != null && data.costRateMax != null) {
+      return data.costRateMax >= data.costRateMin;
+    }
+    return true;
+  },
+  { message: "Max cost rate must be greater than or equal to min", path: ["costRateMax"] },
+);
 
 const updateRoleSchema = z.object({
   name: z
@@ -59,7 +71,18 @@ const updateRoleSchema = z.object({
   defaultPayType: z.enum(PAY_TYPE_OPTIONS).optional(),
   overtimeEligible: z.boolean().optional(),
   skillTags: z.array(z.string().max(50)).max(20).optional(),
-});
+  costRateMin: z.number().min(0, "Cost rate min must be >= 0").nullable().optional(),
+  costRateMax: z.number().min(0, "Cost rate max must be >= 0").nullable().optional(),
+  costRateCurrency: z.string().min(3).max(3).nullable().optional(),
+}).refine(
+  (data) => {
+    if (data.costRateMin != null && data.costRateMax != null) {
+      return data.costRateMax >= data.costRateMin;
+    }
+    return true;
+  },
+  { message: "Max cost rate must be greater than or equal to min", path: ["costRateMax"] },
+);
 
 const searchRolesSchema = z.object({
   q: z.string().max(100).optional(),
@@ -77,6 +100,7 @@ export {
   generateRoleCode,
   LEVEL_OPTIONS,
   PAY_TYPE_OPTIONS,
+  CURRENCY_OPTIONS,
   type CreateRoleInput,
   type UpdateRoleInput,
 };
