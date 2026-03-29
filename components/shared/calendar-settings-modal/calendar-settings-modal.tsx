@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { CalendarCog, Search, Plus, Trash2, Copy, ChevronDown, Calendar, ArrowLeft, Check, X } from "lucide-react";
-import { Modal, ModalFooter } from "@/components/ui/modal";
+import { Modal, ModalHeader, ModalFooter } from "@/components/ui/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,12 +64,11 @@ function DuplicateCalendarModal({ open, onClose, calendar, onSave }: DuplicateCa
 
   return (
     <Modal open={open} onClose={onClose} width={420}>
-      <div className="flex flex-col gap-1 px-6 pt-6 pb-4">
-        <h2 className="text-base font-semibold text-foreground">Duplicate Calendar</h2>
-        <p className="text-[13px] text-muted-foreground">
-          Enter a name for the duplicated calendar
-        </p>
-      </div>
+      <ModalHeader
+        title="Duplicate Calendar"
+        description="Enter a name for the duplicated calendar"
+        onClose={onClose}
+      />
       <div className="px-6 pb-4">
         <Input
           ref={inputRef}
@@ -894,23 +893,19 @@ function CalendarSettingsModal({
 
       {/* Delete Calendar Confirmation */}
       <Modal open={!!deleteCalTarget} onClose={() => setDeleteCalTarget(null)} width={400}>
-        <div className="flex flex-col">
-          <div className="px-6 py-5">
-            <h2 className="text-base font-semibold text-foreground">Delete Calendar</h2>
-            <p className="mt-2 text-[13px] text-muted-foreground">
-              Are you sure you want to delete &quot;{deleteCalTarget?.name}&quot;? All associated exceptions will also be removed. This action cannot be undone.
-            </p>
-          </div>
-          <div className="h-px bg-border" />
-          <div className="flex items-center justify-end gap-2 px-6 py-4">
-            <Button variant="outline" onClick={() => setDeleteCalTarget(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDeleteCal}>
-              Delete
-            </Button>
-          </div>
-        </div>
+        <ModalHeader
+          title="Delete Calendar"
+          description={`Are you sure you want to delete "${deleteCalTarget?.name}"? All associated exceptions will also be removed. This action cannot be undone.`}
+          onClose={() => setDeleteCalTarget(null)}
+        />
+        <ModalFooter>
+          <Button variant="outline" onClick={() => setDeleteCalTarget(null)}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleConfirmDeleteCal}>
+            Delete
+          </Button>
+        </ModalFooter>
       </Modal>
     </>
   );

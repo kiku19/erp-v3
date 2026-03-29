@@ -90,7 +90,7 @@ function installMockFetch(calendarsRef: { current: CalendarData[] }) {
 }
 
 const meta: Meta<typeof CalendarSettingsModal> = {
-  title: "Planner/CalendarSettingsModal",
+  title: "Shared/CalendarSettingsModal",
   component: CalendarSettingsModal,
   decorators: [
     (Story) => {

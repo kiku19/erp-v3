@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { CalendarSettingsModal } from "@/app/(app)/project-management/[projectId]/planner/_components/calendar-settings-modal";
+import { CalendarSettingsModal } from "@/components/shared/calendar-settings-modal/calendar-settings-modal";
 import type { CalendarData, CalendarExceptionData, ExceptionType } from "@/lib/planner/calendar-types";
 import { useOrgSetup, generateId } from "./context";
 
