@@ -16,7 +16,7 @@ import { SplitterHandle } from "./_components/splitter-handle";
 import { WbsIconSettingsModal } from "./_components/wbs-icon-settings-modal";
 import { ActivityDetailPanel } from "./_components/activity-detail-panel";
 import { ActivityDetailModal } from "./_components/activity-detail-modal";
-import { CalendarSettingsModal } from "./_components/calendar-settings-modal";
+import { CalendarSettingsModal } from "@/components/shared/calendar-settings-modal/calendar-settings-modal";
 import { ObsModal } from "./_components/obs-modal";
 import { GanttChart } from "./_components/gantt-chart";
 import { GanttSettingsModal } from "./_components/gantt-settings-modal";
