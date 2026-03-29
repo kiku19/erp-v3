@@ -70,7 +70,8 @@ type Action =
   | { type: "HYDRATE_NODES"; nodes: any[]; calendars: any[]; roles: any[]; costCenters?: any[] }
   | { type: "SET_NODE_PEOPLE"; nodeId: string; people: any[]; total: number }
   | { type: "SET_NODE_EQUIPMENT"; nodeId: string; equipment: any[]; total: number }
-  | { type: "SET_NODE_MATERIALS"; nodeId: string; materials: any[]; total: number };
+  | { type: "SET_NODE_MATERIALS"; nodeId: string; materials: any[]; total: number }
+  | { type: "SET_TOTAL_PEOPLE_COUNT"; count: number };
 
 /* ─────────────────────── Helpers ────────────────────────────────── */
 
@@ -127,6 +128,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         assignedRoles: [],
         isActive: true,
         peopleCount: 0,
+        totalPeopleCount: 0,
         equipmentCount: 0,
         materialCount: 0,
         nodeHeadName: null,
@@ -214,7 +216,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
     }
 
     case "ADD_PERSON":
-      return { ...state, people: { ...state.people, [action.person.id]: action.person } };
+      return { ...state, totalPeopleCount: state.totalPeopleCount + 1, people: { ...state.people, [action.person.id]: action.person } };
 
     case "UPDATE_PERSON": {
       const person = state.people[action.personId];
@@ -235,7 +237,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           newNodes[nid] = { ...node, nodeHeadPersonId: null };
         }
       }
-      return { ...state, people: newPeople, nodes: newNodes };
+      return { ...state, totalPeopleCount: Math.max(0, state.totalPeopleCount - 1), people: newPeople, nodes: newNodes };
     }
 
     case "ADD_EQUIPMENT":
@@ -501,6 +503,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
           isActive: n.isActive,
           peopleCount: n.peopleCount ?? 0,
+          totalPeopleCount: n.totalPeopleCount ?? 0,
           equipmentCount: n.equipmentCount ?? 0,
           materialCount: n.materialCount ?? 0,
           nodeHeadName: n.nodeHeadName ?? null,
@@ -630,6 +633,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
           isActive: n.isActive,
           peopleCount: n.peopleCount ?? 0,
+          totalPeopleCount: n.totalPeopleCount ?? 0,
           equipmentCount: n.equipmentCount ?? 0,
           materialCount: n.materialCount ?? 0,
           nodeHeadName: n.nodeHeadName ?? null,
@@ -715,6 +719,9 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
       };
     }
 
+    case "SET_TOTAL_PEOPLE_COUNT":
+      return { ...state, totalPeopleCount: action.count };
+
     default:
       return state;
   }
@@ -746,6 +753,7 @@ function createInitialState(companyName: string): OrgSetupState {
         assignedRoles: [],
         isActive: true,
         peopleCount: 0,
+        totalPeopleCount: 0,
         equipmentCount: 0,
         materialCount: 0,
         nodeHeadName: null,
@@ -753,6 +761,7 @@ function createInitialState(companyName: string): OrgSetupState {
         costCenterName: null,
       },
     },
+    totalPeopleCount: 0,
     people: {},
     equipment: {},
     materials: {},
@@ -780,6 +789,7 @@ interface OrgSetupContextValue {
   state: OrgSetupState;
   dispatch: React.Dispatch<Action>;
   getNodePeopleCount: (nodeId: string) => number;
+  getNodeTotalPeopleCount: (nodeId: string) => number;
   getNodeRolesCount: (nodeId: string) => number;
   getNodeDepth: (nodeId: string) => number;
   loadNodePeople: (nodeId: string, limit?: number, offset?: number) => Promise<void>;
@@ -807,6 +817,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
   const {
     fetchOrgSetup,
     fetchNodes,
+    fetchAllPeople,
     fetchNodePeople,
     fetchNodeEquipment,
     fetchNodeMaterials,
@@ -818,10 +829,11 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
 
     async function load() {
       try {
-        // Fetch nodes with counts + global config (calendars, roles, costCenters)
-        const [nodesData, orgData] = await Promise.all([
+        // Fetch nodes with counts + global config (calendars, roles, costCenters) + total people count
+        const [nodesData, orgData, peopleData] = await Promise.all([
           fetchNodes(),
           fetchOrgSetup(),
+          fetchAllPeople({ limit: 1, offset: 0 }),
         ]);
         if (cancelled) return;
 
@@ -848,6 +860,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
               roles: orgData.roles,
               costCenters: orgData.costCenters,
             });
+            dispatch({ type: "SET_TOTAL_PEOPLE_COUNT", count: peopleData.total });
           }
         } else {
           if (!cancelled) {
@@ -858,6 +871,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
               roles: orgData.roles,
               costCenters: orgData.costCenters,
             });
+            dispatch({ type: "SET_TOTAL_PEOPLE_COUNT", count: peopleData.total });
           }
         }
       } catch (error) {
@@ -874,6 +888,11 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
 
   const getNodePeopleCount = useCallback(
     (nodeId: string) => state.nodes[nodeId]?.peopleCount ?? 0,
+    [state.nodes],
+  );
+
+  const getNodeTotalPeopleCount = useCallback(
+    (nodeId: string) => state.nodes[nodeId]?.totalPeopleCount ?? 0,
     [state.nodes],
   );
 
@@ -932,6 +951,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
         state,
         dispatch,
         getNodePeopleCount,
+        getNodeTotalPeopleCount,
         getNodeRolesCount,
         getNodeDepth: getNodeDepthFn,
         loadNodePeople,

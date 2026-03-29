@@ -114,6 +114,19 @@ function SpotlightSearch<T extends SpotlightSearchItem>({
     setActiveIndex(0);
   }, [query]);
 
+  // Load initial results when spotlight opens with server search
+  useEffect(() => {
+    if (!useServerSearch || !isMounted || isClosing) return;
+    setIsSearching(true);
+    onSearch!("").then((results) => {
+      setSearchResults(results);
+    }).catch(() => {
+      setSearchResults([]);
+    }).finally(() => {
+      setIsSearching(false);
+    });
+  }, [isMounted, isClosing, useServerSearch, onSearch]);
+
   // Debounced server-side search
   useEffect(() => {
     if (!useServerSearch) return;

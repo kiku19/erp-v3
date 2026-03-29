@@ -16,6 +16,7 @@ interface OBSNode {
   isActive: boolean;
   /* Server-computed counts (from GET /api/org-setup/nodes) */
   peopleCount: number;
+  totalPeopleCount: number;
   equipmentCount: number;
   materialCount: number;
   nodeHeadName: string | null;
@@ -149,6 +150,7 @@ interface OrgSetupState {
     rootNodeId: string;
   };
   nodes: Record<string, OBSNode>;
+  totalPeopleCount: number;
   people: Record<string, Person>;
   equipment: Record<string, Equipment>;
   materials: Record<string, Material>;

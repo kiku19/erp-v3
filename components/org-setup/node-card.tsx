@@ -22,7 +22,7 @@ interface NodeCardProps {
 }
 
 function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
-  const { state, dispatch, getNodePeopleCount, getNodeRolesCount, getNodeDepth, loadNodePeople } = useOrgSetup();
+  const { state, dispatch, getNodePeopleCount, getNodeTotalPeopleCount, getNodeRolesCount, getNodeDepth, loadNodePeople } = useOrgSetup();
   const node = state.nodes[nodeId];
   const [showNodeHeadSearch, setShowNodeHeadSearch] = useState(false);
   const [showCostCenterSearch, setShowCostCenterSearch] = useState(false);
@@ -34,6 +34,7 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
   const depth = getNodeDepth(nodeId);
   const canAddChild = depth < MAX_DEPTH;
   const peopleCount = getNodePeopleCount(nodeId);
+  const totalPeopleCount = getNodeTotalPeopleCount(nodeId);
   const rolesCount = getNodeRolesCount(nodeId);
   const calendarName = node.calendarName ?? (node.calendarId ? state.calendars[node.calendarId]?.name : null) ?? null;
   const costCenterName = node.costCenterName ?? (node.costCenterId ? state.costCenters[node.costCenterId]?.name : null) ?? null;
@@ -132,6 +133,9 @@ function NodeCard({ nodeId, layout, isFirstNode }: NodeCardProps) {
             <span className="flex items-center gap-1">
               <Users size={12} />
               {peopleCount} people
+              {totalPeopleCount > peopleCount && (
+                <span className="text-[10px] text-muted-foreground/70">({totalPeopleCount} total)</span>
+              )}
             </span>
             <span className="flex items-center gap-1">
               <Briefcase size={12} />

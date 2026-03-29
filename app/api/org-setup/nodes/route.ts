@@ -205,6 +205,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       createdAt: node.createdAt,
       updatedAt: node.updatedAt,
       peopleCount: node._count.people,
+      totalPeopleCount: node.totalPeopleCount,
       equipmentCount: node._count.equipment,
       materialCount: node._count.materials,
     }));
