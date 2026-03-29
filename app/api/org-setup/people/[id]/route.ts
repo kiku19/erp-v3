@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authenticateRequest, isAuthError } from "@/lib/api-auth";
 import { updatePersonSchema } from "@/lib/validations/org-setup";
 import { emitOBSEvent, OBS_EVENTS } from "@/lib/events/org-events";
+import { updateAncestorPeopleCounts } from "@/lib/org-setup/update-ancestor-people-counts";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -133,7 +134,11 @@ export async function PATCH(
     // Prisma checked updates use relation-level ops, not scalar FK fields.
     // When nodeId is explicitly null, use node: { disconnect: true } instead.
     const updateData: Record<string, unknown> = { ...parsed.data };
-    if ("nodeId" in updateData) {
+    const nodeIdChanging = "nodeId" in updateData;
+    const oldNodeId = existing.nodeId;
+    const newNodeId = nodeIdChanging ? (updateData.nodeId as string | null) : oldNodeId;
+
+    if (nodeIdChanging) {
       if (updateData.nodeId === null) {
         delete updateData.nodeId;
         updateData.node = { disconnect: true };
@@ -144,9 +149,19 @@ export async function PATCH(
       }
     }
 
-    const person = await prisma.oBSPerson.update({
-      where: { id },
-      data: updateData,
+    const person = await prisma.$transaction(async (tx) => {
+      const updated = await tx.oBSPerson.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Update ancestor counts when node assignment changes
+      if (nodeIdChanging && oldNodeId !== newNodeId) {
+        await updateAncestorPeopleCounts(oldNodeId, -1, tenantId, tx);
+        await updateAncestorPeopleCounts(newNodeId, 1, tenantId, tx);
+      }
+
+      return updated;
     });
 
     emitOBSEvent(OBS_EVENTS.PERSON_UPDATED, tenantId, person.id, {
@@ -214,16 +229,17 @@ export async function DELETE(
       );
     }
 
-    await prisma.$transaction([
-      prisma.oBSPerson.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.oBSPerson.update({
         where: { id },
         data: { isDeleted: true },
-      }),
-      prisma.oBSNode.updateMany({
+      });
+      await tx.oBSNode.updateMany({
         where: { tenantId, nodeHeadPersonId: id, isDeleted: false },
         data: { nodeHeadPersonId: null },
-      }),
-    ]);
+      });
+      await updateAncestorPeopleCounts(existing.nodeId, -1, tenantId, tx);
+    });
 
     emitOBSEvent(OBS_EVENTS.PERSON_DELETED, tenantId, id, { personId: id });
 

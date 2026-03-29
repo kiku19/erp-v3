@@ -128,6 +128,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
         assignedRoles: [],
         isActive: true,
         peopleCount: 0,
+        totalPeopleCount: 0,
         equipmentCount: 0,
         materialCount: 0,
         nodeHeadName: null,
@@ -502,6 +503,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
           isActive: n.isActive,
           peopleCount: n.peopleCount ?? 0,
+          totalPeopleCount: n.totalPeopleCount ?? 0,
           equipmentCount: n.equipmentCount ?? 0,
           materialCount: n.materialCount ?? 0,
           nodeHeadName: n.nodeHeadName ?? null,
@@ -631,6 +633,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           assignedRoles: Array.isArray(n.assignedRoles) ? n.assignedRoles : [],
           isActive: n.isActive,
           peopleCount: n.peopleCount ?? 0,
+          totalPeopleCount: n.totalPeopleCount ?? 0,
           equipmentCount: n.equipmentCount ?? 0,
           materialCount: n.materialCount ?? 0,
           nodeHeadName: n.nodeHeadName ?? null,
@@ -750,6 +753,7 @@ function createInitialState(companyName: string): OrgSetupState {
         assignedRoles: [],
         isActive: true,
         peopleCount: 0,
+        totalPeopleCount: 0,
         equipmentCount: 0,
         materialCount: 0,
         nodeHeadName: null,
@@ -785,6 +789,7 @@ interface OrgSetupContextValue {
   state: OrgSetupState;
   dispatch: React.Dispatch<Action>;
   getNodePeopleCount: (nodeId: string) => number;
+  getNodeTotalPeopleCount: (nodeId: string) => number;
   getNodeRolesCount: (nodeId: string) => number;
   getNodeDepth: (nodeId: string) => number;
   loadNodePeople: (nodeId: string, limit?: number, offset?: number) => Promise<void>;
@@ -886,6 +891,11 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
     [state.nodes],
   );
 
+  const getNodeTotalPeopleCount = useCallback(
+    (nodeId: string) => state.nodes[nodeId]?.totalPeopleCount ?? 0,
+    [state.nodes],
+  );
+
   const getNodeRolesCount = useCallback(
     (nodeId: string) => state.nodes[nodeId]?.assignedRoles.length ?? 0,
     [state.nodes],
@@ -941,6 +951,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
         state,
         dispatch,
         getNodePeopleCount,
+        getNodeTotalPeopleCount,
         getNodeRolesCount,
         getNodeDepth: getNodeDepthFn,
         loadNodePeople,

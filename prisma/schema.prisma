@@ -434,6 +434,7 @@ model OBSNode {
   costCenterId     String?
   assignedRoles    Json     @default("[]")
   isActive         Boolean  @default(true)
+  totalPeopleCount Int      @default(0)
   sortOrder        Int      @default(0)
   isDeleted        Boolean  @default(false)
   createdAt        DateTime @default(now())

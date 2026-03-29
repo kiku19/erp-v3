@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authenticateRequest, isAuthError } from "@/lib/api-auth";
 import { batchAssignPeopleSchema } from "@/lib/validations/org-setup";
 import { emitOBSEvent, OBS_EVENTS } from "@/lib/events/org-events";
+import { updateAncestorPeopleCounts } from "@/lib/org-setup/update-ancestor-people-counts";
 
 /**
  * @swagger
@@ -92,10 +93,24 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Batch update within a transaction
     const result = await prisma.$transaction(async (tx) => {
+      // Decrement old node ancestor counts for people moving from other nodes
+      const sourceNodeCounts = new Map<string, number>();
+      for (const person of existingPeople) {
+        if (person.nodeId && person.nodeId !== targetNodeId) {
+          sourceNodeCounts.set(person.nodeId, (sourceNodeCounts.get(person.nodeId) ?? 0) + 1);
+        }
+      }
+      for (const [sourceNodeId, count] of sourceNodeCounts) {
+        await updateAncestorPeopleCounts(sourceNodeId, -count, tenantId, tx);
+      }
+
       const updateResult = await tx.oBSPerson.updateMany({
         where: { id: { in: personIds }, tenantId, isDeleted: false },
         data: { nodeId: targetNodeId },
       });
+
+      // Increment target node ancestor counts for all assigned people
+      await updateAncestorPeopleCounts(targetNodeId, updateResult.count, tenantId, tx);
 
       const updatedPeople = await tx.oBSPerson.findMany({
         where: { id: { in: personIds }, tenantId, isDeleted: false },

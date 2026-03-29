@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { authenticateRequest, isAuthError } from "@/lib/api-auth";
 import { createPersonSchema } from "@/lib/validations/org-setup";
 import { emitOBSEvent, OBS_EVENTS } from "@/lib/events/org-events";
+import { updateAncestorPeopleCounts } from "@/lib/org-setup/update-ancestor-people-counts";
 
 /**
  * @swagger
@@ -240,8 +241,12 @@ export async function POST(request: NextRequest): Promise<Response> {
       );
     }
 
-    const person = await prisma.oBSPerson.create({
-      data: { tenantId, ...parsed.data },
+    const person = await prisma.$transaction(async (tx) => {
+      const created = await tx.oBSPerson.create({
+        data: { tenantId, ...parsed.data },
+      });
+      await updateAncestorPeopleCounts(created.nodeId, 1, tenantId, tx);
+      return created;
     });
 
     emitOBSEvent(OBS_EVENTS.PERSON_CREATED, tenantId, person.id, { person });
