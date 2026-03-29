@@ -70,7 +70,8 @@ type Action =
   | { type: "HYDRATE_NODES"; nodes: any[]; calendars: any[]; roles: any[]; costCenters?: any[] }
   | { type: "SET_NODE_PEOPLE"; nodeId: string; people: any[]; total: number }
   | { type: "SET_NODE_EQUIPMENT"; nodeId: string; equipment: any[]; total: number }
-  | { type: "SET_NODE_MATERIALS"; nodeId: string; materials: any[]; total: number };
+  | { type: "SET_NODE_MATERIALS"; nodeId: string; materials: any[]; total: number }
+  | { type: "SET_TOTAL_PEOPLE_COUNT"; count: number };
 
 /* ─────────────────────── Helpers ────────────────────────────────── */
 
@@ -214,7 +215,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
     }
 
     case "ADD_PERSON":
-      return { ...state, people: { ...state.people, [action.person.id]: action.person } };
+      return { ...state, totalPeopleCount: state.totalPeopleCount + 1, people: { ...state.people, [action.person.id]: action.person } };
 
     case "UPDATE_PERSON": {
       const person = state.people[action.personId];
@@ -235,7 +236,7 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
           newNodes[nid] = { ...node, nodeHeadPersonId: null };
         }
       }
-      return { ...state, people: newPeople, nodes: newNodes };
+      return { ...state, totalPeopleCount: Math.max(0, state.totalPeopleCount - 1), people: newPeople, nodes: newNodes };
     }
 
     case "ADD_EQUIPMENT":
@@ -715,6 +716,9 @@ function reducer(state: OrgSetupState, action: Action): OrgSetupState {
       };
     }
 
+    case "SET_TOTAL_PEOPLE_COUNT":
+      return { ...state, totalPeopleCount: action.count };
+
     default:
       return state;
   }
@@ -753,6 +757,7 @@ function createInitialState(companyName: string): OrgSetupState {
         costCenterName: null,
       },
     },
+    totalPeopleCount: 0,
     people: {},
     equipment: {},
     materials: {},
@@ -807,6 +812,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
   const {
     fetchOrgSetup,
     fetchNodes,
+    fetchAllPeople,
     fetchNodePeople,
     fetchNodeEquipment,
     fetchNodeMaterials,
@@ -818,10 +824,11 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
 
     async function load() {
       try {
-        // Fetch nodes with counts + global config (calendars, roles, costCenters)
-        const [nodesData, orgData] = await Promise.all([
+        // Fetch nodes with counts + global config (calendars, roles, costCenters) + total people count
+        const [nodesData, orgData, peopleData] = await Promise.all([
           fetchNodes(),
           fetchOrgSetup(),
+          fetchAllPeople({ limit: 1, offset: 0 }),
         ]);
         if (cancelled) return;
 
@@ -848,6 +855,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
               roles: orgData.roles,
               costCenters: orgData.costCenters,
             });
+            dispatch({ type: "SET_TOTAL_PEOPLE_COUNT", count: peopleData.total });
           }
         } else {
           if (!cancelled) {
@@ -858,6 +866,7 @@ function OrgSetupProvider({ companyName, children }: OrgSetupProviderProps) {
               roles: orgData.roles,
               costCenters: orgData.costCenters,
             });
+            dispatch({ type: "SET_TOTAL_PEOPLE_COUNT", count: peopleData.total });
           }
         }
       } catch (error) {

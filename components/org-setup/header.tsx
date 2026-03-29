@@ -15,7 +15,7 @@ function Header() {
   const calendarCount = Object.keys(state.calendars).length;
   const roleCount = Object.keys(state.roles).length;
   const costCenterCount = Object.keys(state.costCenters).length;
-  const peopleCount = Object.keys(state.people).length;
+  const peopleCount = state.totalPeopleCount;
 
   const toggleModal = useCallback(
     (panel: GlobalPanelType) => {

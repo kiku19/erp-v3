@@ -48,6 +48,7 @@ interface ModalProps {
 interface ModalHeaderProps extends HTMLAttributes<HTMLDivElement> {
   title: string;
   description?: string;
+  actions?: ReactNode;
   onClose?: () => void;
 }
 
@@ -180,6 +181,7 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
 function ModalHeader({
   title,
   description,
+  actions,
   onClose,
   className,
   ...props
@@ -201,16 +203,19 @@ function ModalHeader({
             </p>
           )}
         </div>
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close modal"
-            className="flex items-center justify-center rounded-md border border-border bg-background p-2 text-foreground hover:bg-muted-hover cursor-pointer transition-colors duration-[var(--duration-fast)]"
-          >
-            <X size={16} />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {actions}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close modal"
+              className="flex items-center justify-center rounded-md border border-border bg-background p-2 text-foreground hover:bg-muted-hover cursor-pointer transition-colors duration-[var(--duration-fast)]"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
       </div>
       <div className="h-px w-full bg-border" />
     </>

@@ -149,6 +149,7 @@ interface OrgSetupState {
     rootNodeId: string;
   };
   nodes: Record<string, OBSNode>;
+  totalPeopleCount: number;
   people: Record<string, Person>;
   equipment: Record<string, Equipment>;
   materials: Record<string, Material>;

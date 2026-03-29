@@ -231,10 +231,10 @@ const PersonRow = memo(function PersonRow({
             type="button"
             onClick={(e) => { e.stopPropagation(); onDeleteRequest(person.id); }}
             className={cn(
-              "flex items-center justify-center h-6 w-6 rounded-md shrink-0 opacity-0 group-hover/person:opacity-100 transition-opacity duration-[var(--duration-fast)] cursor-pointer",
+              "flex items-center justify-center h-7 w-7 rounded-md shrink-0 opacity-0 group-hover/person:opacity-100 transition-opacity duration-[var(--duration-fast)] cursor-pointer",
               isSelected
-                ? "text-primary-active-foreground/70 hover:text-primary-active-foreground"
-                : "text-muted-foreground hover:text-destructive",
+                ? "text-primary-active-foreground/70 hover:text-primary-active-foreground hover:bg-primary-active-foreground/10"
+                : "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
             )}
             aria-label={`Delete ${person.name}`}
           >
@@ -611,13 +611,8 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
           title="People"
           description={`${total} people across all nodes`}
           onClose={onClose}
-        />
-
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Left Panel — List */}
-          <div data-testid="people-modal-list" className="w-[520px] border-r border-border flex flex-col shrink-0">
-            {/* Toolbar: Search + Add */}
-            <div className="flex items-center justify-end gap-1 px-4 py-2 border-b border-border shrink-0">
+          actions={
+            <>
               <Button
                 variant="outline"
                 size="icon"
@@ -637,8 +632,13 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
               >
                 <Plus size={14} />
               </Button>
-            </div>
+            </>
+          }
+        />
 
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Left Panel — List */}
+          <div data-testid="people-modal-list" className="w-[520px] border-r border-border flex flex-col shrink-0">
             {/* People List */}
             <div className="flex-1 min-h-0 overflow-auto">
               {isLoading ? (
@@ -866,7 +866,7 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
         renderItem={renderSpotlightItem}
         onSearch={handleSpotlightSearch}
         searchDebounceMs={250}
-        emptyLabel="Type to search"
+        emptyLabel="Recently Added"
         noResultsLabel="No people found for"
       />
     </>
