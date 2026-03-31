@@ -211,8 +211,8 @@ function RolesModal({ open, onClose }: RolesModalProps) {
         type: "ADD_ROLE",
         role: { id: newRoleId, ...roleData },
       });
-      backToList();
     }
+    backToList();
 
     // Best-effort: persist to API
     try {
@@ -297,9 +297,9 @@ function RolesModal({ open, onClose }: RolesModalProps) {
     onClose();
   }, [resetForm, onClose]);
 
-  /* ────────── Always open in create mode ────────── */
+  /* ────────── Auto-enter create mode when no roles exist ────────── */
   useEffect(() => {
-    if (open) {
+    if (open && roles.length === 0 && !isCreating) {
       openCreate();
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps

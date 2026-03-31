@@ -197,9 +197,9 @@ function ModalHeader({
         {...props}
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          <h2 className="text-subhead font-semibold text-foreground">{title}</h2>
           {description && (
-            <p className="text-[13px] font-normal text-muted-foreground">
+            <p className="text-body font-normal text-muted-foreground">
               {description}
             </p>
           )}

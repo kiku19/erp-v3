@@ -112,12 +112,12 @@ Always use `ModalHeader` + `ModalFooter`. Never hand-build.
 
 | Token          | Size  | Usage                                                  |
 |----------------|-------|--------------------------------------------------------|
-| `text-micro`   | 9px   | Badges on list items, pay type labels                  |
-| `text-caption`  | 10px  | Badge counts, category headers, item meta, hint text   |
-| `text-detail`  | 11px  | Pagination text, email, secondary data                 |
-| `text-body-sm` | 12px  | List item names, button labels, descriptions, errors   |
-| `text-body`    | 13px  | Form labels, section titles, list header title          |
-| `text-subhead` | 15px  | Right-panel headings, form titles                      |
+| `text-micro`   | 10px  | Badges on list items, pay type labels                  |
+| `text-caption`  | 11px  | Badge counts, category headers, item meta, hint text   |
+| `text-detail`  | 12px  | Pagination text, email, secondary data                 |
+| `text-body-sm` | 13px  | List item names, button labels, descriptions, errors   |
+| `text-body`    | 14px  | Form labels, section titles, list header title          |
+| `text-subhead` | 16px  | Right-panel headings, form titles                      |
 
 Never use `text-sm`, `text-xs`, `text-lg`, `text-base`, or `text-[Npx]`.
 
