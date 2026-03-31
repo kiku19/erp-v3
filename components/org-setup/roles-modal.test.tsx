@@ -187,7 +187,7 @@ describe("DeleteRoleModal", () => {
       />,
     );
     expect(screen.getByText("Delete Role")).toBeDefined();
-    expect(screen.getByText("Painter")).toBeDefined();
+    expect(screen.getByText(/Painter/)).toBeDefined();
   });
 
   it("calls onConfirm when delete clicked", () => {

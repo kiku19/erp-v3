@@ -114,7 +114,7 @@ const PersonRow = memo(function PersonRow({
           isSelected ? "bg-primary-active-foreground/15" : "bg-muted",
         )}>
           <span className={cn(
-            "text-[10px] font-semibold",
+            "text-caption font-semibold",
             isSelected ? "text-primary-active-foreground" : "text-muted-foreground",
           )}>
             {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
@@ -126,13 +126,13 @@ const PersonRow = memo(function PersonRow({
           {/* Row 1: Name + Employee ID */}
           <div className="flex items-center gap-2">
             <span className={cn(
-              "text-[13px] font-medium truncate",
+              "text-body font-medium truncate",
               isSelected ? "text-primary-active-foreground" : "text-foreground",
             )}>
               {person.name}
             </span>
             <span className={cn(
-              "text-[10px] font-mono shrink-0",
+              "text-caption font-mono shrink-0",
               isSelected ? "text-primary-active-foreground/70" : "text-muted-foreground",
             )}>
               {person.employeeId}
@@ -146,7 +146,7 @@ const PersonRow = memo(function PersonRow({
               isSelected ? "text-primary-active-foreground/60" : "text-muted-foreground",
             )} />
             <span className={cn(
-              "text-[11px] truncate",
+              "text-detail truncate",
               isSelected ? "text-primary-active-foreground/70" : "text-muted-foreground",
             )}>
               {person.email}
@@ -158,7 +158,7 @@ const PersonRow = memo(function PersonRow({
             <Badge
               variant="secondary"
               className={cn(
-                "text-[9px] px-1.5 py-0",
+                "text-micro px-1.5 py-0",
                 isSelected ? "bg-primary-active-foreground/15 text-primary-active-foreground" : "",
               )}
             >
@@ -168,7 +168,7 @@ const PersonRow = memo(function PersonRow({
               <Badge
                 variant="secondary"
                 className={cn(
-                  "text-[9px] px-1.5 py-0",
+                  "text-micro px-1.5 py-0",
                   isSelected ? "bg-primary-active-foreground/15 text-primary-active-foreground" : "",
                 )}
               >
@@ -176,7 +176,7 @@ const PersonRow = memo(function PersonRow({
               </Badge>
             )}
             <span className={cn(
-              "text-[9px]",
+              "text-micro",
               isSelected ? "text-primary-active-foreground/60" : "text-muted-foreground",
             )}>
               {person.payType} · {person.employmentType}
@@ -191,7 +191,7 @@ const PersonRow = memo(function PersonRow({
                 isSelected ? "text-primary-active-foreground/60" : "text-muted-foreground",
               )} />
               <span className={cn(
-                "text-[10px] font-medium",
+                "text-caption font-medium",
                 isSelected ? "text-primary-active-foreground/80" : "text-foreground",
               )}>
                 {formatPaySummary(person)}
@@ -204,7 +204,7 @@ const PersonRow = memo(function PersonRow({
                   isSelected ? "text-primary-active-foreground/60" : "text-muted-foreground",
                 )} />
                 <span className={cn(
-                  "text-[10px]",
+                  "text-caption",
                   isSelected ? "text-primary-active-foreground/70" : "text-muted-foreground",
                 )}>
                   {new Date(person.joinDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
@@ -219,10 +219,10 @@ const PersonRow = memo(function PersonRow({
       <div className="flex items-center gap-0.5 shrink-0 mt-1" onClick={(e) => e.stopPropagation()}>
         {isDeleting ? (
           <>
-            <Button variant="destructive" size="sm" className="h-6 text-[11px] px-2" onClick={() => onDeleteConfirm(person.id)}>
+            <Button variant="destructive" size="sm" className="h-6 text-detail px-2" onClick={() => onDeleteConfirm(person.id)}>
               Delete
             </Button>
-            <Button variant="outline" size="sm" className="h-6 text-[11px] px-2" onClick={onDeleteCancel}>
+            <Button variant="outline" size="sm" className="h-6 text-detail px-2" onClick={onDeleteCancel}>
               No
             </Button>
           </>
@@ -589,13 +589,13 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
     (person: PersonRecord) => (
       <div className="flex items-center gap-3">
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted shrink-0">
-          <span className="text-[9px] font-semibold text-muted-foreground">
+          <span className="text-micro font-semibold text-muted-foreground">
             {person.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
           </span>
         </div>
         <div className="flex flex-col gap-0.5 min-w-0">
-          <span className="text-[13px] font-medium text-foreground truncate">{person.name}</span>
-          <span className="text-[11px] text-muted-foreground truncate">
+          <span className="text-body font-medium text-foreground truncate">{person.name}</span>
+          <span className="text-detail text-muted-foreground truncate">
             {person.employeeId} · {person.email}
           </span>
         </div>
@@ -648,7 +648,7 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
               ) : people.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
                   <Users size={24} className="text-muted-foreground" />
-                  <p className="text-[12px] text-muted-foreground">
+                  <p className="text-body-sm text-muted-foreground">
                     No people added yet
                   </p>
                 </div>
@@ -672,7 +672,7 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
             {/* Pagination Footer */}
             {total > 0 && (
               <div data-testid="people-pagination" className="flex items-center justify-between px-4 py-2 border-t border-border shrink-0">
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-detail text-muted-foreground">
                   {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
                 </span>
                 <div className="flex items-center gap-1">
@@ -686,7 +686,7 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
                   >
                     <ChevronLeft size={14} />
                   </Button>
-                  <span className="text-[11px] text-muted-foreground px-2">
+                  <span className="text-detail text-muted-foreground px-2">
                     {page + 1} / {totalPages}
                   </span>
                   <Button
@@ -716,7 +716,7 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
                   >
                     <ArrowLeft size={14} />
                   </button>
-                  <h3 className="text-sm font-semibold text-foreground">
+                  <h3 className="text-body-sm font-semibold text-foreground">
                     {selectedId ? "Edit Person" : "Add Person"}
                   </h3>
                 </div>
@@ -724,17 +724,17 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
                 {/* Required fields */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2 flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">Full Name *</label>
+                    <label className="text-body font-medium text-foreground">Full Name *</label>
                     <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Full name" autoFocus />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">Employee ID *</label>
+                    <label className="text-body font-medium text-foreground">Employee ID *</label>
                     <Input value={formEmployeeId} onChange={(e) => setFormEmployeeId(e.target.value)} placeholder="EMP-001" className="font-mono" />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">Email *</label>
+                    <label className="text-body font-medium text-foreground">Email *</label>
                     <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} placeholder="name@company.com" />
                   </div>
                 </div>
@@ -744,22 +744,22 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
                 {/* Assignment & classification */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">OBS Node</label>
+                    <label className="text-body font-medium text-foreground">OBS Node</label>
                     <Select options={nodeOptions} value={formNodeId} onChange={setFormNodeId} />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">Role</label>
+                    <label className="text-body font-medium text-foreground">Role</label>
                     <Select options={roleOptions} value={formRoleId} onChange={handleRoleChange} placeholder="No role" />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">Pay Type</label>
+                    <label className="text-body font-medium text-foreground">Pay Type</label>
                     <Select options={PAY_TYPE_OPTIONS} value={formPayType} onChange={(v) => handlePayTypeChange(v as PayType)} />
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">Employment Type</label>
+                    <label className="text-body font-medium text-foreground">Employment Type</label>
                     <Select options={EMPLOYMENT_TYPE_OPTIONS} value={formEmploymentType} onChange={(v) => setFormEmploymentType(v as EmploymentType)} disabled={formPayType === "contract"} />
                   </div>
                 </div>
@@ -770,12 +770,12 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
                     <div className="h-px bg-border" />
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-medium text-foreground">Standard Rate (₹/hr)</label>
+                        <label className="text-body font-medium text-foreground">Standard Rate (₹/hr)</label>
                         <Input type="number" min="0" value={formStdRate} onChange={(e) => setFormStdRate(e.target.value)} placeholder="0.00" />
                       </div>
                       {selectedRole?.overtimeEligible !== false && (
                         <div className="flex flex-col gap-1.5">
-                          <label className="text-[13px] font-medium text-foreground">Overtime Rate (₹/hr)</label>
+                          <label className="text-body font-medium text-foreground">Overtime Rate (₹/hr)</label>
                           <Input type="number" min="0" value={formOtRate} onChange={(e) => setFormOtRate(e.target.value)} placeholder="0.00" />
                         </div>
                       )}
@@ -789,13 +789,13 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
                     <div className="h-px bg-border" />
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-medium text-foreground">Monthly Salary (₹/month)</label>
+                        <label className="text-body font-medium text-foreground">Monthly Salary (₹/month)</label>
                         <Input type="number" min="0" value={formSalary} onChange={(e) => setFormSalary(e.target.value)} placeholder="0.00" />
                       </div>
                       {formSalary && (
                         <div className="flex flex-col gap-1">
-                          <span className="text-[12px] text-muted-foreground">Daily allocation (visible to PM)</span>
-                          <span className="text-sm font-medium text-foreground">
+                          <span className="text-body-sm text-muted-foreground">Daily allocation (visible to PM)</span>
+                          <span className="text-body-sm font-medium text-foreground">
                             ₹{Math.round(Number(formSalary) / 26).toLocaleString()}/day
                           </span>
                         </div>
@@ -809,11 +809,11 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
                     <div className="h-px bg-border" />
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-medium text-foreground">Contract Amount (₹)</label>
+                        <label className="text-body font-medium text-foreground">Contract Amount (₹)</label>
                         <Input type="number" min="0" value={formContractAmt} onChange={(e) => setFormContractAmt(e.target.value)} placeholder="0.00" />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-[13px] font-medium text-foreground">Join Date</label>
+                        <label className="text-body font-medium text-foreground">Join Date</label>
                         <Input type="date" value={formJoinDate} onChange={(e) => setFormJoinDate(e.target.value)} />
                       </div>
                     </div>
@@ -822,13 +822,13 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
 
                 {formPayType !== "contract" && (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[13px] font-medium text-foreground">Join Date</label>
+                    <label className="text-body font-medium text-foreground">Join Date</label>
                     <Input type="date" value={formJoinDate} onChange={(e) => setFormJoinDate(e.target.value)} />
                   </div>
                 )}
 
                 {saveError && (
-                  <p className="text-[12px] text-error-foreground">{saveError}</p>
+                  <p className="text-body-sm text-error-foreground">{saveError}</p>
                 )}
 
                 <div className="flex items-center justify-end gap-2 pt-2">
@@ -847,7 +847,7 @@ function PeopleModal({ open, onClose }: PeopleModalProps) {
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
                 <Users size={32} className="text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-body-sm text-muted-foreground">
                   Select a person to edit or click <strong>+</strong> to add one.
                 </p>
               </div>

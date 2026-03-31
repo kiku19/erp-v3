@@ -62,7 +62,7 @@ interface ModalFooterProps extends HTMLAttributes<HTMLDivElement> {
 
 /* ─────────────────────── Modal ───────────────────────────────────── */
 
-function Modal({ open, onClose, children, className, width = 420 }: ModalProps) {
+function Modal({ open, onClose, children, className, width }: ModalProps) {
   const modalId = useId();
   const [isMounted, setIsMounted] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -156,7 +156,7 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
         onAnimationEnd={handleAnimationEnd}
         style={{
           zIndex: dialogZ,
-          width: `${width}px`,
+          width: width != null ? `${width}px` : undefined,
           animation: isClosing
             ? "modal-out var(--duration-fast) var(--ease-default) forwards"
             : "dropdown-in var(--duration-normal) var(--ease-default) forwards",
@@ -164,6 +164,7 @@ function Modal({ open, onClose, children, className, width = 420 }: ModalProps) 
         className={cn(
           "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
           "flex flex-col rounded-lg border border-border bg-card shadow-[var(--shadow-dropdown)]",
+          width == null && "w-[420px]",
           className,
         )}
         onClick={(e) => e.stopPropagation()}
@@ -196,9 +197,9 @@ function ModalHeader({
         {...props}
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          <h2 className="text-subhead font-semibold text-foreground">{title}</h2>
           {description && (
-            <p className="text-[13px] font-normal text-muted-foreground">
+            <p className="text-body font-normal text-muted-foreground">
               {description}
             </p>
           )}

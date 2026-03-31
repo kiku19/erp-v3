@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from "react";
 import {
   Plus,
-  X,
   Search,
   ArrowLeft,
   Trash2,
@@ -13,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalHeader, ModalFooter } from "@/components/ui/modal";
 import { SpotlightSearch } from "@/components/ui/spotlight-search";
 import { useOrgSetup, generateId } from "./context";
 import { type CostCenter } from "./types";
@@ -222,15 +221,11 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
       {/* Main Cost Center Modal */}
       <Modal open={open} onClose={handleClose} width={900} className="h-[620px]">
         <div className="flex h-full flex-col" data-testid="cost-center-modal">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-5">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-semibold text-foreground">Cost Centers</h2>
-              <p className="text-[13px] text-muted-foreground">
-                Define cost centers for your organisation
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
+          <ModalHeader
+            title="Cost Centers"
+            description="Define cost centres for your organisation"
+            onClose={handleClose}
+            actions={
               <Button
                 variant="icon"
                 size="icon"
@@ -239,28 +234,20 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
               >
                 <Search size={16} />
               </Button>
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={handleClose}
-                aria-label="Close modal"
-              >
-                <X size={16} />
-              </Button>
-            </div>
-          </div>
+            }
+          />
 
           {/* Body: Split panel */}
           <div className="flex flex-1 overflow-hidden">
             {/* Left Panel — Cost Centers List */}
-            <div className="flex w-[320px] shrink-0 flex-col border-r border-border bg-muted">
+            <div className="flex w-[320px] shrink-0 flex-col border-r border-border bg-card">
               {/* Left header */}
               <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-semibold text-foreground">
+                  <span className="text-body font-semibold text-foreground">
                     All Cost Centers
                   </span>
-                  <Badge className="text-[11px] px-2.5 py-0.5">
+                  <Badge className="text-caption px-2.5 py-0.5">
                     {costCenters.length}
                   </Badge>
                 </div>
@@ -279,7 +266,7 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
                 {costCenters.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
                     <Wallet size={32} className="text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-body-sm text-muted-foreground">
                       No cost centers created yet
                     </p>
                   </div>
@@ -292,22 +279,33 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
                         "group flex cursor-pointer items-center justify-between border-b border-border px-5 py-3",
                         "transition-colors duration-[var(--duration-fast)]",
                         selectedCCId === cc.id
-                          ? "bg-background"
-                          : "hover:bg-background/50",
+                          ? "bg-primary-active text-primary-active-foreground"
+                          : "hover:bg-muted-hover",
                       )}
                       onClick={() => openEdit(cc)}
                     >
                       <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium text-foreground">
+                        <span className={cn(
+                          "text-body-sm font-medium truncate",
+                          selectedCCId === cc.id ? "text-primary-active-foreground" : "text-foreground",
+                        )}>
                           {cc.name}
                         </span>
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className={cn(
+                          "font-mono text-caption",
+                          selectedCCId === cc.id ? "text-primary-active-foreground/70" : "text-muted-foreground",
+                        )}>
                           {cc.code}
                         </span>
                       </div>
                       <button
                         type="button"
-                        className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity duration-[var(--duration-fast)] hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                        className={cn(
+                          "rounded-md p-1.5 opacity-0 transition-opacity duration-[var(--duration-fast)] group-hover:opacity-100 cursor-pointer",
+                          selectedCCId === cc.id
+                            ? "text-primary-active-foreground/70 hover:text-primary-active-foreground hover:bg-primary-active-foreground/10"
+                            : "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                        )}
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteTargetId(cc.id);
@@ -337,14 +335,14 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
                         >
                           <ArrowLeft size={16} />
                         </button>
-                        <span className="text-[15px] font-semibold text-foreground">
+                        <span className="text-subhead font-semibold text-foreground">
                           {isCreating ? "New Cost Center" : "Edit Cost Center"}
                         </span>
                       </div>
 
                       {/* Name */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Name
                         </label>
                         <Input
@@ -358,7 +356,7 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
 
                       {/* Code */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Code
                         </label>
                         <Input
@@ -371,14 +369,14 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
                           className="font-mono"
                           data-testid="cc-code-input"
                         />
-                        <p className="text-xs text-muted-foreground opacity-70">
+                        <p className="text-caption text-muted-foreground opacity-70">
                           Auto-suggested from name
                         </p>
                       </div>
 
                       {/* Description */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Description
                         </label>
                         <Textarea
@@ -422,7 +420,7 @@ function CostCenterModal({ open, onClose }: CostCenterModalProps) {
                       size={40}
                       className="text-muted-foreground"
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-body-sm text-muted-foreground">
                       Select a cost center to edit or view details
                     </p>
                   </div>
@@ -491,12 +489,12 @@ function CostCenterSearchModal({
         <>
           <Wallet size={14} className="shrink-0" />
           <div className="flex flex-1 flex-col min-w-0">
-            <span className="text-sm font-medium truncate">
+            <span className="text-body-sm font-medium truncate">
               {cc.name}
             </span>
             <span
               className={cn(
-                "text-[11px] font-mono truncate",
+                "text-detail font-mono truncate",
                 isActive
                   ? "text-primary-active-foreground/70"
                   : "text-muted-foreground",
@@ -528,18 +526,13 @@ function DeleteCostCenterModal({
 }: DeleteCostCenterModalProps) {
   return (
     <Modal open={open} onClose={onCancel} width={400}>
-      <div className="flex flex-col gap-4 p-6" data-testid="delete-cc-modal">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-base font-semibold text-foreground">
-            Delete Cost Center
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete{" "}
-            <span className="font-medium text-foreground">{name}</span>?
-            This will also remove cost center assignments from all nodes.
-          </p>
-        </div>
-        <div className="flex items-center justify-end gap-2">
+      <div data-testid="delete-cc-modal">
+        <ModalHeader
+          title="Delete Cost Center"
+          description={`Are you sure you want to delete "${name}"? This will also remove cost center assignments from all nodes.`}
+          onClose={onCancel}
+        />
+        <ModalFooter>
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
@@ -550,7 +543,7 @@ function DeleteCostCenterModal({
           >
             Delete
           </Button>
-        </div>
+        </ModalFooter>
       </div>
     </Modal>
   );

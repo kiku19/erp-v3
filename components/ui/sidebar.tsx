@@ -167,7 +167,7 @@ function SidebarTrigger({ onReveal, className }: SidebarTriggerProps) {
   return (
     <div
       data-testid="sidebar-trigger"
-      className={cn("fixed top-0 left-0 z-30 h-20 w-5", className)}
+      className={cn("fixed top-0 left-0 z-30 h-full w-5", className)}
       onMouseEnter={onReveal}
     />
   );

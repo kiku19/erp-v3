@@ -114,7 +114,7 @@ describe("DeleteCostCenterModal", () => {
       />,
     );
     expect(screen.getByText("Delete Cost Center")).toBeDefined();
-    expect(screen.getByText("Operations")).toBeDefined();
+    expect(screen.getByText(/Operations/)).toBeDefined();
   });
 
   it("calls onConfirm when delete clicked", () => {
