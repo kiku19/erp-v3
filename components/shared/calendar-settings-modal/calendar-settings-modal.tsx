@@ -139,8 +139,8 @@ function EmptyCalendarSvg() {
         </svg>
       </div>
       <div className="flex flex-col items-center gap-1">
-        <span className="text-muted-foreground text-[13px] font-medium">No calendars added yet</span>
-        <span className="text-muted-foreground text-[11px]">Click + to create one</span>
+        <span className="text-muted-foreground text-body font-medium">No calendars added yet</span>
+        <span className="text-muted-foreground text-detail">Click + to create one</span>
       </div>
     </div>
   );
@@ -169,7 +169,7 @@ function SuccessAnimation({ fading }: { fading?: boolean }) {
           />
         </div>
       </div>
-      <span className="text-foreground text-sm font-medium">Calendar created!</span>
+      <span className="text-foreground text-body-sm font-medium">Calendar created!</span>
     </div>
   );
 }
@@ -400,8 +400,8 @@ function CalendarSettingsModal({
             <div className="flex items-center gap-3">
               <CalendarCog size={22} className="text-accent-foreground" />
               <div className="flex flex-col gap-0.5">
-                <span className="text-base font-semibold text-foreground">Calendar Settings</span>
-                <span className="text-[12px] text-muted-foreground">Manage work calendars and scheduling rules</span>
+                <span className="text-subhead font-semibold text-foreground">Calendar Settings</span>
+                <span className="text-body-sm text-muted-foreground">Manage work calendars and scheduling rules</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -412,7 +412,7 @@ function CalendarSettingsModal({
                 className="gap-2"
               >
                 <Search size={14} className="text-muted-foreground" />
-                <span className="text-[12px] text-muted-foreground">Search calendars...</span>
+                <span className="text-body-sm text-muted-foreground">Search calendars...</span>
               </Button>
               <Button
                 variant="ghost"
@@ -433,8 +433,8 @@ function CalendarSettingsModal({
               {/* List Header */}
               <div className="flex items-center justify-between h-12 px-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-foreground">Calendars</span>
-                  <Badge variant="secondary" className="text-[10px] px-2 py-0.5">{calendars.length}</Badge>
+                  <span className="text-body font-semibold text-foreground">Calendars</span>
+                  <Badge variant="secondary" className="text-caption px-2 py-0.5">{calendars.length}</Badge>
                 </div>
                 <Button
                   variant="ghost"
@@ -460,7 +460,7 @@ function CalendarSettingsModal({
                     if (items.length === 0) return null;
                     return (
                       <div key={cat}>
-                        <div className="px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        <div className="px-4 py-2 text-caption font-semibold text-muted-foreground uppercase tracking-wider">
                           {cat} calendars
                         </div>
                         {items.map((cal) => (
@@ -483,13 +483,13 @@ function CalendarSettingsModal({
                               className="flex flex-col gap-0.5 flex-1 min-w-0 px-4 py-2.5 text-left cursor-pointer"
                             >
                               <span className={cn(
-                                "text-[12px] font-medium truncate",
+                                "text-body-sm font-medium truncate",
                                 cal.id === selectedCalId ? "text-primary-active-foreground" : "text-foreground",
                               )}>
                                 {cal.name}
                               </span>
                               <span className={cn(
-                                "text-[10px]",
+                                "text-caption",
                                 cal.id === selectedCalId ? "text-primary-active-foreground/70" : "text-muted-foreground",
                               )}>
                                 {cal.hoursPerDay}h/day · {cal.workDays.filter((d) => d.working).length} days/wk
@@ -532,7 +532,7 @@ function CalendarSettingsModal({
                     >
                       <ArrowLeft size={16} />
                     </button>
-                    <span className="text-[14px] font-semibold text-foreground">
+                    <span className="text-subhead font-semibold text-foreground">
                       Exceptions & Holidays — New Calendar
                     </span>
                   </div>
@@ -560,7 +560,7 @@ function CalendarSettingsModal({
                     >
                       <ArrowLeft size={16} />
                     </button>
-                    <span className="text-[14px] font-semibold text-foreground">
+                    <span className="text-subhead font-semibold text-foreground">
                       Exceptions & Holidays — {selectedCal.name}
                     </span>
                   </div>
@@ -584,20 +584,20 @@ function CalendarSettingsModal({
                   {/* Calendar Name + Actions */}
                   <div className="flex items-center justify-between h-14 px-6 border-b border-border">
                     <div className="flex items-center gap-3">
-                      <span className="text-[14px] font-semibold text-foreground">{selectedCal.name}</span>
+                      <span className="text-subhead font-semibold text-foreground">{selectedCal.name}</span>
                       <Badge variant="warning">{selectedCal.category}</Badge>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 text-[12px]"
+                        className="h-7 text-body-sm"
                         onClick={() => setDuplicateOpen(true)}
                       >
                         <Copy size={12} />
                         Duplicate
                       </Button>
-                      <Button variant="outline" size="sm" className="h-7 text-[12px] text-destructive" onClick={handleDelete}>
+                      <Button variant="outline" size="sm" className="h-7 text-body-sm text-destructive" onClick={handleDelete}>
                         <Trash2 size={12} />
                         Delete
                       </Button>
@@ -608,12 +608,12 @@ function CalendarSettingsModal({
                     {/* Work Week Configuration */}
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-semibold text-foreground">Work Week Configuration</span>
+                        <span className="text-body font-semibold text-foreground">Work Week Configuration</span>
                         <div className="flex items-center gap-4">
-                          <span className="text-[12px] text-muted-foreground">
+                          <span className="text-body-sm text-muted-foreground">
                             Total: {totalHoursPerWeek} hrs/wk · {workingDaysCount} days/wk
                           </span>
-                          <Button variant="outline" size="sm" className="h-6 text-[11px]">
+                          <Button variant="outline" size="sm" className="h-6 text-detail">
                             <ChevronDown size={12} />
                             Fill Down
                           </Button>
@@ -622,7 +622,7 @@ function CalendarSettingsModal({
 
                       {/* Day table */}
                       <div className="border border-border rounded-md overflow-hidden">
-                        <div className="flex items-center h-9 bg-muted px-3 text-[11px] font-semibold text-muted-foreground">
+                        <div className="flex items-center h-9 bg-muted px-3 text-detail font-semibold text-muted-foreground">
                           <span className="w-[120px]">Day</span>
                           <span className="w-[80px] text-center">Workday</span>
                           <span className="w-[120px]">Start Time</span>
@@ -633,7 +633,7 @@ function CalendarSettingsModal({
                         {workDays.map((dc, idx) => (
                           <div
                             key={dc.day}
-                            className="flex items-center h-10 px-3 border-t border-border text-[12px] text-foreground"
+                            className="flex items-center h-10 px-3 border-t border-border text-body-sm text-foreground"
                           >
                             <span className="w-[120px] font-medium">{dc.day}</span>
                             <span className="w-[80px] flex justify-center">
@@ -645,7 +645,7 @@ function CalendarSettingsModal({
                                   type="time"
                                   value={dc.startTime}
                                   onChange={(e) => handleTimeChange(idx, "startTime", e.target.value)}
-                                  className="h-7 text-[11px] w-[100px]"
+                                  className="h-7 text-detail w-[100px]"
                                 />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
@@ -657,7 +657,7 @@ function CalendarSettingsModal({
                                   type="time"
                                   value={dc.endTime}
                                   onChange={(e) => handleTimeChange(idx, "endTime", e.target.value)}
-                                  className="h-7 text-[11px] w-[100px]"
+                                  className="h-7 text-detail w-[100px]"
                                 />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
@@ -675,11 +675,11 @@ function CalendarSettingsModal({
                     {/* Exceptions & Holidays */}
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-semibold text-foreground">Exceptions & Holidays</span>
+                        <span className="text-body font-semibold text-foreground">Exceptions & Holidays</span>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 text-[12px]"
+                          className="h-7 text-body-sm"
                           onClick={() => setExceptionModalOpen(true)}
                         >
                           <Plus size={12} />
@@ -689,7 +689,7 @@ function CalendarSettingsModal({
 
                       <div className="flex flex-col gap-2">
                         {selectedCal.exceptions.length === 0 ? (
-                          <span className="text-[12px] text-muted-foreground py-2">No exceptions configured</span>
+                          <span className="text-body-sm text-muted-foreground py-2">No exceptions configured</span>
                         ) : (
                           selectedCal.exceptions.map((ex) => (
                             <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
@@ -698,8 +698,8 @@ function CalendarSettingsModal({
                                 DOT_CLASS_MAP[ex.exceptionType] ?? "bg-muted-foreground",
                               )} />
                               <div className="flex flex-col gap-0.5 flex-1">
-                                <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
-                                <span className="text-[11px] text-muted-foreground">
+                                <span className="text-body-sm font-medium text-foreground">{ex.name}</span>
+                                <span className="text-detail text-muted-foreground">
                                   {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
                                 </span>
                               </div>
@@ -722,12 +722,12 @@ function CalendarSettingsModal({
                 /* ── Add Calendar Form (default) ── */
                 <div className="flex flex-col h-full">
                   <div className="flex items-center h-14 px-6 border-b border-border shrink-0">
-                    <span className="text-[14px] font-semibold text-foreground">Create New Calendar</span>
+                    <span className="text-subhead font-semibold text-foreground">Create New Calendar</span>
                   </div>
-                  <div className="flex flex-col gap-6 p-6 overflow-auto">
+                  <div className="flex flex-col gap-6 p-6 flex-1 overflow-auto">
                     {/* Calendar Name */}
                     <div className="flex flex-col gap-2">
-                      <label className="text-[13px] font-medium text-foreground">Calendar Name</label>
+                      <label className="text-body font-medium text-foreground">Calendar Name</label>
                       <Input
                         placeholder="Enter calendar name..."
                         value={newCalName}
@@ -739,14 +739,14 @@ function CalendarSettingsModal({
                     {/* Work Week Configuration */}
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-semibold text-foreground">Work Week Configuration</span>
-                        <span className="text-[12px] text-muted-foreground">
+                        <span className="text-body font-semibold text-foreground">Work Week Configuration</span>
+                        <span className="text-body-sm text-muted-foreground">
                           Total: {newFormTotalHours} hrs/wk · {newFormWorkingDays} days/wk
                         </span>
                       </div>
 
                       <div className="border border-border rounded-md overflow-hidden">
-                        <div className="flex items-center h-9 bg-muted px-3 text-[11px] font-semibold text-muted-foreground">
+                        <div className="flex items-center h-9 bg-muted px-3 text-detail font-semibold text-muted-foreground">
                           <span className="w-[120px]">Day</span>
                           <span className="w-[80px] text-center">Workday</span>
                           <span className="w-[120px]">Start Time</span>
@@ -757,7 +757,7 @@ function CalendarSettingsModal({
                         {newFormWorkDays.map((dc, idx) => (
                           <div
                             key={dc.day}
-                            className="flex items-center h-10 px-3 border-t border-border text-[12px] text-foreground"
+                            className="flex items-center h-10 px-3 border-t border-border text-body-sm text-foreground"
                           >
                             <span className="w-[120px] font-medium">{dc.day}</span>
                             <span className="w-[80px] flex justify-center">
@@ -769,7 +769,7 @@ function CalendarSettingsModal({
                                   type="time"
                                   value={dc.startTime}
                                   onChange={(e) => handleNewFormTimeChange(idx, "startTime", e.target.value)}
-                                  className="h-7 text-[11px] w-[100px]"
+                                  className="h-7 text-detail w-[100px]"
                                 />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
@@ -781,7 +781,7 @@ function CalendarSettingsModal({
                                   type="time"
                                   value={dc.endTime}
                                   onChange={(e) => handleNewFormTimeChange(idx, "endTime", e.target.value)}
-                                  className="h-7 text-[11px] w-[100px]"
+                                  className="h-7 text-detail w-[100px]"
                                 />
                               ) : (
                                 <span className="text-muted-foreground">—</span>
@@ -799,11 +799,11 @@ function CalendarSettingsModal({
                     {/* Exceptions & Holidays (local, pre-creation) */}
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[13px] font-semibold text-foreground">Exceptions & Holidays</span>
+                        <span className="text-body font-semibold text-foreground">Exceptions & Holidays</span>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-7 text-[12px]"
+                          className="h-7 text-body-sm"
                           data-testid="add-form-add-exception-btn"
                           onClick={() => setAddFormExceptionOpen(true)}
                         >
@@ -814,7 +814,7 @@ function CalendarSettingsModal({
 
                       <div className="flex flex-col gap-2">
                         {newFormExceptions.length === 0 ? (
-                          <span className="text-[12px] text-muted-foreground py-2">No exceptions configured</span>
+                          <span className="text-body-sm text-muted-foreground py-2">No exceptions configured</span>
                         ) : (
                           newFormExceptions.map((ex) => (
                             <div key={ex.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
@@ -823,8 +823,8 @@ function CalendarSettingsModal({
                                 DOT_CLASS_MAP[ex.exceptionType] ?? "bg-muted-foreground",
                               )} />
                               <div className="flex flex-col gap-0.5 flex-1">
-                                <span className="text-[12px] font-medium text-foreground">{ex.name}</span>
-                                <span className="text-[11px] text-muted-foreground">
+                                <span className="text-body-sm font-medium text-foreground">{ex.name}</span>
+                                <span className="text-detail text-muted-foreground">
                                   {new Date(ex.date).toLocaleDateString()} — {ex.exceptionType}
                                 </span>
                               </div>
@@ -842,16 +842,16 @@ function CalendarSettingsModal({
                       </div>
                     </div>
 
-                    {/* Create button */}
-                    <div className="flex justify-end">
-                      <Button
-                        data-testid="create-calendar-btn"
-                        onClick={handleCreate}
-                        disabled={!newCalName.trim()}
-                      >
-                        Create Calendar
-                      </Button>
-                    </div>
+                  </div>
+                  {/* Fixed footer */}
+                  <div className="flex justify-end px-6 py-4 border-t border-border shrink-0">
+                    <Button
+                      data-testid="create-calendar-btn"
+                      onClick={handleCreate}
+                      disabled={!newCalName.trim()}
+                    >
+                      Create Calendar
+                    </Button>
                   </div>
                 </div>
               )}
@@ -882,8 +882,8 @@ function CalendarSettingsModal({
           <>
             <Calendar size={18} className="text-muted-foreground shrink-0" />
             <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-              <span className="text-sm font-medium truncate">{cal.name}</span>
-              <span className="text-[11px] text-muted-foreground truncate">
+              <span className="text-body-sm font-medium truncate">{cal.name}</span>
+              <span className="text-detail text-muted-foreground truncate">
                 {cal.hoursPerDay}h/day · {cal.workDays.filter((d) => d.working).length} days/wk
               </span>
             </div>

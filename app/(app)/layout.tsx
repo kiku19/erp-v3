@@ -48,7 +48,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { visible, isClosing, show, hide, startHideTimer, cancelHideTimer } =
-    useSidebarAutoHide();
+    useSidebarAutoHide(5000);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

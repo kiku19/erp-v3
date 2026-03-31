@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { Badge } from "@/components/ui/badge";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalHeader, ModalFooter } from "@/components/ui/modal";
 import { SpotlightSearch } from "@/components/ui/spotlight-search";
 import { useOrgSetup, generateId } from "./context";
 import { type Role, type PayType, type RoleLevel } from "./types";
@@ -24,6 +24,12 @@ import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 
 /* ─────────────────────── Constants ───────────────────────────────── */
+
+const PAY_TYPE_CONFIG: Record<PayType, { label: string; dotClass: string }> = {
+  hourly: { label: "Hourly", dotClass: "bg-info" },
+  salaried: { label: "Salaried", dotClass: "bg-success" },
+  contract: { label: "Contract", dotClass: "bg-warning" },
+};
 
 const LEVEL_OPTIONS = [
   { value: "Junior", label: "Junior" },
@@ -82,6 +88,19 @@ function RolesModal({ open, onClose }: RolesModalProps) {
 
   const selectedRole = selectedRoleId ? state.roles[selectedRoleId] : null;
   const showForm = isCreating || selectedRole !== null;
+
+  // Track whether edit form has unsaved changes
+  const isFormDirty = selectedRole
+    ? formName.trim() !== selectedRole.name ||
+      formCode.trim().toUpperCase() !== selectedRole.code ||
+      formLevel !== selectedRole.level ||
+      formPayType !== selectedRole.defaultPayType ||
+      formOvertimeEligible !== selectedRole.overtimeEligible ||
+      formCostRateMin !== selectedRole.costRateMin ||
+      formCostRateMax !== selectedRole.costRateMax ||
+      (formCostRateCurrency !== (selectedRole.costRateCurrency ?? "USD")) ||
+      JSON.stringify(formSkillTags) !== JSON.stringify(selectedRole.skillTags)
+    : true; // create mode is always "dirty"
 
   /* ────────── Reset form ────────── */
   const resetForm = useCallback(() => {
@@ -192,8 +211,8 @@ function RolesModal({ open, onClose }: RolesModalProps) {
         type: "ADD_ROLE",
         role: { id: newRoleId, ...roleData },
       });
+      backToList();
     }
-    backToList();
 
     // Best-effort: persist to API
     try {
@@ -278,9 +297,9 @@ function RolesModal({ open, onClose }: RolesModalProps) {
     onClose();
   }, [resetForm, onClose]);
 
-  /* ────────── Auto-enter create mode when no roles exist ────────── */
+  /* ────────── Always open in create mode ────────── */
   useEffect(() => {
-    if (open && roles.length === 0 && !isCreating) {
+    if (open) {
       openCreate();
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -290,17 +309,14 @@ function RolesModal({ open, onClose }: RolesModalProps) {
   return (
     <>
       {/* Main Roles Modal */}
-      <Modal open={open} onClose={handleClose} width={1152} className="h-[85vh]">
+      <Modal open={open} onClose={handleClose} className="h-[85vh] w-[90vw] max-w-[1152px]">
         <div className="flex h-full flex-col" data-testid="roles-modal">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-5">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-semibold text-foreground">Roles</h2>
-              <p className="text-[13px] text-muted-foreground">
-                Define job roles for your organisation
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
+          <ModalHeader
+            title="Roles"
+            description="Define job roles for your organisation"
+            onClose={handleClose}
+            actions={
               <Button
                 variant="icon"
                 size="icon"
@@ -309,28 +325,20 @@ function RolesModal({ open, onClose }: RolesModalProps) {
               >
                 <Search size={16} />
               </Button>
-              <Button
-                variant="icon"
-                size="icon"
-                onClick={handleClose}
-                aria-label="Close modal"
-              >
-                <X size={16} />
-              </Button>
-            </div>
-          </div>
+            }
+          />
 
           {/* Body: Split panel */}
           <div className="flex flex-1 overflow-hidden">
             {/* Left Panel — Roles List */}
-            <div className="flex w-[400px] shrink-0 flex-col border-r border-border bg-muted">
+            <div className="flex w-[35%] min-w-[280px] shrink-0 flex-col border-r border-border bg-card">
               {/* Left header */}
               <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[15px] font-semibold text-foreground">
+                  <span className="text-body font-semibold text-foreground">
                     All Roles
                   </span>
-                  <Badge className="text-[11px] px-2.5 py-0.5">
+                  <Badge className="text-caption px-2.5 py-0.5">
                     {roles.length}
                   </Badge>
                 </div>
@@ -349,7 +357,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                 {roles.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
                     <Briefcase size={32} className="text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-body-sm text-muted-foreground">
                       No roles created yet
                     </p>
                   </div>
@@ -362,22 +370,64 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                         "group flex cursor-pointer items-center justify-between border-b border-border px-5 py-3",
                         "transition-colors duration-[var(--duration-fast)]",
                         selectedRoleId === role.id
-                          ? "bg-background"
-                          : "hover:bg-background/50",
+                          ? "bg-primary-active text-primary-active-foreground"
+                          : "hover:bg-muted-hover",
                       )}
                       onClick={() => openEdit(role)}
                     >
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-sm font-medium text-foreground">
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <span className={cn(
+                          "text-body-sm font-medium truncate",
+                          selectedRoleId === role.id ? "text-primary-active-foreground" : "text-foreground",
+                        )}>
                           {role.name}
                         </span>
-                        <span className="font-mono text-xs text-muted-foreground">
+                        <span className={cn(
+                          "font-mono text-caption",
+                          selectedRoleId === role.id ? "text-primary-active-foreground/70" : "text-muted-foreground",
+                        )}>
                           {role.code}
                         </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={cn(
+                            "inline-flex items-center gap-1.5 text-caption",
+                            selectedRoleId === role.id ? "text-primary-active-foreground/70" : "text-muted-foreground",
+                          )}>
+                            <span className={cn(
+                              "h-1.5 w-1.5 rounded-full shrink-0",
+                              selectedRoleId === role.id ? "bg-primary-active-foreground/70" : PAY_TYPE_CONFIG[role.defaultPayType].dotClass,
+                            )} />
+                            {PAY_TYPE_CONFIG[role.defaultPayType].label}
+                          </span>
+                          {(role.costRateMin != null || role.costRateMax != null) && (
+                            <>
+                              <span className={cn(
+                                "text-caption",
+                                selectedRoleId === role.id ? "text-primary-active-foreground/40" : "text-border",
+                              )}>·</span>
+                              <span className={cn(
+                                "text-caption",
+                                selectedRoleId === role.id ? "text-primary-active-foreground/70" : "text-muted-foreground",
+                              )}>
+                                {role.costRateCurrency ?? "USD"}{" "}
+                                {role.costRateMin != null && role.costRateMax != null
+                                  ? `${role.costRateMin.toLocaleString()}–${role.costRateMax.toLocaleString()}`
+                                  : role.costRateMin != null
+                                    ? `${role.costRateMin.toLocaleString()}+`
+                                    : `up to ${role.costRateMax!.toLocaleString()}`}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <button
                         type="button"
-                        className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity duration-[var(--duration-fast)] hover:bg-destructive hover:text-destructive-foreground group-hover:opacity-100"
+                        className={cn(
+                          "rounded-md p-1.5 opacity-0 transition-opacity duration-[var(--duration-fast)] group-hover:opacity-100 cursor-pointer",
+                          selectedRoleId === role.id
+                            ? "text-primary-active-foreground/70 hover:text-primary-active-foreground hover:bg-primary-active-foreground/10"
+                            : "text-muted-foreground hover:text-destructive hover:bg-destructive/10",
+                        )}
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteTargetId(role.id);
@@ -407,14 +457,14 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                         >
                           <ArrowLeft size={16} />
                         </button>
-                        <span className="text-[15px] font-semibold text-foreground">
+                        <span className="text-subhead font-semibold text-foreground">
                           {isCreating ? "New Role" : "Edit Role"}
                         </span>
                       </div>
 
                       {/* Role Name */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Role Name
                         </label>
                         <Input
@@ -428,7 +478,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
 
                       {/* Role Code */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Role Code
                         </label>
                         <Input
@@ -441,14 +491,14 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                           className="font-mono"
                           data-testid="role-code-input"
                         />
-                        <p className="text-xs text-muted-foreground opacity-70">
+                        <p className="text-caption text-muted-foreground opacity-70">
                           Auto-suggested from name
                         </p>
                       </div>
 
                       {/* Level */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Level
                         </label>
                         <Select
@@ -460,7 +510,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
 
                       {/* Pay Type — radio-style buttons */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Default Pay Type
                         </label>
                         <div className="flex gap-3">
@@ -470,7 +520,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                               type="button"
                               onClick={() => setFormPayType(item.value)}
                               className={cn(
-                                "flex items-center gap-1.5 rounded-md border px-3.5 py-2 text-[13px] font-medium transition-colors duration-[var(--duration-fast)] cursor-pointer",
+                                "flex items-center gap-2 rounded-md border px-3.5 py-2 text-body font-medium transition-colors duration-[var(--duration-fast)] cursor-pointer",
                                 formPayType === item.value
                                   ? "border-foreground bg-foreground text-primary-foreground"
                                   : "border-border bg-background text-foreground hover:bg-muted-hover",
@@ -481,7 +531,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                                   "h-2 w-2 rounded-full",
                                   formPayType === item.value
                                     ? "bg-primary-foreground"
-                                    : "border border-border",
+                                    : PAY_TYPE_CONFIG[item.value].dotClass,
                                 )}
                               />
                               {item.label}
@@ -493,10 +543,10 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                       {/* Overtime Eligible */}
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium text-foreground">
+                          <span className="text-body font-medium text-foreground">
                             Overtime Eligible
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-caption text-muted-foreground">
                             Allow overtime tracking for this role
                           </span>
                         </div>
@@ -509,16 +559,16 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                       {/* Cost Range (optional) */}
                       <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium text-foreground">
+                          <span className="text-body font-medium text-foreground">
                             Cost Range
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-caption text-muted-foreground">
                             Estimated cost rate for project planning — actual rates are set per division
                           </span>
                         </div>
                         <div className="flex items-end gap-3">
                           <div className="flex flex-1 flex-col gap-1">
-                            <label className="text-xs text-muted-foreground">
+                            <label className="text-caption text-muted-foreground">
                               Min
                             </label>
                             <Input
@@ -534,9 +584,9 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                               data-testid="cost-rate-min-input"
                             />
                           </div>
-                          <span className="pb-2.5 text-sm text-muted-foreground">—</span>
+                          <span className="pb-2.5 text-body-sm text-muted-foreground">—</span>
                           <div className="flex flex-1 flex-col gap-1">
-                            <label className="text-xs text-muted-foreground">
+                            <label className="text-caption text-muted-foreground">
                               Max
                             </label>
                             <Input
@@ -553,7 +603,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                             />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <label className="text-xs text-muted-foreground">
+                            <label className="text-caption text-muted-foreground">
                               Currency
                             </label>
                             <Select
@@ -566,7 +616,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                         {formCostRateMin != null &&
                           formCostRateMax != null &&
                           formCostRateMax < formCostRateMin && (
-                            <p className="text-xs text-error">
+                            <p className="text-caption text-error">
                               Max rate must be greater than or equal to min rate
                             </p>
                           )}
@@ -574,7 +624,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
 
                       {/* Skill Tags */}
                       <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-medium text-foreground">
+                        <label className="text-body font-medium text-foreground">
                           Skill Tags
                         </label>
                         <Input
@@ -612,7 +662,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                           size={16}
                           className="mt-0.5 shrink-0 text-info"
                         />
-                        <p className="text-xs leading-relaxed text-info-foreground">
+                        <p className="text-caption leading-relaxed text-info-foreground">
                           Rates for this role are set inside each division. The
                           same role can have different rates in different
                           divisions.
@@ -635,6 +685,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                         !formName.trim() ||
                         !formCode.trim() ||
                         isSaving ||
+                        !isFormDirty ||
                         (formCostRateMin != null &&
                           formCostRateMax != null &&
                           formCostRateMax < formCostRateMin)
@@ -656,7 +707,7 @@ function RolesModal({ open, onClose }: RolesModalProps) {
                       size={40}
                       className="text-muted-foreground"
                     />
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-body-sm text-muted-foreground">
                       Select a role to edit or check more information about it
                     </p>
                   </div>
@@ -729,12 +780,12 @@ function RolesSearchModal({
         <>
           <Briefcase size={14} className="shrink-0" />
           <div className="flex flex-1 flex-col min-w-0">
-            <span className="text-sm font-medium truncate">
+            <span className="text-body-sm font-medium truncate">
               {role.name}
             </span>
             <span
               className={cn(
-                "text-[11px] font-mono truncate",
+                "text-detail font-mono truncate",
                 isActive
                   ? "text-primary-active-foreground/70"
                   : "text-muted-foreground",
@@ -745,7 +796,7 @@ function RolesSearchModal({
           </div>
           <Badge
             variant="success"
-            className="shrink-0 text-[10px]"
+            className="shrink-0 text-caption"
           >
             {LEVEL_OPTIONS.find((l) => l.value === role.level)?.label ??
               role.level}
@@ -773,18 +824,13 @@ function DeleteRoleModal({
 }: DeleteRoleModalProps) {
   return (
     <Modal open={open} onClose={onCancel} width={400}>
-      <div className="flex flex-col gap-4 p-6" data-testid="delete-role-modal">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-base font-semibold text-foreground">
-            Delete Role
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete{" "}
-            <span className="font-medium text-foreground">{roleName}</span>?
-            This will also remove all role assignments in divisions.
-          </p>
-        </div>
-        <div className="flex items-center justify-end gap-2">
+      <div data-testid="delete-role-modal">
+        <ModalHeader
+          title="Delete Role"
+          description={`Are you sure you want to delete "${roleName}"? This will also remove all role assignments in divisions.`}
+          onClose={onCancel}
+        />
+        <ModalFooter>
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
@@ -795,7 +841,7 @@ function DeleteRoleModal({
           >
             Delete
           </Button>
-        </div>
+        </ModalFooter>
       </div>
     </Modal>
   );

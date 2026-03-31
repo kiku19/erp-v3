@@ -53,6 +53,21 @@
 - **Animation:** `duration-fast` (150ms), `duration-normal` (200ms), `duration-slow` (300ms), `ease-default`, `scale-press` (0.98)
 - **Radius:** `sm` (4px), `md` (8px), `lg` (12px), `pill` (9999px)
 - **Font:** `font-primary` / `font-secondary` (Inter)
+- **Type Scale** (defined as `--text-*` in globals.css `@theme inline`, generates Tailwind `text-*` utilities):
+  | Class | Size | Usage |
+  |---|---|---|
+  | `text-micro` | 9px | Badges, tiny labels, category headers |
+  | `text-caption` | 10px | Hints, secondary info, table column headers |
+  | `text-detail` | 11px | Table cells, compact data, small button text |
+  | `text-body-sm` | 12px | Form labels, list item names, descriptions |
+  | `text-body` | 13px | Default body text, inputs, section titles |
+  | `text-subhead` | 15px | Modal titles, card headings |
+  | `text-heading` | 17px | Page section headings |
+  | `text-title` | 22px | Page titles |
+  | `text-display` | 26px | Hero/display text |
+  - Use ONLY these classes for font sizing. No hardcoded pixel values or default Tailwind text sizes.
+  - ❌ `text-[13px]` · `text-[11px]` · `text-sm` · `text-xs` · Any hardcoded pixel font size
+  - ✅ `text-body-sm` · `text-caption` · `text-subhead` · `text-detail`
 
 ## Tests
 
